@@ -7,14 +7,14 @@ export const cx = (...a: (string | false | null | undefined)[]) => a.filter(Bool
 
 type BtnKind = 'primary' | 'secondary' | 'danger' | 'ghost'
 export function Button({ kind = 'secondary', size = 'md', className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { kind?: BtnKind; size?: 'sm' | 'md' }) {
-  const k = { primary: 'bg-brand text-fg-inverse hover:opacity-90', secondary: 'border border-border bg-panel hover:bg-hover', danger: 'border border-destructive text-destructive hover:bg-destructive-surface', ghost: 'hover:bg-hover' }[kind]
-  return <button {...p} className={cx('inline-flex items-center gap-1 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed', size === 'sm' ? 'px-2 py-0.5 text-ui-sm' : 'px-3 py-1 text-ui-base', k, className)} />
+  const k = { primary: 'border border-brand bg-brand text-fg-inverse hover:opacity-85', secondary: 'border border-border bg-transparent text-fg hover:bg-hover', danger: 'border border-border text-destructive hover:bg-destructive-surface', ghost: 'border border-transparent hover:bg-hover' }[kind]
+  return <button {...p} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50', size === 'sm' ? 'h-7 px-2 text-ui-sm' : 'h-8 px-3 text-ui-base', k, className)} />
 }
 
 export type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info'
 export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  const t = { neutral: 'bg-surface text-fg-subtle', success: 'bg-success-surface text-success', warning: 'bg-warning-surface text-warning', danger: 'bg-destructive-surface text-destructive', info: 'bg-accent text-link' }[tone]
-  return <span className={cx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-ui-xs', t, className)}>{children}</span>
+  const t = { neutral: 'border-border text-fg-subtle', success: 'border-success text-success bg-success-surface', warning: 'border-warning text-warning bg-warning-surface', danger: 'border-destructive text-destructive bg-destructive-surface', info: 'border-link text-link bg-accent' }[tone]
+  return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-1.5 text-ui-xs leading-5', t, className)}>{children}</span>
 }
 
 const STATUS_TONE: Record<string, Tone> = { running: 'success', paused: 'warning', unreachable: 'danger', failed: 'danger', creating: 'neutral' }
@@ -29,7 +29,7 @@ export function Panel({ title, actions, children, className }: { title?: ReactNo
   const { lang } = useI18n()
   return (
     <section className={cx('rounded-xl border border-border bg-panel', className)}>
-      {(title || actions) && <header className="flex items-center gap-2 border-b border-border px-3 py-2"><h2 className="text-ui-base font-medium">{word(lang, title) as ReactNode}</h2><div className="flex-1" />{actions}</header>}
+      {(title || actions) && <header className="flex items-center gap-2 border-b border-border px-3 py-2"><h2 className="text-ui-caption font-medium text-fg-subtle">{word(lang, title) as ReactNode}</h2><div className="flex-1" />{actions}</header>}
       <div className="p-3">{children}</div>
     </section>
   )
@@ -37,7 +37,7 @@ export function Panel({ title, actions, children, className }: { title?: ReactNo
 
 export function Tile({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: Tone }) {
   return (
-    <div className={cx('rounded-xl border border-border px-3 py-2', tone === 'warning' ? 'bg-warning-surface' : 'bg-panel')}>
+    <div className={cx('rounded-xl border border-border px-3.5 py-3', tone === 'warning' ? 'bg-warning-surface' : 'bg-panel')}>
       <div className="text-ui-caption text-fg-subtle">{label}</div>
       <div className="text-ui-xl font-medium">{value}</div>
       {sub && <div className="text-ui-sm text-fg-subtle">{sub}</div>}
@@ -53,8 +53,8 @@ export function Table<T>({ cols, rows, keyOf, empty, onRow }: { cols: Col<T>[]; 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-ui-base">
-        <thead><tr className="border-b border-border text-left text-ui-caption text-fg-subtle">{cols.map((c, i) => <th key={i} className="px-2 py-1 font-normal" style={c.w ? { width: c.w } : undefined}>{word(lang, c.h) as ReactNode}</th>)}</tr></thead>
-        <tbody>{rows.map(r => <tr key={keyOf(r)} onClick={onRow ? () => onRow(r) : undefined} className={cx('border-b border-border last:border-0', onRow && 'cursor-pointer hover:bg-hover')}>{cols.map((c, i) => <td key={i} className="px-2 py-1.5 align-middle">{c.cell(r)}</td>)}</tr>)}</tbody>
+        <thead><tr className="border-b border-border text-left text-ui-caption text-fg-subtle">{cols.map((c, i) => <th key={i} className="whitespace-nowrap px-2 py-1.5 text-ui-sm font-medium" style={c.w ? { width: c.w } : undefined}>{word(lang, c.h) as ReactNode}</th>)}</tr></thead>
+        <tbody>{rows.map(r => <tr key={keyOf(r)} onClick={onRow ? () => onRow(r) : undefined} className={cx('border-b border-border last:border-0', onRow && 'cursor-pointer hover:bg-bg-alt')}>{cols.map((c, i) => <td key={i} className="px-2 py-1.5 align-middle [&_a]:whitespace-nowrap">{c.cell(r)}</td>)}</tr>)}</tbody>
       </table>
     </div>
   )
@@ -78,7 +78,7 @@ export function CodeBlock({ code, label }: { code: string; label?: string }) {
   )
 }
 
-export const inputCls = 'rounded-lg border border-border bg-input px-2 py-1 text-ui-base placeholder:text-fg-subtlest'
+export const inputCls = 'h-8 rounded-lg border border-border bg-input px-2.5 text-ui-base placeholder:text-fg-subtlest focus:border-border-hover'
 export function Input(p: InputHTMLAttributes<HTMLInputElement>) { return <input {...p} className={cx(inputCls, p.className)} /> }
 export function Select(p: SelectHTMLAttributes<HTMLSelectElement>) { return <select {...p} className={cx(inputCls, p.className)} /> }
 
