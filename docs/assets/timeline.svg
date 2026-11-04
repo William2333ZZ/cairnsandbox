@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 400" width="1100" height="400" role="img" aria-label="Checkpoint, rollback and fork on a timeline">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#F59E0B"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5EEAD4"/></marker>
+  </defs>
+  <rect width="1100" height="400" rx="16" fill="#0F1B2D"/>
+  <g font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" fill="#CBD5E1">
+    <text x="40" y="44" font-size="20" font-weight="700" fill="#F8FAFC">Go back, or try several things from the same point</text>
+    <line x1="60" y1="160" x2="560" y2="160" stroke="#64748B" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="60" cy="160" r="9" fill="#64748B"/>
+    <text x="60" y="194" font-size="15" text-anchor="middle">start</text>
+    <circle cx="250" cy="160" r="13" fill="#14B8A6" stroke="#5EEAD4" stroke-width="3"/>
+    <text x="236" y="122" font-size="16" text-anchor="end" fill="#5EEAD4" font-weight="700">checkpoint "clean"</text>
+    <text x="236" y="141" font-size="13" text-anchor="end" fill="#94A3B8">about 50 ms pause</text>
+    <circle cx="480" cy="160" r="12" fill="#EF4444"/>
+    <path d="M474 154 L486 166 M486 154 L474 166" stroke="#0F1B2D" stroke-width="3" stroke-linecap="round"/>
+    <text x="480" y="196" font-size="16" text-anchor="middle" fill="#FCA5A5" font-weight="700">rm -rf …</text>
+    <path d="M472 142 C 430 92, 330 92, 262 144" fill="none" stroke="#F59E0B" stroke-width="3.5" stroke-dasharray="2 7" stroke-linecap="round" marker-end="url(#ar)"/>
+    <text x="366" y="82" font-size="16" text-anchor="middle" fill="#F59E0B" font-weight="700">rollback in place</text>
+    <text x="366" y="102" font-size="13" text-anchor="middle" fill="#94A3B8">same id, same address</text>
+    <path d="M258 174 C 300 215, 400 222, 636 222" fill="none" stroke="#5EEAD4" stroke-width="3" marker-end="url(#ag)"/>
+    <path d="M254 174 C 290 250, 400 282, 636 282" fill="none" stroke="#5EEAD4" stroke-width="3" marker-end="url(#ag)"/>
+    <path d="M250 174 C 270 290, 380 342, 636 342" fill="none" stroke="#5EEAD4" stroke-width="3" marker-end="url(#ag)"/>
+    <text x="40" y="262" font-size="16" fill="#5EEAD4" font-weight="700">fork n copies</text>
+    <text x="40" y="282" font-size="13" fill="#94A3B8">each with its own disk</text>
+    <rect x="650" y="204" width="200" height="36" rx="18" fill="#12332F" stroke="#14B8A6"/><text x="750" y="227" font-size="15" text-anchor="middle" fill="#99F6E4">attempt A · tests pass</text>
+    <rect x="650" y="264" width="200" height="36" rx="18" fill="#3A1B1B" stroke="#EF4444"/><text x="750" y="287" font-size="15" text-anchor="middle" fill="#FCA5A5">attempt B · fails</text>
+    <rect x="650" y="324" width="200" height="36" rx="18" fill="#12332F" stroke="#14B8A6"/><text x="750" y="347" font-size="15" text-anchor="middle" fill="#99F6E4">attempt C · tests pass</text>
+    <text x="880" y="288" font-size="14" fill="#94A3B8">keep the one you like,</text>
+    <text x="880" y="308" font-size="14" fill="#94A3B8">delete the rest</text>
+    <rect x="640" y="70" width="420" height="76" rx="10" fill="#0A1322" stroke="#1E3A52"/>
+    <text x="656" y="96" font-size="14" font-family="Menlo,Consolas,monospace" fill="#94A3B8">sb.checkpoints.create("clean")</text>
+    <text x="656" y="118" font-size="14" font-family="Menlo,Consolas,monospace" fill="#94A3B8">sb.checkpoints.rollback("clean")</text>
+    <text x="656" y="140" font-size="14" font-family="Menlo,Consolas,monospace" fill="#94A3B8">sb.fork(n=3, checkpoint="clean")</text>
+  </g>
+</svg>
