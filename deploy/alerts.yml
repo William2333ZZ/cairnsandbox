@@ -1,0 +1,103 @@
+# Prometheus 告警规则(docs/guide/operations.md 的"指标与告警"一节逐条解释每条的含义与处置)。
+# 抓取配置示例(每个控制面副本单独抓,计数器是副本自己的):
+#   scrape_configs:
+#     - job_name: aios-cp
+#       metrics_path: /metrics
+#       authorization: { type: Bearer, credentials_file: /etc/prometheus/aios-cp.token }   # 部署者令牌
+#       static_configs: [{ targets: ["cp-host:18700"] }]
+# 审计链没有指标(整文件校验不该放在抓取路径里):用 cron 跑 `curl -H "Authorization: Bearer $T" $CP/audit/verify`,ok 不为 true 就报警。
+groups:
+  - name: cairnbox-cloud
+    rules:
+      - alert: AiosControlPlaneDown
+        expr: up{job="aios-cp"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "控制面副本 {{ $labels.instance }} 抓取失败", action: "operations.md 的 F4:换起这个副本;其他副本若有就不受影响" }
+
+      - alert: AiosNodeDown
+        expr: cairn_node_up == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "节点 {{ $labels.node }} 失联", action: "operations.md 的 F3:先确认它真的死了,再决定要不要接管(evacuate)" }
+
+      - alert: AiosSandboxesStranded
+        expr: cairnboxes_on_down_nodes > 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "{{ $value }} 台沙箱在失联的节点上,列表里显示 unreachable", action: "operations.md 的 F3:节点确认死亡后 POST /nodes/<n>/evacuate;durable 的从最后一份 bundle 恢复" }
+
+      - alert: AiosRegistryDown
+        expr: cairn_dependency_up{dep="registry"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "路由注册表(Redis)不可达:所有按沙箱 id 的请求现在是 503", action: "operations.md 的 F5" }
+
+      - alert: AiosDatabaseDown
+        expr: cairn_dependency_up{dep="database"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "租户数据库(Postgres)不可达:创建 503,成员令牌 401,计量停", action: "operations.md 的 F6" }
+
+      - alert: AiosStoreDown
+        expr: cairn_dependency_up{dep="store"} == 0
+        for: 2m
+        labels: { severity: warning }
+        annotations: { summary: "分块仓库(fc-store)不可达:durable 暂停发布不了 bundle,未缓存的镜像块读不到", action: "operations.md 的 F7" }
+
+      - alert: AiosMeteringStalled
+        expr: cairn_metering_last_tick_age_seconds > 300
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "计量已 {{ $value }} 秒没记账", action: "operations.md 的 F6:看数据库与持租约的副本;停超过 3600 秒的空档不会回补" }
+
+      - alert: AiosNodeLoadHigh
+        expr: cairn_node_load > 0.85
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "节点 {{ $labels.node }} 负载 {{ $value }}(空位与内存里占用高的那个)", action: "operations.md 的容量一节:加节点,或 POST /fleet/balance" }
+
+      - alert: AiosNodeMemoryHigh
+        expr: cairn_node_mem_mib_running / cairn_node_mem_budget_mib > 0.9
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "节点 {{ $labels.node }} 内存预算用了 {{ $value }}", action: "同上;新的创建会开始 429" }
+
+      - alert: AiosNoRoomAnywhere
+        expr: min(cairn_node_load) > 0.85
+        for: 10m
+        labels: { severity: critical }
+        annotations: { summary: "每个节点都超过 85%:新沙箱很快会 429 'no node with capacity'", action: "operations.md 的容量一节:现在就加节点" }
+
+      - alert: AiosServerErrors
+        expr: |
+          sum by (instance) (rate(cairn_http_responses_total{class="5xx"}[5m]))
+            / sum by (instance) (rate(cairn_http_responses_total[5m])) > 0.05
+          and sum by (instance) (rate(cairn_http_responses_total[5m])) > 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "控制面 {{ $labels.instance }} 的 5xx 超过 5%", action: "operations.md:看是哪个依赖(cairn_dependency_up),再看 /audit 里的 registry_error / node_down" }
+
+      - alert: AiosRateLimiting
+        expr: rate(cairn_http_rate_limited_total[5m]) > 0
+        for: 15m
+        labels: { severity: info }
+        annotations: { summary: "有成员令牌持续被限速(429 rate limit)", action: "是脚本打得太猛,还是 CP_RATE_PER_MIN 太小;评测器用部署者令牌不受限" }
+
+      - alert: AiosEgressRequestsWaiting
+        expr: cairn_network_requests_pending > 0
+        for: 1d
+        labels: { severity: info }
+        annotations: { summary: "{{ $value }} 条出口放宽等 owner 批了一天", action: "控制台 → 项目与成员 顶部" }
+
+      - alert: AiosAbuseSignal
+        expr: increase(cairn_abuse_signals_total[15m]) > 0
+        for: 0m
+        labels: { severity: warning }
+        annotations: { summary: "有沙箱持续满载 CPU 或出站流量异常({{ $labels.kind }})", action: "GET /abuse/signals 看是谁;像挖矿或洪泛就 POST /accounts/<a>/suspend(operations.md F12),是正常构建就忽略(阈值见 ABUSE_*)" }
+
+      - alert: AiosAccountSuspended
+        expr: cairn_accounts_suspended > 0
+        for: 7d
+        labels: { severity: info }
+        annotations: { summary: "有账户被停用超过 7 天", action: "该解封就 POST /accounts/<a>/unsuspend,该清理就让 owner 删沙箱" }

@@ -1,0 +1,16 @@
+{
+ "id": "py-dominoes",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "dominoes.py"
+ ],
+ "smoke": true,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "dominoes",
+  "blurb": "Make a chain of dominoes."
+ }
+}

@@ -1,0 +1,15 @@
+# Garage(S3 兼容对象存储)单节点配置。rpc_secret / admin_token 走环境变量 GARAGE_RPC_SECRET / GARAGE_ADMIN_TOKEN,不写在这里。
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+replication_factor = 1          # 单节点;加节点后改成 3 并重做布局(见 docs/guide/operations.md 的存储一节)
+
+rpc_bind_addr = "0.0.0.0:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "0.0.0.0:3900"
+
+[admin]
+api_bind_addr = "0.0.0.0:3903"

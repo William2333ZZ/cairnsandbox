@@ -1,0 +1,16 @@
+{
+ "id": "py-react",
+ "domain": "coding",
+ "group": "validate",
+ "timeout_s": 300,
+ "allowed_write": [
+  "react.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "react",
+  "blurb": "Implement a basic reactive system."
+ }
+}

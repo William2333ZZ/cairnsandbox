@@ -1,0 +1,11 @@
+{
+ "id": "dedupe-aggregate",
+ "domain": "data",
+ "group": "evolve",
+ "timeout_s": 420,
+ "allowed_write": [
+  "summary.json",
+  "bin/"
+ ],
+ "smoke": false
+}

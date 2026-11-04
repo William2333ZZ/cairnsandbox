@@ -1,0 +1,16 @@
+{
+ "id": "py-sgf-parsing",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "sgf_parsing.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "sgf-parsing",
+  "blurb": "Parsing a Smart Game Format string."
+ }
+}

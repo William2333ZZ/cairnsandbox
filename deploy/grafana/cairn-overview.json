@@ -1,0 +1,347 @@
+{
+ "title": "Cairn 沙箱云 · 总览",
+ "uid": "cairn-overview",
+ "schemaVersion": 39,
+ "version": 1,
+ "refresh": "30s",
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "tags": [
+  "cairn"
+ ],
+ "templating": {
+  "list": [
+   {
+    "name": "DS",
+    "type": "datasource",
+    "query": "prometheus",
+    "label": "数据源"
+   }
+  ]
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "节点在线 / 总数",
+   "description": "在线低于总数:AiosNodeDown",
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 6,
+    "h": 5
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "cairn_nodes_alive",
+     "legendFormat": "在线"
+    },
+    {
+     "refId": "B",
+     "expr": "cairn_nodes_total",
+     "legendFormat": "总数"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "运行中沙箱",
+   "description": "",
+   "gridPos": {
+    "x": 6,
+    "y": 0,
+    "w": 6,
+    "h": 5
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum(cairn_node_vms_running)",
+     "legendFormat": "运行中"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "依赖可达性(1 = 通)",
+   "description": "registry / database / store",
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 6,
+    "h": 5
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "cairn_dependency_up",
+     "legendFormat": "{{dep}}"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "被停用的账户 / 滥用信号(15 分钟)",
+   "description": "",
+   "gridPos": {
+    "x": 18,
+    "y": 0,
+    "w": 6,
+    "h": 5
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "cairn_accounts_suspended",
+     "legendFormat": "被停用账户"
+    },
+    {
+     "refId": "B",
+     "expr": "sum(increase(cairn_abuse_signals_total[15m]))",
+     "legendFormat": "滥用信号"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "节点内存(已用 / 预算 MiB)",
+   "description": "",
+   "gridPos": {
+    "x": 0,
+    "y": 5,
+    "w": 12,
+    "h": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "cairn_node_mem_mib_running",
+     "legendFormat": "{{node}} 已用"
+    },
+    {
+     "refId": "B",
+     "expr": "cairn_node_mem_budget_mib",
+     "legendFormat": "{{node}} 预算"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "decmbytes"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "节点负载(0-1)",
+   "description": "每个节点都超过 0.85:AiosCapacity",
+   "gridPos": {
+    "x": 12,
+    "y": 5,
+    "w": 12,
+    "h": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "cairn_node_load",
+     "legendFormat": "{{node}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 7,
+   "type": "timeseries",
+   "title": "沙箱数:按状态",
+   "description": "",
+   "gridPos": {
+    "x": 0,
+    "y": 13,
+    "w": 12,
+    "h": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (status) (cairnboxes)",
+     "legendFormat": "{{status}}"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "停在失联节点上的沙箱",
+   "description": "> 0:AiosSandboxesStranded,看运维手册 F3",
+   "gridPos": {
+    "x": 12,
+    "y": 13,
+    "w": 12,
+    "h": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "cairnboxes_on_down_nodes",
+     "legendFormat": "沙箱"
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "type": "timeseries",
+   "title": "控制面响应(每秒,按类)",
+   "description": "",
+   "gridPos": {
+    "x": 0,
+    "y": 21,
+    "w": 12,
+    "h": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (class) (rate(cairn_http_responses_total[5m]))",
+     "legendFormat": "{{class}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "限速(每秒)与 5xx 比例",
+   "description": "",
+   "gridPos": {
+    "x": 12,
+    "y": 21,
+    "w": 12,
+    "h": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "rate(cairn_http_rate_limited_total[5m])",
+     "legendFormat": "被限速"
+    },
+    {
+     "refId": "B",
+     "expr": "sum(rate(cairn_http_responses_total{class=\"5xx\"}[5m])) / sum(rate(cairn_http_responses_total[5m]))",
+     "legendFormat": "5xx 比例"
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "type": "timeseries",
+   "title": "计量上次运行至今(秒)",
+   "description": "> 300:AiosMeteringStalled,账单会少算",
+   "gridPos": {
+    "x": 0,
+    "y": 29,
+    "w": 12,
+    "h": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "cairn_metering_last_tick_age_seconds",
+     "legendFormat": "秒"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 12,
+   "type": "timeseries",
+   "title": "等 owner 批的出口放宽",
+   "description": "",
+   "gridPos": {
+    "x": 12,
+    "y": 29,
+    "w": 12,
+    "h": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${DS}"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "cairn_network_requests_pending",
+     "legendFormat": "条数"
+    }
+   ]
+  }
+ ],
+ "description": "指标来自控制面的 /metrics(deploy/alerts.yml 里的告警用同一批)。导入:Grafana → Dashboards → Import → 上传这个文件。"
+}

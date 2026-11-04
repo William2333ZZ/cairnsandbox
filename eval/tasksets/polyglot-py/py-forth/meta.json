@@ -1,0 +1,16 @@
+{
+ "id": "py-forth",
+ "domain": "coding",
+ "group": "test",
+ "timeout_s": 300,
+ "allowed_write": [
+  "forth.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "forth",
+  "blurb": "Implement an evaluator for a very simple subset of Forth."
+ }
+}

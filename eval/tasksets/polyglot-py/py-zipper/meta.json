@@ -1,0 +1,16 @@
+{
+ "id": "py-zipper",
+ "domain": "coding",
+ "group": "validate",
+ "timeout_s": 300,
+ "allowed_write": [
+  "zipper.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "zipper",
+  "blurb": "Creating a zipper for a binary tree."
+ }
+}

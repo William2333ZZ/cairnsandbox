@@ -1,0 +1,16 @@
+{
+ "id": "py-bowling",
+ "domain": "coding",
+ "group": "validate",
+ "timeout_s": 300,
+ "allowed_write": [
+  "bowling.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "bowling",
+  "blurb": "Score a bowling game."
+ }
+}

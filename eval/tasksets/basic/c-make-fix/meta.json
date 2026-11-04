@@ -1,0 +1,11 @@
+{
+ "id": "c-make-fix",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 420,
+ "allowed_write": [
+  "Makefile",
+  "src/"
+ ],
+ "smoke": false
+}

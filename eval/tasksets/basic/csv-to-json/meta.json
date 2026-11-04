@@ -1,0 +1,11 @@
+{
+ "id": "csv-to-json",
+ "domain": "data",
+ "group": "evolve",
+ "timeout_s": 420,
+ "allowed_write": [
+  "csv2json.py"
+ ],
+ "smoke": false,
+ "variant_inputs": true
+}

@@ -1,0 +1,16 @@
+{
+ "id": "py-hangman",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "hangman.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "hangman",
+  "blurb": "Implement the logic of the hangman game using functional reactive programming."
+ }
+}

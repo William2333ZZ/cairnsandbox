@@ -1,0 +1,65 @@
+#!/bin/bash
+# PID 1 for the sandbox guest (two stages).
+# Stage 1 runs on the read-only base root. It finds disks by filesystem LABEL:
+#   sbx-base   read-only base layer (virtio-blk or pmem; with pmem it is mounted with DAX)
+#   sbx-upper  this VM's writable layer
+#   sbx-layer* extra read-only layers (workspace / toolkit), stacked above base, later labels on top
+# then builds root = overlay(lower=layers:base, upper) and pivots into it. Stage 2 runs sandboxd.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+if [ "$1" != "stage2" ]; then
+  mountpoint -q /proc || mount -t proc proc /proc
+  mountpoint -q /sys  || mount -t sysfs sys /sys
+  mountpoint -q /dev  || mount -t devtmpfs dev /dev
+  UPPER=$(blkid -L sbx-upper 2>/dev/null)
+  if [ -n "$UPPER" ]; then
+    mount -t tmpfs tmpfs /mnt
+    mkdir -p /mnt/lower /mnt/upper /mnt/root
+    BASE=$(blkid -L sbx-base 2>/dev/null); BASE=${BASE:-/dev/vda}
+    case "$BASE" in
+      /dev/pmem*) mount -o ro,dax "$BASE" /mnt/lower 2>/dev/null || mount -o ro "$BASE" /mnt/lower ;;
+      *)          mount -o ro "$BASE" /mnt/lower ;;
+    esac
+    LOWERS=/mnt/lower
+    for dev in $(blkid -o device -t LABEL="sbx-layer*" 2>/dev/null | sort); do :; done
+    i=0
+    for dev in $(blkid 2>/dev/null | grep -o '^/dev/[a-z0-9]*: LABEL="sbx-layer[^"]*"' | sort -t'"' -k2 | cut -d: -f1); do
+      i=$((i+1)); mkdir -p /mnt/layer$i; mount -o ro "$dev" /mnt/layer$i && LOWERS="/mnt/layer$i:$LOWERS"
+    done
+    if ! mount -t ext4 "$UPPER" /mnt/upper; then echo "fc-init: upper disk mount failed"; exec /bin/bash; fi
+    mkdir -p /mnt/upper/upper /mnt/upper/work
+    mount -t overlay overlay -o "lowerdir=$LOWERS,upperdir=/mnt/upper/upper,workdir=/mnt/upper/work" /mnt/root \
+      || { echo "fc-init: overlay mount failed (lowers=$LOWERS)"; exec /bin/bash; }
+    echo "fc-init: root overlay lowers=$LOWERS base=$BASE"
+    cd /mnt/root
+    mkdir -p .oldroot
+    pivot_root . .oldroot
+    exec chroot . /sbin/fc-init stage2
+  fi
+  exec /sbin/fc-init stage2
+fi
+
+# ---- stage 2 ----
+mountpoint -q /proc || mount -t proc proc /proc
+mountpoint -q /sys  || mount -t sysfs sys /sys
+mkdir -p /run
+mountpoint -q /run || mount -t tmpfs tmpfs /run
+if [ -d /.oldroot ]; then
+  mount --move /.oldroot/dev /dev 2>/dev/null || mount -t devtmpfs dev /dev
+  mkdir -p /run/upper; mount --move /.oldroot/mnt/upper /run/upper 2>/dev/null   # keep the upper layer reachable for pack
+  umount -l /.oldroot 2>/dev/null
+  rmdir /.oldroot 2>/dev/null
+fi
+mkdir -p /dev/pts /dev/shm        # after /dev is the real devtmpfs
+mountpoint -q /dev/pts || mount -t devpts devpts /dev/pts
+mountpoint -q /dev/shm || mount -t tmpfs tmpfs /dev/shm
+chmod 1777 /tmp
+hostname sandbox
+ip link set lo up 2>/dev/null
+echo "fc-init: root=$(findmnt -n -o FSTYPE /) starting sandboxd"
+export HOME=/root
+while true; do
+  if [ -x /usr/local/lib/sandboxd/sandboxd ]; then /usr/local/lib/sandboxd/sandboxd       # Rust runtime (L1)
+  else /usr/bin/python3 /usr/local/lib/sandboxd/sandboxd.py; fi                            # legacy Python daemon
+  echo "fc-init: sandboxd exited ($?), restarting in 1s"; sleep 1
+done

@@ -1,0 +1,17 @@
+state*/
+cp-state*/
+store/
+images/
+registry-data/
+db-data/
+intake-state*/
+eval-state*/
+model-state*/
+harvest-state/
+web/node_modules/
+console/node_modules/
+console/.next/
+console/out/
+console-dist/
+guest/sbx-runtime/target/
+recipes/*/files/

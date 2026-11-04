@@ -1,0 +1,1 @@
+<!-- The harness's own long-term notes. Everything outside comments is added to the end of every task the agent gets. A candidate harness may edit this file: short, general, true notes about how to work well here (no task names, no expected answers). -->

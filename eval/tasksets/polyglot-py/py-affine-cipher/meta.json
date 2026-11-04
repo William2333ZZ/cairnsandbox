@@ -1,0 +1,16 @@
+{
+ "id": "py-affine-cipher",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "affine_cipher.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "affine-cipher",
+  "blurb": "Create an implementation of the Affine cipher, an ancient encryption algorithm from the Middle East."
+ }
+}

@@ -1,0 +1,2 @@
+{"kernel": "kernel-out/vmlinux-6.18.59-sbx", "base": "base/base-debian-13-v2.ext4",
+ "note": "debian-13 rebuilt with /etc/hosts (localhost) and a guest pack that falls back to disk (D76); side by side with debian-13 so existing snapshots stay valid"}

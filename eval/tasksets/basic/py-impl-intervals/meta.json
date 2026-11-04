@@ -1,0 +1,11 @@
+{
+ "id": "py-impl-intervals",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 420,
+ "allowed_write": [
+  "intervals.py"
+ ],
+ "smoke": false,
+ "variant_inputs": true
+}

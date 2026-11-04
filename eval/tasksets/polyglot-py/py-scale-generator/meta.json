@@ -1,0 +1,16 @@
+{
+ "id": "py-scale-generator",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "scale_generator.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "scale-generator",
+  "blurb": "Generate musical scales, given a starting note and a set of intervals."
+ }
+}

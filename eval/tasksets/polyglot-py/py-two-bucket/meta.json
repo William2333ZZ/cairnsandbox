@@ -1,0 +1,16 @@
+{
+ "id": "py-two-bucket",
+ "domain": "coding",
+ "group": "test",
+ "timeout_s": 300,
+ "allowed_write": [
+  "two_bucket.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "two-bucket",
+  "blurb": "Given two buckets of different size, demonstrate how to measure an exact number of liters."
+ }
+}

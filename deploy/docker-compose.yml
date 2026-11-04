@@ -1,0 +1,163 @@
+# The whole Cairn sandbox cloud on one host (docs/010 部署; D44). Mirrors run-node.sh service by service so either can run the stack.
+#   cp .env.example .env; edit it; docker compose up -d            (first time: see README.md for images, layers and the token)
+# Services: fc-registry (Redis: routes, nodes, leases), fc-db (Postgres: tenancy, usage, statements), fc-store (chunk store: bundles, lazy images),
+# fc-node (node agent: microVMs; privileged by necessity), fc-cp (control plane, Go; web UI at /ui/, E2B surface on 8710), fc-model (model proxy),
+# fc-eval (evaluator), fc-intake (the Agent service). A second node is the fc-node service copied with NODE_NAME / state dir / port changed.
+name: cairn
+
+x-node-image: &node_image ${NODE_IMAGE:-fc-node:dev}
+
+services:
+  fc-registry:
+    image: valkey/valkey:7.2-alpine
+    command: ["valkey-server", "--appendonly", "yes", "--save", ""]
+    volumes: ["${DATA_DIR:-.}/registry-data:/data"]
+    ports: ["127.0.0.1:16379:6379"]
+    restart: unless-stopped
+
+  fc-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cp
+      POSTGRES_DB: cp
+      POSTGRES_PASSWORD_FILE: /run/secrets/db.password
+    secrets: [db.password]
+    volumes: ["${DATA_DIR:-.}/db-data:/var/lib/postgresql/data"]
+    ports: ["127.0.0.1:15432:5432"]
+    restart: unless-stopped
+
+  fc-store:
+    image: *node_image
+    entrypoint: ["/usr/bin/python3", "/usr/local/bin/imgstore.py", "serve", "/store", "8900", "--bw-mbps", "${STORE_BW_MBPS:-0}"]
+    volumes: ["${DATA_DIR:-.}/store:/store"]
+    ports: ["127.0.0.1:18900:8900"]
+    restart: unless-stopped
+
+  fc-node:
+    image: *node_image
+    hostname: fc-node
+    entrypoint: ["/usr/bin/python3", "/usr/local/bin/nodeagent.py"]
+    # The jailer needs these (run-node.sh says why): devices for KVM / tap / vsock / fuse, SYS_ADMIN for mounts and pivot_root, SYS_PTRACE for the core-sched cookie,
+    # SYS_NICE for QoS, a private cgroup namespace, and Docker's AppArmor / seccomp profiles off for this one trusted container.
+    devices: ["/dev/kvm", "/dev/net/tun", "/dev/vhost-vsock", "/dev/fuse"]
+    cap_add: [NET_ADMIN, SYS_ADMIN, SYS_PTRACE, SYS_NICE]
+    security_opt: ["apparmor=unconfined", "seccomp=unconfined"]
+    cgroup: private
+    sysctls: {net.ipv4.ip_forward: 1}
+    stop_grace_period: 120s                      # SIGTERM: running persistent sandboxes are paused to disk first
+    environment:
+      NODE_NAME: fc-node
+      TEMPLATES_DIR: /work/templates
+      MAX_VMS: ${MAX_VMS:-32}
+      MEM_BUDGET_MIB: ${MEM_BUDGET_MIB:-8192}
+      TLS_CERT: ${NODE_TLS_CERT:-}                      # D62: serve HTTPS (both set); see deploy/tls/gen-certs.sh
+      TLS_KEY: ${NODE_TLS_KEY:-}
+      FENCE_AFTER_S: ${FENCE_AFTER_S:-0}                 # D54: >0 = this node stops its own sandboxes when the control plane is silent that long
+      HOST_VCPUS: ${HOST_VCPUS:-16}
+      JAIL: ${JAIL:-1}
+      LAZY_STORE: http://fc-store:8900
+      STORE: http://fc-store:8900
+      DEFAULT_TEMPLATE: ${DEFAULT_TEMPLATE:-debian-13}
+      REGISTRY_MIRROR: ${REGISTRY_MIRROR:-https://registry-1.docker.io}
+      TEMPLATE_POOL: ${TEMPLATE_POOL:-}
+    volumes:
+      - "${REPO_DIR:-..}/images:/work/images:ro"
+      - "${REPO_DIR:-..}/recipes/templates:/work/templates:ro"
+      - "${DATA_DIR:-.}/state:/var/lib/fc-node"
+    ports: ["127.0.0.1:18800:8800"]
+    depends_on: [fc-store]
+    restart: unless-stopped
+
+  fc-cp:
+    image: ${CP_IMAGE:-fc-cp:dev}
+    environment:
+      NODES: '[{"name":"fc-node","url":"http://fc-node:8800","token_file":"/nodes/state/node-token"}]'
+      STORE: http://fc-store:8900
+      NODE_CA_FILE: ${NODE_CA_FILE:-}                   # D62: CA that signed the nodes' certificates (nodes registered with https:// URLs)
+      CP_TRUST_PROXY: ${CP_TRUST_PROXY:-0}              # 1 = believe X-Forwarded-For (only behind your own reverse proxy); used for the signup rate limit
+      PREVIEW_DOMAIN: ${PREVIEW_DOMAIN:-}             # D55: e.g. preview.example.com; needs wildcard DNS + TLS in front
+      AUTO_EVACUATE_AFTER_S: ${AUTO_EVACUATE_AFTER_S:-0}   # D54: >0 = evacuate a node silent this long; must exceed the nodes' FENCE_AFTER_S + 30
+      EVAL_URL: http://fc-eval:8600
+      INTAKE_URL: http://fc-intake:8400
+      MODEL_PROXY_URL: http://fc-model:8500
+      CP_TOKEN_FILE: /run/secrets/cp.token
+      CP_REGISTRY: redis://fc-registry:6379
+      CP_DB_PASSWORD_FILE: /run/secrets/db.password
+      CP_DB: postgres://cp:@fc-db:5432/cp?sslmode=disable      # the password is read from CP_DB_PASSWORD_FILE and put into this URL at start
+      CP_REPLICA: fc-cp
+      CP_E2B_PORT: "8710"
+    secrets: [cp.token, db.password]
+    volumes:
+      - "${DATA_DIR:-.}:/nodes:ro"                 # the nodes' token files (state/node-token)
+      - "${DATA_DIR:-.}/cp-state:/var/lib/fc-cp"
+      - "${REPO_DIR:-..}/web:/web:ro"
+      - "${REPO_DIR:-..}/console-dist:/console:ro"      # 控制台的静态导出(./console/build.sh 生成),在 /console/ 托管
+    ports: ["127.0.0.1:18700:8700", "127.0.0.1:18710:8710"]
+    depends_on: [fc-registry, fc-db, fc-node]
+    restart: unless-stopped
+
+  fc-model:
+    image: *node_image
+    entrypoint: ["/usr/bin/python3", "/usr/local/bin/modelproxy.py"]
+    environment:
+      MODEL_BACKEND: ${MODEL_BACKEND:-mock}         # upstream: set UPSTREAM_URL and put the key in secrets/deepseek.key
+      UPSTREAM_URL: ${UPSTREAM_URL:-}
+      UPSTREAM_KEY_FILE: ${UPSTREAM_KEY_FILE:-/secrets/deepseek.key}
+      UPSTREAM_KEY_FILES: ${UPSTREAM_KEY_FILES:-}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-}
+      MODEL_PRICES: ${MODEL_PRICES:-}
+    volumes: ["${DATA_DIR:-.}/model-state:/var/lib/fc-model", "${SECRETS_DIR:-./secrets}:/secrets:ro"]
+    ports: ["127.0.0.1:18500:8500"]
+    restart: unless-stopped
+
+  fc-eval:
+    image: *node_image
+    entrypoint: ["/usr/bin/python3", "/eval/evaluator.py", "serve"]
+    environment:
+      EVAL_STATE: /var/lib/fc-eval
+      TASKSETS_DIR: /eval/tasksets
+      EVAL_TEMPLATE: ${DEFAULT_TEMPLATE:-debian-13}
+      EVAL_LAYERS: ${EVAL_LAYERS:-}                 # langs,harness layer ids once built (README: layers)
+      CP_URL: http://fc-cp:8700
+      CP_TOKEN_FILE: /run/secrets/cp.token
+      MODEL_PROXY_URL: http://fc-model:8500
+      INTAKE_URL: http://fc-intake:8400
+    secrets: [cp.token]
+    volumes: ["${REPO_DIR:-..}/eval:/eval:ro", "${DATA_DIR:-.}/eval-state:/var/lib/fc-eval"]
+    ports: ["127.0.0.1:18600:8600"]
+    depends_on: [fc-cp, fc-model]
+    restart: unless-stopped
+
+  fc-intake:
+    image: *node_image
+    entrypoint: ["/usr/bin/python3", "/intake/intake.py"]
+    environment:
+      INTAKE_STATE: /var/lib/fc-intake
+      INTAKE_TEMPLATE: ${DEFAULT_TEMPLATE:-debian-13}
+      INTAKE_LAYERS: ${INTAKE_LAYERS:-}             # langs,harness,dev layer ids
+      INTAKE_PROJECT: ${INTAKE_PROJECT:-}
+      CP_URL: http://fc-cp:8700
+      CP_TOKEN_FILE: /run/secrets/cp.token
+      MODEL_PROXY_URL: http://fc-model:8500
+      EVAL_URL: http://fc-eval:8600
+      GITEA_URL: ${GITEA_URL:-}
+      GITEA_REPO: ${GITEA_REPO:-}
+      GITEA_TOKEN_FILE: /secrets/gitea-cairn-bot.token
+      GITEA_BOT: ${GITEA_BOT:-cairn-bot}
+      MAX_PARALLEL: ${MAX_PARALLEL:-2}
+    secrets: [cp.token]
+    volumes: ["${REPO_DIR:-..}/intake:/intake:ro", "${DATA_DIR:-.}/intake-state:/var/lib/fc-intake", "${SECRETS_DIR:-./secrets}:/secrets:ro"]
+    ports: ["127.0.0.1:18400:8400"]
+    depends_on: [fc-cp, fc-model]
+    restart: unless-stopped
+
+secrets:
+  cp.token:
+    file: ${SECRETS_DIR:-./secrets}/cp.token
+  db.password:
+    file: ${SECRETS_DIR:-./secrets}/db.password
+
+networks:
+  default:
+    name: ${NETWORK:-fcnet}
+    external: ${NETWORK_EXTERNAL:-false}

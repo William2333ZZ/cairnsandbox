@@ -1,0 +1,2 @@
+{"kernel": "kernel-out/vmlinux-6.18.59-sbx", "base": "base/base-debian-13.ext4",
+ "note": "L0+L1 from recipes/base-debian-13 (Debian 13 essential + fc-init/sandboxd) on the trimmed 6.18 kernel from recipes/kernel-6.18"}

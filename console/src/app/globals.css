@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 令牌沿用工作台(web/src/theme.css,DESIGN.md):近中性表面、黑 / 白品牌色、发丝线边框、状态色只用于状态。 */
+:root {
+  --ui-font-size: 14px;
+  --code-font-size: 13px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "PingFang SC", "Noto Sans CJK SC", monospace;
+
+  --c-bg: #f8f8f8; --c-bg-alt: #ececee; --c-panel: #ffffff; --c-sidebar: #f0f0f0; --c-card: #ffffff; --c-card-selected: #ffffff;
+  --c-popover: #ffffff; --c-input: #ffffff; --c-border: rgba(13, 13, 13, 0.1); --c-border-hover: rgba(13, 13, 13, 0.15);
+  --c-surface: rgba(13, 13, 13, 0.03); --c-hover: rgba(13, 13, 13, 0.05); --c-selected: rgba(13, 13, 13, 0.05); --c-bubble: rgba(13, 13, 13, 0.05);
+  --c-fg: #404040; --c-fg-subtle: rgba(64, 64, 64, 0.6); --c-fg-subtlest: rgba(64, 64, 64, 0.4); --c-fg-inverse: #ffffff;
+  --c-brand: #000000; --c-accent: #ebf4ff; --c-link: #0b7fff;
+  --c-success: #16a34a; --c-success-surface: rgba(22, 163, 74, 0.1); --c-warning: #ca8a04; --c-warning-surface: rgba(202, 138, 4, 0.12);
+  --c-destructive: #dc2626; --c-destructive-surface: rgba(220, 38, 38, 0.1); --c-waiting: #15803d; --c-waiting-surface: rgba(21, 128, 61, 0.1);
+  --c-diff-add: rgba(22, 163, 74, 0.12); --c-diff-del: rgba(220, 38, 38, 0.12);
+  --shadow-composer: 0 1px 3px rgb(0 0 0 / 4%), 0 6px 18px rgb(0 0 0 / 4%);
+}
+:root[data-theme="dark"] {
+  --c-bg: #161616; --c-bg-alt: #2b2b2b; --c-panel: #202020; --c-sidebar: #161616; --c-card: #2b2b2b; --c-card-selected: #2b2b2b;
+  --c-popover: #2b2b2b; --c-input: #2b2b2b; --c-border: rgba(255, 255, 255, 0.1); --c-border-hover: rgba(255, 255, 255, 0.15);
+  --c-surface: rgba(255, 255, 255, 0.05); --c-hover: rgba(255, 255, 255, 0.05); --c-selected: rgba(255, 255, 255, 0.1); --c-bubble: rgba(255, 255, 255, 0.08);
+  --c-fg: #e5e5e5; --c-fg-subtle: rgba(229, 229, 229, 0.6); --c-fg-subtlest: rgba(229, 229, 229, 0.3); --c-fg-inverse: #161616;
+  --c-brand: #ffffff; --c-accent: #001d3d; --c-link: #5ca7ff;
+  --c-success: #22c55e; --c-success-surface: rgba(34, 197, 94, 0.14); --c-warning: #eab308; --c-warning-surface: rgba(234, 179, 8, 0.14);
+  --c-destructive: #ef4444; --c-destructive-surface: rgba(239, 68, 68, 0.14); --c-waiting: #4ade80; --c-waiting-surface: rgba(74, 222, 128, 0.12);
+  --c-diff-add: rgba(34, 197, 94, 0.16); --c-diff-del: rgba(239, 68, 68, 0.16);
+  --shadow-composer: 0 1px 3px rgb(0 0 0 / 30%), 0 6px 18px rgb(0 0 0 / 30%);
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--c-bg); color: var(--c-fg); font-family: var(--font-sans); font-size: var(--ui-font-size); -webkit-font-smoothing: antialiased; }
+a { color: var(--c-link); text-decoration: none; } a:hover { text-decoration: underline; }
+button, input, select, textarea { font: inherit; color: inherit; }
+*:focus-visible { outline: 2px solid var(--c-link); outline-offset: 1px; }
+* { scrollbar-width: thin; scrollbar-color: var(--c-border-hover) transparent; }
+code.inline { font-family: var(--font-mono); font-size: var(--code-font-size); background: var(--c-surface); border-radius: 4px; padding: 0 4px; }
+pre.code { font-family: var(--font-mono); font-size: var(--code-font-size); white-space: pre-wrap; word-break: break-all; line-height: 1.5; margin: 0; }

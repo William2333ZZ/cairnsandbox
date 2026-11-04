@@ -1,0 +1,16 @@
+{
+ "id": "py-wordy",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "wordy.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "wordy",
+  "blurb": "Parse and evaluate simple math word problems returning the answer as an integer."
+ }
+}

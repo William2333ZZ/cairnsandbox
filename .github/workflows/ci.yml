@@ -1,0 +1,29 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: cp/go.mod }
+      - run: cd cp && go vet ./... && go test ./...
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: unit tests (memchain/uffd tests that need sparse-file support run here too)
+        run: uv run --with pytest --with jinja2 --with pyyaml python -m pytest tests/unit
+      - name: shell syntax
+        run: for f in run-node.sh node/*.sh deploy/*.sh scripts/*.sh; do bash -n "$f"; done
+  sdk-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cd sdk/js && npm ci && npm run build
+  # The end-to-end suite (node/test-*.py) needs KVM; run it on a self-hosted runner labelled `kvm` when one is available (see ROADMAP.md).

@@ -1,0 +1,16 @@
+{
+ "id": "py-simple-linked-list",
+ "domain": "coding",
+ "group": "validate",
+ "timeout_s": 300,
+ "allowed_write": [
+  "simple_linked_list.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "simple-linked-list",
+  "blurb": "Write a simple linked list implementation that uses Elements and a List."
+ }
+}

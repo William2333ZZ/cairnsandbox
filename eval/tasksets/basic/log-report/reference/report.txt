@@ -1,0 +1,5 @@
+total_requests 300
+error_requests 37
+top_ip 10.0.0.2 38
+top_path /api/orders 50
+bytes_total 758498

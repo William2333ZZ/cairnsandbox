@@ -1,0 +1,16 @@
+{
+ "id": "py-robot-name",
+ "domain": "coding",
+ "group": "test",
+ "timeout_s": 300,
+ "allowed_write": [
+  "robot_name.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "robot-name",
+  "blurb": "Manage robot factory settings."
+ }
+}

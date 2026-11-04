@@ -1,0 +1,86 @@
+
+<html><body><h3>New submissions (showing 3 of 35 entries)</h3><dl id="articles"><dt>
+      <a name='item1'>[1]</a>
+      <a href ="/abs/2610.37871" title="Abstract" id="2610.37871">
+        arXiv:2610.37871
+      </a>
+      
+        [<a href="/pdf/2610.37871" title="Download PDF" id="pdf-2610.37871" aria-labelledby="pdf-2610.37871">pdf</a>, <a href="https://arxiv.org/html/2610.37871v1" title="View HTML" id="html-2610.37871" aria-labelledby="html-2610.37871" rel="noopener noreferrer" target="_blank">html</a>, <a href="/format/2610.37871" title="Other formats" id="oth-2610.37871" aria-labelledby="oth-2610.37871">other</a>]
+    </dt>
+    <dd>
+      <div class='meta'>
+        <div class='list-title mathjax'><span class='descriptor'>Title:</span>
+          ICALL-BENCH: Benchmarking LLM Interprocedural Reasoning in Binary Programs
+        </div>
+        <div class='list-authors'><a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Yao,+S">Shenglong Yao</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Liu,+Z">Zirui Liu</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Yuan,+X">Xiangchi Yuan</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Lee,+W">Wenke Lee</a></div>
+
+
+
+        <div class='list-subjects'><span class='descriptor'>Subjects:</span>
+          <span class="primary-subject">Software Engineering (cs.SE)</span>; Cryptography and Security (cs.CR)
+        </div>
+
+        <p class='mathjax'>
+          Recent benchmarks show that LLMs achieve strong performance in both function-level binary understanding and end-to-end binary reverse engineering tasks, but whether LLMs can reason over interprocedural semantics in compiled binaries remains unclear. Function-level benchmarks offer limited visibility into cross-function relationships, while whole-program benchmarks typically evaluate final outcomes of tasks that may be solvable from local clues alone, making it difficult to disentangle interprocedural reasoning from exploration, tool use, execution, and retrieval. To address this limitation, we introduce ICALL-BENCH, a benchmark that directly evaluates whether LLMs and agents can understand and reason over interprocedural semantics in binary programs, using indirect-call target recovery as a measurable probe. ICALL-BENCH covers 50 complete real-world C/C++ programs spanning different complexity levels and multiple optimization configurations, with an average of 74,746 lines of code and 941 functions per program. We further introduce three analysis regimes spanning model-only reasoning, static tool-augmented agents, and Internet-enabled open-world agents to examine how intrinsic reasoning, active information acquisition, and external knowledge each contribute to interprocedural binary analysis. We evaluate five recent LLMs and their corresponding agents. Our results reveal a wide separation across current models and agents, with program-level verifiable success rates ranging from 23% to 81%. They also show that greater information access does not consistently lead to better results, with particularly limited gains on the hardest cases, where deeper interprocedural reasoning remains the primary bottleneck. Uneven performance across models and frequent verifiable failures even under an optimistic evaluation indicate that robust binary interprocedural reasoning remains an open challenge.
+        </p>
+      </div>
+    </dd>
+    <dt>
+      <a name='item2'>[2]</a>
+      <a href ="/abs/2610.37888" title="Abstract" id="2610.37888">
+        arXiv:2610.37888
+      </a>
+      
+        [<a href="/pdf/2610.37888" title="Download PDF" id="pdf-2610.37888" aria-labelledby="pdf-2610.37888">pdf</a>, <a href="https://arxiv.org/html/2610.37888v1" title="View HTML" id="html-2610.37888" aria-labelledby="html-2610.37888" rel="noopener noreferrer" target="_blank">html</a>, <a href="/format/2610.37888" title="Other formats" id="oth-2610.37888" aria-labelledby="oth-2610.37888">other</a>]
+    </dt>
+    <dd>
+      <div class='meta'>
+        <div class='list-title mathjax'><span class='descriptor'>Title:</span>
+          Cognitive Debt in the GenAI Era - Listening to Practitioners&#39; Voices on the Loss of Understanding
+        </div>
+        <div class='list-authors'><a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Tavantzis,+T">Theocharis Tavantzis</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Trinkenreich,+B">Bianca Trinkenreich</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Greiler,+M">Michaela Greiler</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Ara%C3%BAjo,+J+C">Júlia Condé Araújo</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Ara%C3%BAjo,+M+C">Marina Condé Araújo</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Santos,+I">Italo Santos</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Serebrenik,+A">Alexander Serebrenik</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Storey,+M">Margaret-Anne Storey</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Baldassarre,+M+T">Maria Teresa Baldassarre</a></div>
+
+        <div class='list-comments mathjax'><span class='descriptor'>Comments:</span>
+          12 pages, 3 figures. Manuscript under review at ICSE-SEIP
+        </div>
+
+
+        <div class='list-subjects'><span class='descriptor'>Subjects:</span>
+          <span class="primary-subject">Software Engineering (cs.SE)</span>
+        </div>
+
+        <p class='mathjax'>
+          Fast-paced AI-assisted software development risks reducing developers&#39; understanding of the systems they build. This growing gap between what the system does and what developers understand about it, described as ``cognitive debt&#39;&#39;, is not new, but AI has exacerbated it. This has led to a recent surge in blog posts and online discussions, in which practitioners recognize and write about cognitive debt, and share their experiences well before academic studies can capture them. To understand their concerns and inform future research and practice, we conduct a grey literature review of 76 sources, focusing on how cognitive debt is conceptualized and manifests, its contributing factors, its consequences, and the practices to prevent, detect, and mitigate it. We find that cognitive debt can accumulate unnoticed behind working code and passing tests, particularly when developers accept AI-generated solutions without building understanding. Practitioners report consequences such as harder maintenance and debugging, fragmented knowledge in the team, and reduced productivity. They propose practices such as documenting design rationale, review-sized changes, comprehension gates, and knowledge-sharing rituals, along with signals like reliability metrics to detect it. Our findings give software teams a structured view of emerging practical approaches in AI-assisted development and stress the need to preserve human understanding alongside faster code production.
+        </p>
+      </div>
+    </dd>
+    <dt>
+      <a name='item3'>[3]</a>
+      <a href ="/abs/2610.38039" title="Abstract" id="2610.38039">
+        arXiv:2610.38039
+      </a>
+      
+        [<a href="/pdf/2610.38039" title="Download PDF" id="pdf-2610.38039" aria-labelledby="pdf-2610.38039">pdf</a>, <a href="https://arxiv.org/html/2610.38039v1" title="View HTML" id="html-2610.38039" aria-labelledby="html-2610.38039" rel="noopener noreferrer" target="_blank">html</a>, <a href="/format/2610.38039" title="Other formats" id="oth-2610.38039" aria-labelledby="oth-2610.38039">other</a>]
+    </dt>
+    <dd>
+      <div class='meta'>
+        <div class='list-title mathjax'><span class='descriptor'>Title:</span>
+          Reusable LLM-Based Plans with Probabilistic Guarantees for Self-Adaptive Systems
+        </div>
+        <div class='list-authors'><a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Arya,+A+T">Asher Tempest Arya</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Maghera,+R">Rajan Maghera</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Jiang,+N+W">Nicholas Wu Jiang</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Mora,+F">Federico Mora</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Babikian,+A+A">Aren A. Babikian</a>, <a href="https://arxiv.org/search/cs?searchtype=author&amp;query=Chechik,+M">Marsha Chechik</a></div>
+
+        <div class='list-comments mathjax'><span class='descriptor'>Comments:</span>
+          12 pages, 7 figures, 3 tables
+        </div>
+
+
+        <div class='list-subjects'><span class='descriptor'>Subjects:</span>
+          <span class="primary-subject">Software Engineering (cs.SE)</span>
+        </div>
+
+        <p class='mathjax'>
+          Self-adaptive systems are designed to accommodate variants of their environment, which form a family of instances whose uncertainty is captured by probabilistic models, and must meet probabilistic requirements on each instance. Within such a family, changes in size and structure complicate the fundamental adaptation decision: whether to retain, reuse, or construct a new controller, since controllers are often synthesized for and specific to an instance. Large language models (LLMs) have recently been used to write reusable controllers, but existing approaches largely target deterministic domains, and probabilistic model checking of their output remains limited to preliminary single-instance studies. In this paper, we propose a verifier-guided framework for controller reuse with explicit support for families of environments. The framework introduces a novel combination of LLM-written controllers with probabilistic model checking to provide per-instance guarantees for probabilistic requirements. We evaluate our approach using three LLMs on three benchmarks, assessing its effectiveness and cost with respect to baseline implementations, the distribution of adaptation decisions, and the impact of individual framework components. On grid worlds, LLM-written rule lists are verified on about 90% of held-out instances, against at most 77% for the baselines, and verifying a stored rule list is 15 to 103 times faster than per-instance synthesis. Reuse serves most episodes at a small fraction of the cost of generation or per-instance synthesis, and model-checking feedback increases verified coverage over independent restarts.
+        </p>
+      </div>
+    </dd>
+    </dl><h3>Cross submissions (showing 0 of 0 entries)</h3></body></html>

@@ -1,0 +1,10 @@
+{
+ "id": "cli-wordfreq",
+ "domain": "coding",
+ "group": "validate",
+ "timeout_s": 420,
+ "allowed_write": [
+  "wordfreq.py"
+ ],
+ "smoke": false
+}

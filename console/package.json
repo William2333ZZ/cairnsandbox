@@ -1,0 +1,31 @@
+{
+  "name": "cairn-console",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cairn 沙箱云控制台(Next.js,静态导出,由控制面在 /console/ 托管)",
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "test": "vitest run",
+    "check": "tsc --noEmit && vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "next": "^16.4.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "autoprefixer": "^10.4.21",
+    "jsdom": "^27.0.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.4"
+  }
+}

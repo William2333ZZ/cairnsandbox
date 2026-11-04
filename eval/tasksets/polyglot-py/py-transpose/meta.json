@@ -1,0 +1,16 @@
+{
+ "id": "py-transpose",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "transpose.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "transpose",
+  "blurb": "Take input text and output it transposed."
+ }
+}

@@ -1,0 +1,16 @@
+{
+ "name": "basic",
+ "version": "1",
+ "tasks": [
+  "py-fix-slugify",
+  "py-impl-intervals",
+  "c-make-fix",
+  "cli-wordfreq",
+  "log-report",
+  "organize-files",
+  "cron-backup-script",
+  "csv-to-json",
+  "dedupe-aggregate",
+  "config-edit"
+ ]
+}

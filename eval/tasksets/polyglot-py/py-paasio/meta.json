@@ -1,0 +1,16 @@
+{
+ "id": "py-paasio",
+ "domain": "coding",
+ "group": "validate",
+ "timeout_s": 300,
+ "allowed_write": [
+  "paasio.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "paasio",
+  "blurb": "Report network IO statistics."
+ }
+}

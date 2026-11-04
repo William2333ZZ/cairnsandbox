@@ -1,0 +1,10 @@
+{
+ "id": "cron-backup-script",
+ "domain": "ops",
+ "group": "validate",
+ "timeout_s": 420,
+ "allowed_write": [
+  "bin/"
+ ],
+ "smoke": false
+}

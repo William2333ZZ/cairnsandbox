@@ -1,0 +1,4 @@
+The agent loop, prompts and tool-call conventions in this directory are adapted from mini-swe-agent
+(https://github.com/SWE-agent/mini-swe-agent, version 2.4.6), MIT License, Copyright (c) 2025 mini-swe-agent contributors.
+Changes: litellm/pydantic/rich removed (stdlib HTTP client, dataclass configs); single-file runner; cost taken from the
+model proxy's response headers instead of litellm's price table.

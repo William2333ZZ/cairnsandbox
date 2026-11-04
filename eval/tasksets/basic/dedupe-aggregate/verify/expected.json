@@ -1,0 +1,26 @@
+{
+ "acme": {
+  "orders": 13,
+  "total": 2497.52
+ },
+ "globex": {
+  "orders": 9,
+  "total": 2598.79
+ },
+ "hooli": {
+  "orders": 1,
+  "total": 97.27
+ },
+ "initech": {
+  "orders": 8,
+  "total": 2169.11
+ },
+ "umbrella": {
+  "orders": 11,
+  "total": 2547.87
+ },
+ "wonka": {
+  "orders": 3,
+  "total": 752.06
+ }
+}

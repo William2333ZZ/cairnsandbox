@@ -1,0 +1,16 @@
+{
+ "id": "py-grep",
+ "domain": "coding",
+ "group": "validate",
+ "timeout_s": 300,
+ "allowed_write": [
+  "grep.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "grep",
+  "blurb": "Search a file for lines matching a regular expression pattern. Return the line number and contents of each matching line."
+ }
+}

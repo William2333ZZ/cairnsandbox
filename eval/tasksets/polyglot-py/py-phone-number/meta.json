@@ -1,0 +1,16 @@
+{
+ "id": "py-phone-number",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "phone_number.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "phone-number",
+  "blurb": "Clean up user-entered phone numbers so that they can be sent SMS messages."
+ }
+}

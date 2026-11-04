@@ -1,0 +1,16 @@
+{
+ "id": "py-connect",
+ "domain": "coding",
+ "group": "evolve",
+ "timeout_s": 300,
+ "allowed_write": [
+  "connect.py"
+ ],
+ "smoke": false,
+ "source": {
+  "benchmark": "polyglot-benchmark",
+  "language": "python",
+  "exercise": "connect",
+  "blurb": "Compute the result for a game of Hex / Polygon."
+ }
+}

@@ -1,0 +1,21 @@
+Cairn
+Copyright 2026 The Cairn contributors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party material in this repository
+---------------------------------------
+* aios/ (the seed agent loop, prompts and tool-call conventions) is adapted from mini-swe-agent 2.4.6
+  (https://github.com/SWE-agent/mini-swe-agent), MIT License. The notice and the list of changes are in aios/LICENSE-mini-swe-agent.
+* eval/tasksets/polyglot-py/ is a Python subset of exercises derived from Exercism (https://exercism.org), as packaged by the Aider
+  "polyglot" benchmark. See eval/tasksets/README.md for provenance and licensing; maintainers must confirm it before redistributing.
+* eval/tasksets/basic/ was written for this project.
+
+Software that Cairn runs or downloads at build or run time (not distributed in this repository)
+-----------------------------------------------------------------------------------------------
+* Firecracker and its jailer, Apache License 2.0 (https://github.com/firecracker-microvm/firecracker).
+* The Linux kernel used inside guests is GPL-2.0. If you redistribute a built guest kernel image, you must also offer its source;
+  recipes/kernel-6.18/ records the exact version and configuration.
+* Garage (S3-compatible object store, deploy/garage/) is AGPL-3.0. Cairn talks to it over the network only and does not link it;
+  you are responsible for the terms that apply to the way you run it.
+* Valkey (BSD-3-Clause) or Redis, PostgreSQL (PostgreSQL License), Debian packages in the base image (their own licenses).
