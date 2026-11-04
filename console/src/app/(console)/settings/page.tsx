@@ -29,7 +29,7 @@ export default function Settings() {
         <p className="mb-2 text-ui-sm text-fg-subtle">{t('wh.hint')}</p>
         {secret && <div className="mb-3"><CodeBlock label={t('wh.secret')} code={secret} /></div>}
         <div className="mb-3 space-y-2">
-          <div className="flex gap-2"><Input className="min-w-0 flex-1" placeholder="https://hooks.example.com/aios" value={url} onChange={e => setUrl(e.target.value)} aria-label="URL" />
+          <div className="flex gap-2"><Input className="min-w-0 flex-1" placeholder="https://hooks.example.com/cairn" value={url} onChange={e => setUrl(e.target.value)} aria-label="URL" />
             <Button kind="primary" disabled={!url.trim()} onClick={() => void whAct(async () => { const r = await POST<{ secret: string }>(`/projects/${project}/webhooks`, { url, events: evs }); setSecret(r.secret); setUrl('') })}>{t('wh.add')}</Button></div>
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-ui-sm">{(wh.data?.events ?? []).filter(e => e !== 'ping').map(e => <label key={e} className="flex items-center gap-1"><input type="checkbox" checked={evs.includes(e)} onChange={() => setEvs(evs.includes(e) ? evs.filter(x => x !== e) : [...evs, e])} />{e}</label>)}<span className="text-fg-subtle">{t('wh.allIfNone')}</span></div>
         </div>

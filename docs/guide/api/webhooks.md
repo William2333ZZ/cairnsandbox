@@ -17,7 +17,7 @@
 
 ## 注册
 
-`POST /projects/<p>/webhooks`,请求 `{"url": "https://hooks.example.com/aios", "events": ["sandbox.created", "build.finished"]}`(`events` 省略或空 = 全部)。响应 201:`{"webhook": {id, url, events, …}, "secret": "whsec_…"}`——**签名密钥只返回这一次**。
+`POST /projects/<p>/webhooks`,请求 `{"url": "https://hooks.example.com/cairn", "events": ["sandbox.created", "build.finished"]}`(`events` 省略或空 = 全部)。响应 201:`{"webhook": {id, url, events, …}, "secret": "whsec_…"}`——**签名密钥只返回这一次**。
 
 - URL 必须是 **https**,不能带用户名密码,不能是私网 / 回环 / 链路本地地址或 `localhost`。**真正的防护在连接时**:控制面解析域名后检查实际要连的 IP,拒绝私网、回环、链路本地、运营商 NAT(100.64/10)、多播、保留地址——所以指向内网的域名、DNS 重绑定都过不了;不跟随重定向。
 - 每个项目最多 20 个。

@@ -28,7 +28,7 @@ export default function Members() {
       {issued && <CodeBlock label={`${t('members.rotated')}: ${issued.user}`} code={issued.token} />}
       <Panel title={t('members.title')}>
         <Table cols={[
-          { h: 'user', cell: m => <span className="font-mono">{m.user}</span> }, { h: 'role', cell: m => <Badge tone={m.role === 'owner' ? 'info' : 'neutral'}>{m.role}</Badge> }, { h: '', cell: m => m.name }, { h: '', cell: m => when(m.created) },
+          { h: 'user', cell: m => <span className="font-mono">{m.user}</span> }, { h: 'role', cell: m => <Badge tone={m.role === 'owner' ? 'info' : 'neutral'}>{m.role}</Badge> }, { h: 'name', cell: m => m.name }, { h: 'created', cell: m => when(m.created) },
           { h: '', cell: m => (canManage(role) || m.user === me?.user) ? <Button size="sm" onClick={() => rotate(m.user)}>{t('members.rotate')}</Button> : null },
         ]} rows={ms.data?.members ?? null} keyOf={m => m.id} empty={t('common.empty')} />
       </Panel>

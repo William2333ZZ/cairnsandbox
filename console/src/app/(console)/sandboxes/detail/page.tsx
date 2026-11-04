@@ -7,7 +7,7 @@ import { ApiError, DEL, GET, POST, headers, sandboxPath } from '@/lib/api'
 import { LineChart, rate } from '@/components/charts'
 import { useAuth } from '@/lib/auth'
 import { age, bytes, mib, when } from '@/lib/format'
-import { useI18n } from '@/lib/i18n'
+import { useI18n, word } from '@/lib/i18n'
 import { useGet } from '@/lib/query'
 import type { AuditEvent, Checkpoint, Decision, Sandbox } from '@/lib/types'
 import { Badge, Button, CodeBlock, ErrorLine, Input, Panel, StatusBadge, Table, cx } from '@/components/ui'
@@ -16,7 +16,8 @@ const TABS = ['overview', 'metrics', 'terminal', 'network', 'checkpoints', 'port
 type Tab = (typeof TABS)[number]
 
 function KV({ rows }: { rows: [string, React.ReactNode][] }) {
-  return <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1 text-ui-base">{rows.map(([k, v]) => <div key={k} className="contents"><dt className="text-fg-subtle">{k}</dt><dd className="min-w-0 break-words">{v}</dd></div>)}</dl>
+  const { lang } = useI18n()
+  return <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1 text-ui-base">{rows.map(([k, v]) => <div key={k} className="contents"><dt className="text-fg-subtle">{word(lang, k) as React.ReactNode}</dt><dd className="min-w-0 break-words">{v}</dd></div>)}</dl>
 }
 
 function Detail() {
@@ -152,7 +153,7 @@ function EventsTab({ id }: { id: string }) {
   const mine = (au.data?.events ?? []).filter(e => e.sandbox === id)
   return (
     <>
-      <Panel title="events">{(ev.data?.events ?? []).length === 0 ? <span className="text-fg-subtle">{t('common.empty')}</span> : <ul className="space-y-0.5 text-ui-sm">{ev.data!.events.map(e => <li key={e.seq} className="flex gap-2"><span className="w-40 shrink-0 text-fg-subtlest">{when(e.ts)}</span><span className="font-medium">{e.type}</span><code className="inline min-w-0 truncate">{JSON.stringify(e.data)}</code></li>)}</ul>}</Panel>
+      <Panel title={t('sb.tab.events')}>{(ev.data?.events ?? []).length === 0 ? <span className="text-fg-subtle">{t('common.empty')}</span> : <ul className="space-y-0.5 text-ui-sm">{ev.data!.events.map(e => <li key={e.seq} className="flex gap-2"><span className="w-40 shrink-0 text-fg-subtlest">{when(e.ts)}</span><span className="font-medium">{e.type}</span><code className="inline min-w-0 truncate">{JSON.stringify(e.data)}</code></li>)}</ul>}</Panel>
       <Panel title={t('nav.audit')}><ul className="space-y-0.5 text-ui-sm">{mine.map((e, i) => <li key={i} className="flex gap-2"><span className="w-40 shrink-0 text-fg-subtlest">{when(e.ts)}</span><span className="font-medium">{e.op}</span><span className="text-fg-subtle">{e.by ? `by ${e.by}` : ''}</span></li>)}{mine.length === 0 && <li className="text-fg-subtle">{t('common.empty')}</li>}</ul></Panel>
     </>
   )

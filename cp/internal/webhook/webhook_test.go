@@ -42,7 +42,7 @@ func TestForbiddenAddressesAndURLs(t *testing.T) {
 			t.Errorf("%q must be refused", u)
 		}
 	}
-	if ValidURL("https://hooks.example.com/aios?x=1", false) != nil {
+	if ValidURL("https://hooks.example.com/cairn?x=1", false) != nil {
 		t.Error("a normal https URL was refused")
 	}
 }
