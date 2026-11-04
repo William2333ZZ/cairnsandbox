@@ -10,12 +10,12 @@
 
 </div>
 
-Agents write code, run commands and install packages. They get things wrong, and one day they will do something they should not. Cairn puts them in a microVM you can **rewind**.
+Agents write code, run commands and install packages. They get things wrong, and one day they will do something they should not. Cairn puts them in a microVM you can **rewind**: each sandbox is its own microVM with its own kernel, shared with neither the host nor other sandboxes.
 
 | | |
 | :-- | :-- |
-| ⏪ **Rewind** | Checkpoint a running sandbox (a pause of tens of milliseconds), roll it back in place (same id, same address), or fork n copies from any checkpoint to try different things. |
-| 🔒 **No way out unless approved** | A sandbox has no direct network. Outbound requests go through a proxy that allows only listed hosts; a member who wants to loosen the list needs an owner's approval; credentials are injected at the proxy and never enter the sandbox. |
+| ⏪ **Rewind** | Checkpoint a running sandbox (a pause of about 0.1 s in our runs), roll it back in place (same id, same address), or fork n copies from any checkpoint to try different things. |
+| 🔒 **No way out unless approved** | A sandbox has no direct network by default. Outbound requests go through a proxy that allows only listed hosts; a member who wants to loosen the list needs an owner's approval; credentials are injected at the proxy and never enter the sandbox. |
 | 🧾 **On record** | Everything the control plane does, including each `exec` and file operation, goes into a hash chain you can verify. |
 | 👥 **Knows who it works for** | Accounts, projects, members, quotas, prepaid credit and usage billing live in the sandbox layer. |
 
@@ -23,12 +23,13 @@ Agents write code, run commands and install packages. They get things wrong, and
 <img src="docs/assets/timeline.svg" alt="Checkpoint, rollback and fork" width="92%">
 </div>
 
-## Five minutes
+## Quick start
 
 ```bash
-scripts/bootstrap.sh && cd deploy && docker compose up -d
+scripts/bootstrap.sh && cd deploy && docker compose up -d        # the first run compiles a kernel; see the note below
 pip install -e sdk/python
-CAIRN_URL=http://127.0.0.1:18700 CAIRN_TOKEN=$(cat deploy/secrets/cp.token) python3 sdk/python/examples/quickstart.py
+export CAIRN_URL=http://127.0.0.1:18700 CAIRN_TOKEN=$(cat deploy/secrets/cp.token)
+python3 sdk/python/examples/quickstart.py
 ```
 
 ```python
@@ -54,7 +55,7 @@ await sb.kill();
 
 > [!NOTE]
 > Needs Linux x86_64 with `/dev/kvm`, Docker 24+ with compose v2 and about 15 GB of disk. The first install compiles a guest kernel (30-60 minutes).
-> For agents: `claude mcp add cairn -- python3 -m cairnbox.mcp`. An E2B-shaped REST surface listens on port 18710, so common E2B client code works by changing the address.
+> For agents: `claude mcp add cairn -- python3 -m cairnbox.mcp`. An E2B-shaped REST surface listens on port 18710: `Sandbox.create` / list / pause / resume / kill and similar common calls work, but it is **not full compatibility** (differences in [docs/guide/sdk.md](docs/guide/sdk.md), in Chinese).
 
 ## How it fits together
 

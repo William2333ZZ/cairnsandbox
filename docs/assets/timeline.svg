@@ -11,7 +11,7 @@
     <text x="60" y="194" font-size="15" text-anchor="middle">start</text>
     <circle cx="250" cy="160" r="13" fill="#14B8A6" stroke="#5EEAD4" stroke-width="3"/>
     <text x="236" y="122" font-size="16" text-anchor="end" fill="#5EEAD4" font-weight="700">checkpoint "clean"</text>
-    <text x="236" y="141" font-size="13" text-anchor="end" fill="#94A3B8">about 50 ms pause</text>
+    <text x="236" y="141" font-size="13" text-anchor="end" fill="#94A3B8">about 0.1 s pause</text>
     <circle cx="480" cy="160" r="12" fill="#EF4444"/>
     <path d="M474 154 L486 166 M486 154 L474 166" stroke="#0F1B2D" stroke-width="3" stroke-linecap="round"/>
     <text x="480" y="196" font-size="16" text-anchor="middle" fill="#FCA5A5" font-weight="700">rm -rf …</text>
