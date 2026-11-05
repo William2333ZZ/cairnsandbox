@@ -1,5 +1,7 @@
 # Security model
 
+> This page is about the sandbox cloud's boundaries. The agent layer runs inside sandboxes like any other client and gets no extra trust from the control plane.
+
 The full threat model is `docs/013-threat-model.md` (Chinese). This page is the summary an outside reviewer needs.
 **It has not been reviewed by a third party.** Treat every claim here as ours.
 

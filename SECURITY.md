@@ -5,7 +5,8 @@ Cairn runs untrusted code in microVMs, so we take isolation bugs seriously.
 ## Reporting a vulnerability
 
 Please **do not open a public issue** for a security problem. Use GitHub's private vulnerability reporting on this repository
-("Security" tab -> "Report a vulnerability"). If that is unavailable, contact the maintainers at the address listed in the repository profile.
+("Security" tab -> "Report a vulnerability"; the issue chooser also links to it). If that is unavailable, open a public issue that says only
+that you have a security report and asks for a private channel, with **no details**; a maintainer will reply with one.
 Include what you did, what you expected, what happened, the version or commit, and whether the host or another tenant was affected.
 
 We aim to acknowledge a report within 3 working days and to tell you how we plan to proceed within 10. We will credit you in the fix

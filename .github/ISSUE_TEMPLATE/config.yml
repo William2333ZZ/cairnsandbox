@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem (private)
+    url: https://github.com/William2333ZZ/cairn/security/advisories/new
+    about: Isolation bugs, egress bypass, token leaks and the like. Please do not file these as public issues; see SECURITY.md.
+  - name: Questions and ideas
+    url: https://github.com/William2333ZZ/cairn/discussions
+    about: Usage questions and open-ended ideas (enable Discussions on the repository first).

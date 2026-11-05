@@ -1,5 +1,7 @@
 # Cairn documentation (English)
 
+CairnSandbox (Cairn for short) has two layers: a **sandbox cloud**, which is useful on its own, and an optional **agent layer** that runs on top of it through the public API only. These pages are about the sandbox cloud unless they say otherwise; the agent layer is described in [the README](../../README.md#how-it-fits-together).
+
 Most of the design documents are written in Chinese (`docs/000`-`013`, `docs/guide/`). This directory holds the English entry points.
 The API is plain HTTP and the SDKs are self-describing, so most people never need the Chinese text.
 

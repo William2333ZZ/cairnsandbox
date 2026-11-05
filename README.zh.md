@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/banner.svg" alt="Cairn: a sandbox cloud, with an agent that runs on it" width="100%">
+<img src="docs/assets/banner.svg" alt="CairnSandbox: a sandbox cloud, with an agent that runs on it" width="100%">
 
 <br>
 
@@ -10,7 +10,7 @@
 
 </div>
 
-**Cairn 是一个沙箱云,上面跑着一个 agent。** 两层,可以只要其中一层:
+**CairnSandbox(简称 Cairn)是一个沙箱云,上面跑着一个 agent。** cairn 是山路上堆起来指路的一小摞石头,让人找得到回头的路;在这里,每个检查点就是一块石头。两层,可以只要其中一层:
 
 | | |
 | :-- | :-- |

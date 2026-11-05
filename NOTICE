@@ -1,4 +1,4 @@
-Cairn
+CairnSandbox ("Cairn")
 Copyright 2026 The Cairn contributors
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
@@ -19,3 +19,41 @@ Software that Cairn runs or downloads at build or run time (not distributed in t
 * Garage (S3-compatible object store, deploy/garage/) is AGPL-3.0. Cairn talks to it over the network only and does not link it;
   you are responsible for the terms that apply to the way you run it.
 * Valkey (BSD-3-Clause) or Redis, PostgreSQL (PostgreSQL License), Debian packages in the base image (their own licenses).
+
+Libraries linked into what this repository builds
+--------------------------------------------------
+Checked on 2026-11-05 from each module's own license file (Go, Rust), package metadata (npm, Python); the full license text of each
+package is in its source distribution and, for built artifacts, inside the package. If you redistribute a build, carry those texts along.
+* Go (control plane, `cp/go.mod`, packages that end up in the binary; test-only modules such as miniredis are not listed):
+  MIT: cespare/xxhash, dgryski/go-rendezvous, dustin/go-humanize, jackc/pgpassfile, jackc/pgservicefile, jackc/pgx/v5, jackc/puddle/v2,
+  mattn/go-isatty, ncruces/go-strftime. BSD-3-Clause: google/uuid, remyoudompheng/bigfft, golang.org/x/{sync,sys,text}, modernc.org/{libc,mathutil,memory,sqlite}.
+  BSD-2-Clause: redis/go-redis/v9. modernc.org/sqlite carries the public-domain SQLite source, and modernc.org/libc carries third-party C library code
+  under its own permissive licenses (see that module's LICENSE-* files).
+* Rust (`guest/sbx-runtime`, statically linked into the in-guest runtime): libc, serde, serde_json, base64, each MIT OR Apache-2.0 (we use them under
+  Apache-2.0 or MIT, at your choice); their transitive build-time crates are of the same kind. Run `cargo license` or `cargo about` in `guest/sbx-runtime`
+  when you publish a binary, and ship the notices it lists.
+* JavaScript. `web/` (the workbench; its built `web/dist/` is committed): react and react-dom 18.3.1, scheduler, zustand 4.5.7: MIT.
+  `console/` (static export built in `console/Dockerfile`): next, react, react-dom 19, @tanstack/react-query and their dependencies, which are MIT, Apache-2.0, ISC,
+  BSD-3-Clause and 0BSD. Next.js lists sharp and its prebuilt libvips (LGPL-3.0-or-later) as *optional* dependencies for server-side image optimization;
+  a static export does not use or ship them, so they are not part of the console output. If you switch the console to a server build, re-check this.
+  caniuse-lite (CC-BY-4.0) is build-time data and is not in the output.
+* Python: the SDK `cairnbox` (`sdk/python`) has no third-party dependencies. The agent layer and the node agent use the standard library plus
+  the packages named in their own files; check `pip show` for what your environment installs.
+
+Optional template layers (not in this repository; you build them)
+------------------------------------------------------------------
+`recipes/ci-pylibs/` installs Python packages into a template layer from wheels that `fetch-wheels.sh` downloads from PyPI, so their licenses apply to
+the template you build and to anyone you give it to. At the versions fetched on 2026-11-05 (the exact versions are whatever PyPI serves on the day you fetch):
+BSD-3-Clause: numpy (its wheel also bundles OpenBLAS and the GCC runtime libraries, with their own terms: BSD, GPL-3.0 with the GCC Runtime Library Exception,
+Zlib, MIT, CC0), pandas, scipy (bundles OpenBLAS and libgfortran as above), scikit-learn, joblib, threadpoolctl, contourpy, cycler, httpcore, httpx, idna,
+python-dateutil, lxml (bundles libxml2 and libxslt, MIT), cloudpickle, kiwisolver, mpmath, sympy, seaborn.
+MIT: beautifulsoup4, soupsieve, anyio, h11, charset-normalizer, et_xmlfile, fonttools, narwhals, openpyxl, pyparsing, PyYAML, urllib3.
+Apache-2.0: requests, tzdata; packaging (Apache-2.0 OR BSD-2-Clause). MPL-2.0: certifi, tqdm (MPL-2.0 AND MIT). PSF: matplotlib (a PSF-style license), typing_extensions.
+MIT-CMU (HPND): pillow, whose wheel bundles freetype, harfbuzz, libpng, libtiff, lcms2, openjpeg and others under their own licenses.
+Nothing here is copyleft in a way that reaches your own code through use, but redistributing a template means redistributing these packages and the bundled
+GPL-with-exception runtime libraries: keep the license files inside the wheels' `*.dist-info` directories in the image.
+
+Still to confirm before a release
+---------------------------------
+* The Exercism exercises in `eval/tasksets/polyglot-py/` (see above): every directory's source and attribution.
+* The names and marks: "Cairn" and "CairnSandbox" were not searched for trademark conflicts.

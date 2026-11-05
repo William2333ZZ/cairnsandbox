@@ -1,5 +1,7 @@
 # Using the official E2B SDKs with Cairn
 
+> This is the sandbox cloud acting as an E2B-compatible backend. You do not need the agent layer for any of it: the official SDKs talk to the control plane's E2B port, and you also get what E2B does not have (rewind, audit, approved-only egress).
+
 Point the E2B SDKs at the control plane's E2B port (18710 by default); nothing else changes in your code.
 
 ```bash

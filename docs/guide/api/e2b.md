@@ -174,7 +174,7 @@ print(sbx.commands.run("echo hi").stdout)
 
 ### code-interpreter
 
-官方 `e2b_code_interpreter`(`run_code`、上下文)的 2.10.5–2.11.9 通过 14 条用例,要先建 `code-interpreter-v1` 模板,范围与限制见 [../code-interpreter.md](../code-interpreter.md)。控制面对 `E2b-Sandbox-Port` 不是 49983 的请求,用沙箱的流量令牌(或 envd 令牌)鉴权后转给节点的端口代理(流式)。
+官方 `e2b_code_interpreter`(`run_code`、上下文)的 2.10.5–2.11.9 通过 17 条用例,要先建 `code-interpreter-v1` 模板,范围与限制见 [../code-interpreter.md](../code-interpreter.md)。控制面对 `E2b-Sandbox-Port` 不是 49983 的请求,用沙箱的流量令牌(或 envd 令牌)鉴权后转给节点的端口代理(流式)。
 
 ### 没覆盖到的
 

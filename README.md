@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/banner.svg" alt="Cairn: a sandbox cloud, with an agent that runs on it" width="100%">
+<img src="docs/assets/banner.svg" alt="CairnSandbox: a sandbox cloud, with an agent that runs on it" width="100%">
 
 <br>
 
@@ -10,7 +10,7 @@
 
 </div>
 
-**Cairn is a sandbox cloud, with an agent that runs on it.** Two layers, and you can take either one:
+**CairnSandbox (Cairn for short) is a sandbox cloud, with an agent that runs on it.** A cairn is a small stack of stones that marks a trail so you can find your way back; here every checkpoint is a stone. Two layers, and you can take either one:
 
 | | |
 | :-- | :-- |

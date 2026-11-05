@@ -1,5 +1,7 @@
 # Running on several machines
 
+> About the sandbox cloud only: the control plane and its nodes. The optional agent layer is not involved.
+
 A Cairn cluster is one **control plane machine** (control plane, registry, database, chunk store, and optionally a node of its own) plus any number of **node machines** that run only the node agent and the microVMs. Adding a machine means starting a node there and telling the control plane its IP and token. There is no cluster formation step and nothing to configure on the other nodes.
 
 > **Verified so far:** the exact files below (`docker-compose.node.yml`, `node.sh`, the registration call) were exercised on **one** host, with two separate Compose projects reaching each other only through the Docker bridge address `172.17.0.1` as the "private IP", and a second checkout whose `images/` held nothing but `upper-template.ext4`. That covers registration by IP, creating a sandbox on the remote node, live migration through the store, and evacuating a node that was killed. It does **not** cover two physical machines, real network latency, a firewall, TLS between the control plane and a node, or a reverse proxy in front of the control plane. If a step fails for you on real machines, that is a bug in this guide: please open an issue.
