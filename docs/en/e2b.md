@@ -32,7 +32,7 @@ Not verified: other SDK versions or languages (Go, Java, ...), two physical mach
 
 ## code-interpreter
 
-The official `e2b_code_interpreter` (`Sandbox.create()` and `run_code`, contexts) passes 14 cases for 2.10.5, 2.11.0 and 2.11.9 once the `code-interpreter-v1` template is built with `recipes/code-interpreter/build-template.py`. The server inside is our own small one (standard library only): stateful Python contexts, bash and JavaScript; no charts, no IPython magics, no numpy or pandas. Details and limits: [`docs/guide/code-interpreter.md`](../guide/code-interpreter.md) (Chinese).
+The official `e2b_code_interpreter` (`Sandbox.create()` and `run_code`, contexts) passes 17 cases for 2.10.5, 2.11.0 and 2.11.9 once the `code-interpreter-v1` template is built with `recipes/code-interpreter/build-template.py`. The server inside is our own small one (standard library only): stateful Python contexts, bash and JavaScript. With the optional `ci-pylibs` layer (numpy, pandas, matplotlib, seaborn, scipy, scikit-learn, pillow, requests, ...) matplotlib figures come back as PNG results; there is no structured `chart` object and no IPython magics. Details and limits: [`docs/guide/code-interpreter.md`](../guide/code-interpreter.md) (Chinese).
 
 ## What E2B does not have
 

@@ -47,7 +47,7 @@ with c.sandboxes.create(mem=512, network={"allow_hosts": ["pypi.org"]}) as sb:
 > [!NOTE]
 > 需要 Linux x86_64、`/dev/kvm`、Docker 24+(compose v2)、约 15 GB 磁盘。第一次装要编译 guest 内核,30–60 分钟。
 > JS / TS:`sdk/js`(`cairnbox`,零依赖)。给 agent 当工具:`claude mcp add cairn -- python3 -m cairnbox.mcp`。
-> 官方 **E2B SDK 可以直接对着 18710 端口用**(把 `E2B_API_URL` 与 `E2B_SANDBOX_URL` 指过去):创建、流式输出的 `commands.run`、后台命令与 PTY、文件、列目录与监视、暂停与 connect、fork、快照都通过了一致性用例(Python 的 e2b 36 条、npm 包 20 条,两边各 6 个 2.x 版本(2.52 到 2.63)都通过,在一台机器上用两个节点跑;1.x 的 SDK 不能指向自定义 API 地址,不支持;结果在 [docs/research/e2b-conformance](docs/research/e2b-conformance))。**不是完整兼容**:模板构建只支持从我们的基础或已有模板出发(`run_cmd`、`copy`、环境变量、启动命令;没有 tag,不拉取外部镜像),端口 URL(`get_host`)只在你配了预览域名时可用且要令牌,矩阵见 [docs/guide/api/e2b.md](docs/guide/api/e2b.md)。官方 `e2b_code_interpreter` 的 `run_code` 在建好 `code-interpreter-v1` 模板后也能用(我们自己写的小解释器服务:有状态的 Python 上下文、bash、JavaScript,没有图表和 numpy/pandas,见[指南](docs/guide/code-interpreter.md))。进程还能跨检查点与回滚存活,这是 E2B 没有的。
+> 官方 **E2B SDK 可以直接对着 18710 端口用**(把 `E2B_API_URL` 与 `E2B_SANDBOX_URL` 指过去):创建、流式输出的 `commands.run`、后台命令与 PTY、文件、列目录与监视、暂停与 connect、fork、快照都通过了一致性用例(Python 的 e2b 36 条、npm 包 20 条,两边各 6 个 2.x 版本(2.52 到 2.63)都通过,在一台机器上用两个节点跑;1.x 的 SDK 不能指向自定义 API 地址,不支持;结果在 [docs/research/e2b-conformance](docs/research/e2b-conformance))。**不是完整兼容**:模板构建只支持从我们的基础或已有模板出发(`run_cmd`、`copy`、环境变量、启动命令;没有 tag,不拉取外部镜像),端口 URL(`get_host`)只在你配了预览域名时可用且要令牌,矩阵见 [docs/guide/api/e2b.md](docs/guide/api/e2b.md)。官方 `e2b_code_interpreter` 的 `run_code` 在建好 `code-interpreter-v1` 模板后也能用(我们自己写的小解释器服务:有状态的 Python 上下文、bash、JavaScript,可选的包层里有 numpy、pandas、matplotlib(图以 PNG 返回)、scipy、scikit-learn,没有 IPython 魔法命令,见[指南](docs/guide/code-interpreter.md))。进程还能跨检查点与回滚存活,这是 E2B 没有的。
 
 ## 它是怎么搭的
 

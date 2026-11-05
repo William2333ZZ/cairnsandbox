@@ -12,13 +12,14 @@ the template (docs/guide/code-interpreter.md), so a sandbox started from that te
          {"type":"stdout"|"stderr","text","timestamp"} | {"type":"result","text","html"?,"is_main_result",...} | {"type":"error","name","value","traceback"} |
          {"type":"number_of_executions","execution_count"}
 
-Not Jupyter: no rich outputs beyond text and `_repr_html_`/`_repr_png_`/`_repr_svg_`/`_repr_markdown_`/`_repr_json_`, no charts, no widgets, languages are python, bash and
+Not Jupyter: no widgets or IPython magics; rich outputs are text, matplotlib figures as PNG and `_repr_html_`/`_repr_png_`/`_repr_svg_`/`_repr_markdown_`/`_repr_json_` (no `chart` object), languages are python, bash and
 javascript (bun or node when present). What it is for: the common `run_code` loop of an LLM app.
 """
-import ast, base64, json, os, shutil, subprocess, sys, threading, time, traceback, uuid
+import ast, base64, io, json, os, shutil, subprocess, sys, threading, time, traceback, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("CI_PORT", "49999"))
+PRELOAD = os.environ.get("CI_PRELOAD", "numpy,pandas,matplotlib.pyplot")   # imported once in the default Python context at start, so the template snapshot holds them warm
 DEFAULT_CWD = os.environ.get("CI_CWD", os.path.expanduser("~") or "/")
 LANGS = {"python": "python", "py": "python", "bash": "bash", "sh": "bash", "javascript": "javascript", "js": "javascript", "typescript": "javascript", "ts": "javascript"}
 
@@ -50,6 +51,21 @@ def py_kernel_main():
 
     sys.stdout, sys.stderr = Stream("stdout"), Stream("stderr")
     ns = {"__name__": "__main__", "__builtins__": __builtins__}
+    os.environ.setdefault("MPLBACKEND", "Agg"); os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")      # headless: figures are captured, never shown
+
+    def figures():
+        """matplotlib figures left open by the cell become PNG results (like Jupyter's inline backend), then are closed."""
+        plt = sys.modules.get("matplotlib.pyplot")
+        if plt is None: return
+        try:
+            for num in plt.get_fignums():
+                fig = plt.figure(num); buf = io.BytesIO(); fig.savefig(buf, format="png", bbox_inches="tight")
+                emit({"type": "result", "text": repr(fig), "png": base64.b64encode(buf.getvalue()).decode(), "is_main_result": False})
+        except Exception as e:  # noqa: BLE001
+            emit({"type": "stderr", "text": f"could not capture a figure: {e}\n", "timestamp": now_ns()})
+        finally:
+            try: plt.close("all")
+            except Exception: pass
 
     def rich(v, main):
         r = {"is_main_result": main}
@@ -75,8 +91,9 @@ def py_kernel_main():
     ns["display"] = display
     count = 0
     for line in sys.stdin:
-        req = json.loads(line); code, env = req.get("code", ""), req.get("env") or {}
-        count += 1; saved = {k: os.environ.get(k) for k in env}
+        req = json.loads(line); code, env, silent = req.get("code", ""), req.get("env") or {}, bool(req.get("silent"))
+        if not silent: count += 1
+        saved = {k: os.environ.get(k) for k in env}
         os.environ.update({k: str(v) for k, v in env.items()})
         try:
             tree = ast.parse(code, "<cell>", "exec")
@@ -92,11 +109,13 @@ def py_kernel_main():
             tb = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             emit({"type": "error", "name": type(e).__name__, "value": str(e), "traceback": tb})
         finally:
+            if not silent: figures()
             sys.stdout.flush(); sys.stderr.flush()
             for k, v in saved.items():
                 if v is None: os.environ.pop(k, None)
                 else: os.environ[k] = v
-        emit({"type": "number_of_executions", "execution_count": count}); emit({"type": "done"})
+        if not silent: emit({"type": "number_of_executions", "execution_count": count})
+        emit({"type": "done"})
 
 
 # ------------------------------------------------------------------ contexts
@@ -121,14 +140,15 @@ class Context:
             self.proc.wait()
         self.proc = None
 
-    def run(self, code, env, emit):
+    def run(self, code, env, emit, silent=False):
         """Execute one cell; emit() gets each event dict as it happens."""
         with self.lock:
-            {"python": self._py, "bash": self._bash, "javascript": self._js}[self.language](code, env, emit)
+            if self.language == "python": self._py(code, env, emit, silent)
+            else: {"bash": self._bash, "javascript": self._js}[self.language](code, env, emit)
 
-    def _py(self, code, env, emit):
+    def _py(self, code, env, emit, silent=False):
         if not self.proc or self.proc.poll() is not None: self.start()
-        self.proc.stdin.write(json.dumps({"code": code, "env": env}) + "\n"); self.proc.stdin.flush()
+        self.proc.stdin.write(json.dumps({"code": code, "env": env, "silent": silent}) + "\n"); self.proc.stdin.flush()
         for line in self.proc.stdout:
             ev = json.loads(line)
             if ev["type"] == "done": return
@@ -165,6 +185,7 @@ def get_default(lang):
     with REG:
         if lang not in DEFAULTS:
             c = Context(lang, DEFAULT_CWD); DEFAULTS[lang] = c; CONTEXTS[c.id] = c
+            if lang == "python" and PRELOAD: c.run("\n".join(f"try:\n    import {m}\nexcept ImportError:\n    pass" for m in PRELOAD.split(",") if m), {}, lambda ev: None, silent=True)
         return DEFAULTS[lang]
 
 

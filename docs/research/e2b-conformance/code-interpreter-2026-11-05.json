@@ -1,13 +1,14 @@
 {
  "date": "2026-11-05",
- "setup": "2-node drill stack, template code-interpreter-v1 built by recipes/code-interpreter/build-template.py on the agent-langs layer (CPython 3.13, bun)",
- "suite": "ops/e2b-code-interpreter-conformance.py (14 cases)",
+ "setup": "2-node drill stack, template code-interpreter-v1 built by recipes/code-interpreter/build-template.py on the agent-langs layer (CPython 3.13, bun) plus the ci-pylibs layer (numpy, pandas, matplotlib, scipy, scikit-learn, ...)",
+ "suite": "ops/e2b-code-interpreter-conformance.py (17 cases)",
+ "timings_through_an_ssh_tunnel": "create 0.17-0.23 s; first import of pandas+numpy+matplotlib 0.07-0.19 s (preloaded in the template snapshot); 100k-row DataFrame.describe 0.15 s; a matplotlib figure returned as PNG 0.21-0.28 s",
  "results": [
   {
    "sdk": "e2b-code-interpreter 2.11.9",
    "e2b_version": "2.63.0",
    "summary": {
-    "PASS": 14,
+    "PASS": 17,
     "FAIL": 0,
     "SKIP": 0
    }
@@ -16,7 +17,7 @@
    "sdk": "e2b-code-interpreter 2.11.0",
    "e2b_version": "2.63.0",
    "summary": {
-    "PASS": 14,
+    "PASS": 17,
     "FAIL": 0,
     "SKIP": 0
    }
@@ -25,7 +26,7 @@
    "sdk": "e2b-code-interpreter 2.10.5",
    "e2b_version": "2.63.0",
    "summary": {
-    "PASS": 14,
+    "PASS": 17,
     "FAIL": 0,
     "SKIP": 0
    }

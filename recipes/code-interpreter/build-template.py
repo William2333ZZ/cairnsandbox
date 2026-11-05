@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Build the `code-interpreter-v1` template on a running Cairn stack (docs/guide/code-interpreter.md). Standard library only.
 
-  python3 recipes/code-interpreter/build-template.py --cp http://127.0.0.1:18700 --token $(cat deploy/secrets/cp.token) --layer <agent-langs layer id> [--name code-interpreter-v1]
+  python3 recipes/code-interpreter/build-template.py --cp http://127.0.0.1:18700 --token $(cat deploy/secrets/cp.token) --layer <agent-langs layer id> [--layer <ci-pylibs layer id>] [--name code-interpreter-v1]
 
-It boots a build sandbox on the base template with the agent-langs layer (CPython 3.13 and bun under /aios/runtime), puts server.py in it, starts the server, checks that it answers a
+It boots a build sandbox on the base template with the agent-langs layer (CPython 3.13 and bun under /aios/runtime) and, if given, the ci-pylibs layer (numpy, pandas, matplotlib, ...), puts server.py in it, starts the server, checks that it answers a
 cell, and commits the running sandbox as a template: memory and disk, so a sandbox started from the template already has the server (and its warm Python kernel) listening on 49999.
 A template lives on the node that built it (placement prefers a node that has the template); use --node to choose it. The agent-langs layer comes from recipes/agent-langs (node/build-layer.sh); see the guide for the files it needs.
 """
 import argparse, json, os, sys, time, urllib.error, urllib.request
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--cp", required=True); ap.add_argument("--token", required=True); ap.add_argument("--layer", required=True)
+ap.add_argument("--cp", required=True); ap.add_argument("--token", required=True)
+ap.add_argument("--layer", required=True, action="append", help="a layer id; repeat for several, parents first (agent-langs, then ci-pylibs for numpy/pandas/matplotlib)")
 ap.add_argument("--name", default="code-interpreter-v1"); ap.add_argument("--template", default="debian-13"); ap.add_argument("--project", default="")
 ap.add_argument("--node", default="", help="build on this node (layers and templates live on the node that built them)")
 ap.add_argument("--mem", type=int, default=1024); ap.add_argument("--vcpu", type=int, default=2)
@@ -34,7 +35,7 @@ def ex(sid, cmd, user="agent", timeout=120):
     st, r = call("POST", f"/sandboxes/{sid}/exec", {"cmd": cmd, "user": user, "timeout": timeout}); assert st == 200, (st, r); return r
 
 
-spec = {"template": a.template, "class": "persistent", "mem": a.mem, "vcpu": a.vcpu, "disk": 2048, "layers": [a.layer], "ttl_idle_s": 1800}
+spec = {"template": a.template, "class": "persistent", "mem": a.mem, "vcpu": a.vcpu, "disk": 2048, "layers": a.layer, "ttl_idle_s": 1800}
 if a.node: spec["node"] = a.node
 st, sb = call("POST", "/sandboxes", spec)
 assert st == 201, (st, sb); sid = sb["id"]; print("build sandbox", sid, file=sys.stderr)
@@ -51,6 +52,7 @@ try:
     else: sys.exit("the server did not come up: " + ex(sid, "cat /tmp/ci.log")["stdout"])
     run = f"{PY} - <<'EOF'\nimport json,urllib.request as u\nr=u.Request('http://127.0.0.1:49999/execute',json.dumps({{'code':'sum(range(10))'}}).encode(),{{'Content-Type':'application/json'}})\nprint(u.urlopen(r,timeout=30).read().decode())\nEOF"
     out = ex(sid, run)["stdout"]; assert '"text": "45"' in out, out; print("warm cell ok", file=sys.stderr)
+    if call("DELETE", f"/templates/{a.name}")[0] == 200: print("replaced the earlier template", a.name, file=sys.stderr)       # a commit refuses an existing name
     st, b = call("POST", "/builds", {"kind": "commit", "sandbox": sid, "name": a.name, "note": "code-interpreter server running"}); assert st == 201, (st, b)
     for _ in range(600):
         st, d = call("GET", f"/builds/{b['id']}")

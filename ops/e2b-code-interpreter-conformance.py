@@ -62,6 +62,30 @@ def _(sb):
     assert ex.results and ex.results[0].html == "<b>hi</b>", ex.results
 
 
+@case("numpy and pandas work; a DataFrame carries an html result")
+def _(sb):
+    assert sb.run_code("import numpy as np\nint(np.arange(10).sum())").text == "45"
+    ex = sb.run_code("import pandas as pd\npd.DataFrame({'a': [1, 2], 'b': [3, 4]})")
+    assert ex.results and "<table" in (ex.results[0].html or ""), ex.results
+
+
+@case("a matplotlib figure comes back as a PNG result")
+def _(sb):
+    import base64
+    ex = sb.run_code("import matplotlib.pyplot as plt\nplt.plot([1, 2, 3], [1, 4, 9])\nplt.title('squares')")
+    pngs = [r.png for r in ex.results if r.png]
+    assert pngs and base64.b64decode(pngs[0])[:8] == b"\x89PNG\r\n\x1a\n", ex.results
+    assert not sb.run_code("import matplotlib.pyplot as plt\nlen(plt.get_fignums())").text == "1"      # the figure was closed after it was captured
+
+
+@case("scipy, scikit-learn, pillow, sympy and the common parsers import and run")
+def _(sb):
+    ex = sb.run_code("import scipy, sklearn, PIL, sympy, openpyxl, bs4, lxml, yaml, requests, seaborn, tqdm, httpx\n"
+                     "import numpy as np\nfrom sklearn.linear_model import LinearRegression\n"
+                     "LinearRegression().fit(np.array([[1], [2], [3]]), np.array([2, 4, 6])).coef_.round(3).tolist()")
+    assert ex.error is None and ex.text == "[2.0]", (ex.error, ex.text)
+
+
 @case("contexts: create, isolated state, list, restart, remove")
 def _(sb):
     ctx = sb.create_code_context()

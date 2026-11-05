@@ -1,0 +1,15 @@
+numpy
+pandas
+matplotlib
+seaborn
+scipy
+scikit-learn
+pillow
+requests
+httpx
+beautifulsoup4
+lxml
+openpyxl
+pyyaml
+sympy
+tqdm
