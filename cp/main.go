@@ -175,7 +175,7 @@ func main() {
 	log.Write(map[string]any{"op": "cp_start", "nodes": fl.Names(), "routes": len(life.Routes()), "registry": reg.Kind(), "db": sqldb.Kind})
 	if ep := os.Getenv("CP_E2B_PORT"); ep != "" { // the E2B-shaped surface on its own port (D40)
 		go func() {
-			es := &e2b.Server{Tenancy: tn, Life: life, Images: im, Default: os.Getenv("CP_E2B_DEFAULT_TEMPLATE"), Fleet: fl, Audit: log, Secret: envdSecret()}
+			es := &e2b.Server{Tenancy: tn, Life: life, Images: im, Default: os.Getenv("CP_E2B_DEFAULT_TEMPLATE"), Fleet: fl, Audit: log, Secret: envdSecret(), PreviewDomain: os.Getenv("PREVIEW_DOMAIN")}
 			if err := (&http.Server{Addr: ":" + ep, Handler: es}).ListenAndServe(); err != nil {
 				fmt.Fprintln(os.Stderr, "e2b surface:", err)
 			}

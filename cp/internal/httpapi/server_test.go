@@ -2643,7 +2643,7 @@ func TestTheE2BEnvdSideRelaysAuditsAndIsolates(t *testing.T) {
 	reg, _ := registry.NewFileRegistry(t.TempDir())
 	s, _ := testServer(t, reg, "deployer-secret", a)
 	aud := &recAudit{}
-	es := httptest.NewServer(&e2b.Server{Tenancy: s.Tenancy, Life: s.Life, Images: s.Images, Fleet: s.Fleet, Audit: aud, Secret: []byte("k")})
+	es := httptest.NewServer(&e2b.Server{Tenancy: s.Tenancy, Life: s.Life, Images: s.Images, Fleet: s.Fleet, Audit: aud, Secret: []byte("k"), PreviewDomain: "preview.test"})
 	defer es.Close()
 	mk := func() map[string]any {
 		req, _ := http.NewRequest("POST", es.URL+"/sandboxes", strings.NewReader(`{"templateID":"py312"}`))
@@ -2659,6 +2659,9 @@ func TestTheE2BEnvdSideRelaysAuditsAndIsolates(t *testing.T) {
 	}
 	one, two := mk(), mk()
 	sid, tok := one["sandboxID"].(string), one["envdAccessToken"].(string)
+	if one["domain"] != "preview.test" { // get_host(port) in the SDKs is "<port>-<id>.<domain>": it must name the preview domain the control plane routes
+		t.Fatalf("domain: %v", one["domain"])
+	}
 	if tok == "" || tok == two["envdAccessToken"] || one["envdVersion"] != e2b.EnvdVersion {
 		t.Fatalf("tokens must exist, differ per sandbox, and the version be announced: %v %v", one, two)
 	}

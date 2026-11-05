@@ -36,6 +36,9 @@ type Server struct {
 	NC     nodeclient.Client
 	Audit  Auditor
 	Secret []byte // shared by every replica; envd access tokens are HMACs under it
+	// PreviewDomain (D55): when set, sandboxes report it as their `domain`, so the SDKs' get_host(port) = "<port>-<sandboxID>.<domain>" is a host this control plane
+	// already routes to /sandboxes/<id>/ports/<port>/ (the browser opens it with ?token=, see docs/guide/manual.md).
+	PreviewDomain string
 }
 
 var reSandbox = regexp.MustCompile(`^/(?:v2/)?sandboxes/([^/]+)(/(pause|resume|timeout|refreshes|connect|fork|network|metrics|snapshots))?$`)
@@ -279,6 +282,9 @@ func (s *Server) viewTok(sb map[string]any, withToken bool) map[string]any {
 	}
 	out := map[string]any{"sandboxID": id, "templateID": tpl, "clientID": sb["node"], "alias": tpl, "state": state, "startedAt": stamp(created), "endAt": endAt,
 		"cpuCount": sb["vcpu"], "memoryMB": sb["mem"], "diskSizeMB": sb["disk"], "envdVersion": EnvdVersion, "envdAccessToken": "", "metadata": sb["metadata"], "project": sb["project"]}
+	if s.PreviewDomain != "" {
+		out["domain"] = s.PreviewDomain
+	}
 	if withToken {
 		out["envdAccessToken"] = s.EnvdToken(id)
 	}

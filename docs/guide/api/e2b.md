@@ -115,7 +115,7 @@ print(sbx.commands.run("echo hi").stdout)
 
 ## 兼容矩阵(官方 SDK 实测)
 
-**测的是什么**:官方 `e2b` Python SDK 2.63.0(32 条)与 npm `e2b` 2.63.0(20 条)对着同一个控制面,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,两套都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
+**测的是什么**:官方 `e2b` Python SDK 2.63.0(33 条)与 npm `e2b` 2.63.0(20 条)对着同一个控制面,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,两套都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
 
 图例:**可用** = 一致性用例通过;**已实现未测** = 代码有、没有用例;**部分** = 有但语义不同;**没有** = 不提供。
 
@@ -148,7 +148,7 @@ print(sbx.commands.run("echo hi").stdout)
 | `files.list`(`depth`)、`exists`、`get_info`、`make_dir`、`rename`、`remove` | 可用 | |
 | `files.watch_dir` | 可用 | 靠每 250 ms 轮询目录快照,没有 inotify:重命名显示为"删除 + 创建",大目录树上有开销 |
 | `commands` 的 `StreamInput`(客户端流)、`/files/compose`、`/init`、`/metrics`、`/freeze` 等 envd 内部接口 | 没有 | `StreamInput` 要 HTTP/2 全双工,SDK 的 `send_stdin` 用的是一元的 `SendInput`,不受影响 |
-| 端口:`<port>-<id>.<domain>` 子域、`get_host(port)` | 没有 | 用原生 `ANY /sandboxes/<id>/ports/<port>/<path>`(支持 WebSocket 升级) |
+| `get_host(port)`:沙箱里起的服务的地址 | 部分 | 控制面设了 `PREVIEW_DOMAIN`(D55)时,创建响应的 `domain` 就是它,`get_host(8000)` 得到 `8000-<id>.<域名>`,控制面把这个主机改写成 `/sandboxes/<id>/ports/8000/…`,一致性用例用沙箱里起的小服务验证了(带 Bearer 头访问)。**和 E2B 的区别**:E2B 默认公开,我们要令牌(浏览器里首次带 `?token=`,见 [manual.md](../manual.md));需要你自己做泛域名 DNS 与 TLS;没设 `PREVIEW_DOMAIN` 时 `domain` 为空,`get_host` 退回 SDK 的默认域名,不可用。原生的 `ANY /sandboxes/<id>/ports/<port>/<path>`(含 WebSocket 升级)不受影响 |
 
 ### 多节点与延迟(2026-11-05,同一台机器上的 2 个节点容器)
 

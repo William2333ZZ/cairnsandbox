@@ -6,6 +6,7 @@
 
 ### 沙箱云
 - 修了一个竞态:删除沙箱时控制面在把 200 写给客户端**之后**才去掉路由,客户端收到 200 后立刻查路由偶尔还能查到(CI 上出现过一次 `route survived the delete`)。现在在响应头写出之前先去掉路由。
+- E2B `get_host(port)`:设了 `PREVIEW_DOMAIN` 时创建响应的 `domain` 填它,SDK 拿到的主机就是控制面已经在路由的预览主机(Python 一致性用例 33 条,含沙箱里起服务再经预览域名访问)。
 - E2B 兼容补验证:2 个节点下 Python 32 条、npm 20 条全过;多节点与节点挂掉后 evacuate 再用 SDK 通过;栈本身延迟与小规模并发的数字(`ops/e2b-multinode-check.py`、`ops/e2b-latency-raw.py`、`ops/e2b-latency.py`,结果在 `docs/research/e2b-conformance/`)。
 - **E2B 兼容(D88)**:官方 E2B SDK(Python 与 npm 2.63.0)对着 E2B 口(18710)通过一致性用例(31 + 20 条):`commands.run`(流式输出、后台、stdin、PTY)、文件(读写、列目录、监视、20 MiB)、暂停与 connect、fork、快照、`update_network`、`get_metrics`。envd 协议做在 sandboxd(新模块 `envd.rs`,vsock 49983,没有新依赖);节点新增 `/sandboxes/<id>/envd/…` 流式中继;控制面按 `E2b-Sandbox-Id` 头路由、用绑定到单台沙箱的令牌鉴权、解析 `Start` 写审计;新增 v2 创建/列表/connect、fork、快照、网络、指标。进程跨检查点回滚仍在,`commands.connect` 可接回。要求带 envd 的基础镜像(重建;已有模板快照要重建)。矩阵与局限见 `docs/guide/api/e2b.md`。
 - 多台真机:`deploy/docker-compose.node.yml` 与 `deploy/node.sh`(`init` / `up` / `register`)在另一台机器上起一个节点;`STORE_BIND` 让分块仓库绑到私网 IP;新增 `docs/en/multi-machine.md`。在一台机器上用 Docker 网桥地址当"私网 IP"验证过登记、远端创建、经仓库迁移、杀掉后 evacuate;两台物理机没验证。顺手修了:`TEMPLATE_POOL` 没设时默认空串会让节点启动就崩(现在默认 `[]`)。

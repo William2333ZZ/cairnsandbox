@@ -342,6 +342,28 @@ def _(sb):
     assert (native("GET", f"/sandboxes/{sb.sandbox_id}").get("network") or {}).get("mode") == "closed"
 
 
+@case("sandbox", "get_host(port) is a preview host that reaches a server started in the sandbox")
+def _(sb):
+    need(os.environ.get("CAIRN_URL") and os.environ.get("CAIRN_TOKEN"), "set CAIRN_URL and CAIRN_TOKEN (the native port, which serves the preview domain)")
+    need(os.environ.get("E2B_PREVIEW_DOMAIN"), "set E2B_PREVIEW_DOMAIN to the control plane's PREVIEW_DOMAIN")
+    import http.client
+    import urllib.parse
+    host = sb.get_host(8000)
+    assert host == f"8000-{sb.sandbox_id}.{os.environ['E2B_PREVIEW_DOMAIN']}", host
+    srv = ("use IO::Socket::INET; $s = IO::Socket::INET->new(LocalPort => 8000, Listen => 5, ReuseAddr => 1) or die; "
+           "while ($c = $s->accept) { <$c>; print $c \"HTTP/1.1 200 OK\\r\\nContent-Length: 11\\r\\nConnection: close\\r\\n\\r\\nhello-guest\"; close $c }")
+    sb.files.write("/tmp/e2b/srv.pl", srv)
+    h = sb.commands.run("perl /tmp/e2b/srv.pl", background=True)
+    time.sleep(1)
+    u = urllib.parse.urlparse(os.environ["CAIRN_URL"])
+    c = http.client.HTTPConnection(u.hostname, u.port, timeout=30)
+    c.request("GET", "/", headers={"Host": host, "Authorization": "Bearer " + os.environ["CAIRN_TOKEN"]})
+    r = c.getresponse()
+    body = r.read()
+    sb.commands.kill(h.pid)
+    assert r.status == 200 and body == b"hello-guest", (r.status, body)
+
+
 # ---------------------------------------------------------------- our extension
 @case("cairn", "a background process survives checkpoint + rollback and can be re-attached")
 def _(sb):
