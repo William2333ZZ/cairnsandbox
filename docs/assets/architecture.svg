@@ -1,50 +1,59 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 470" width="1100" height="470" role="img" aria-label="Cairn architecture">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 560" width="1100" height="560" role="img" aria-label="Cairn architecture: a sandbox cloud, and an optional agent layer on top">
   <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#64748B"/></marker></defs>
-  <rect width="1100" height="470" rx="16" fill="#0F1B2D"/>
+  <rect width="1100" height="560" rx="16" fill="#0F1B2D"/>
   <g font-family="'Helvetica Neue',Helvetica,Arial,sans-serif">
     <text x="40" y="44" font-size="20" font-weight="700" fill="#F8FAFC">How the parts fit</text>
     <!-- clients -->
-    <rect x="40" y="70" width="700" height="62" rx="12" fill="#14263A" stroke="#1E3A52"/>
-    <text x="60" y="96" font-size="15" fill="#5EEAD4" font-weight="700">Clients</text>
-    <text x="60" y="118" font-size="14" fill="#CBD5E1">Python / JS SDK · CLI · MCP server · web console · E2B-shaped REST</text>
+    <rect x="40" y="66" width="700" height="78" rx="12" fill="#14263A" stroke="#1E3A52"/>
+    <text x="60" y="92" font-size="15" fill="#5EEAD4" font-weight="700">Clients: anything that speaks the sandbox API</text>
+    <text x="60" y="115" font-size="14" fill="#CBD5E1">official E2B SDKs (Python, JS) · Cairn SDKs · CLI · MCP server · web console</text>
+    <text x="60" y="134" font-size="12" fill="#94A3B8">E2B SDKs use the E2B-compatible port; the rest use the native API</text>
     <!-- agent layer (optional) -->
-    <rect x="770" y="70" width="290" height="62" rx="12" fill="#1B1F33" stroke="#4C4F7A" stroke-dasharray="6 5"/>
-    <text x="790" y="96" font-size="15" fill="#A5B4FC" font-weight="700">Agent layer (optional)</text>
-    <text x="790" y="118" font-size="14" fill="#CBD5E1">intake · evaluator · workbench</text>
-    <line x1="390" y1="132" x2="390" y2="170" stroke="#64748B" stroke-width="2" marker-end="url(#a)"/>
-    <line x1="915" y1="132" x2="915" y2="170" stroke="#64748B" stroke-width="2" marker-end="url(#a)" stroke-dasharray="5 4"/>
-    <text x="925" y="156" font-size="12" fill="#94A3B8">HTTP / SDK only</text>
+    <rect x="770" y="66" width="290" height="78" rx="12" fill="#1B1F33" stroke="#F59E0B" stroke-dasharray="6 5"/>
+    <text x="790" y="92" font-size="15" fill="#FBBF24" font-weight="700">Agent layer (optional)</text>
+    <text x="790" y="115" font-size="14" fill="#CBD5E1">harness · inbox · evaluation · evolve</text>
+    <text x="790" y="134" font-size="12" fill="#94A3B8">budget, tickets and events live here</text>
+    <line x1="390" y1="144" x2="390" y2="186" stroke="#64748B" stroke-width="2" marker-end="url(#a)"/>
+    <path d="M915 144 V186" stroke="#F59E0B" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+    <text x="925" y="170" font-size="12" fill="#94A3B8">HTTP API / SDK only</text>
+    <!-- sandbox cloud frame -->
+    <rect x="24" y="186" width="1052" height="350" rx="16" fill="none" stroke="#14B8A6" stroke-width="1.5"/>
+    <text x="44" y="210" font-size="13" fill="#5EEAD4" font-weight="700" letter-spacing="1">SANDBOX CLOUD · runs without the agent layer</text>
     <!-- control plane -->
-    <rect x="40" y="170" width="1020" height="92" rx="12" fill="#14263A" stroke="#14B8A6"/>
-    <text x="60" y="196" font-size="15" fill="#5EEAD4" font-weight="700">Control plane · Go</text>
+    <rect x="40" y="224" width="1020" height="104" rx="12" fill="#14263A" stroke="#1E3A52"/>
+    <text x="60" y="250" font-size="15" fill="#5EEAD4" font-weight="700">Control plane · Go</text>
     <g font-size="14" fill="#CBD5E1">
-      <text x="60" y="226">accounts · projects · members</text><text x="320" y="226">quotas · prepaid credit · metering</text>
-      <text x="620" y="226">scheduling across nodes</text><text x="850" y="226">hash-chained audit log</text>
-      <text x="60" y="248" fill="#94A3B8">stateless: replicas share Postgres and the registry</text>
+      <text x="60" y="278">native API + E2B-compatible API</text><text x="340" y="278">accounts · projects · members</text>
+      <text x="620" y="278">quotas · credit · metering</text><text x="850" y="278">hash-chained audit log</text>
+      <text x="60" y="304">scheduling across nodes</text><text x="340" y="304">templates · volumes</text>
+      <text x="620" y="304" fill="#94A3B8">stateless: replicas share Postgres and the registry</text>
     </g>
-    <line x1="390" y1="262" x2="390" y2="300" stroke="#64748B" stroke-width="2" marker-end="url(#a)"/>
+    <line x1="390" y1="328" x2="390" y2="366" stroke="#64748B" stroke-width="2" marker-end="url(#a)"/>
     <!-- node -->
-    <rect x="40" y="300" width="700" height="140" rx="12" fill="#14263A" stroke="#1E3A52"/>
-    <text x="60" y="326" font-size="15" fill="#5EEAD4" font-weight="700">Node agent · Python (one per host)</text>
+    <rect x="40" y="366" width="700" height="150" rx="12" fill="#14263A" stroke="#1E3A52"/>
+    <text x="60" y="392" font-size="15" fill="#5EEAD4" font-weight="700">Node agent · Python (one per host)</text>
     <g font-size="14" fill="#CBD5E1">
-      <text x="60" y="354">Firecracker under the jailer</text><text x="340" y="354">checkpoints · rollback · fork</text>
-      <text x="60" y="378">tap + nftables, no direct internet</text><text x="340" y="378">egress proxy with host allowlist</text>
-      <text x="60" y="402">templates and layers</text><text x="340" y="402">lazy image loading</text>
+      <text x="60" y="420">Firecracker under the jailer</text><text x="340" y="420">checkpoints · rollback · fork</text>
+      <text x="60" y="444">tap + nftables, no direct internet</text><text x="340" y="444">egress proxy with host allowlist</text>
+      <text x="60" y="468">templates and layers</text><text x="340" y="468">lazy image loading</text>
+      <text x="60" y="492">relay to sandboxd (envd, ports)</text><text x="340" y="492">memory and disk snapshots</text>
     </g>
     <!-- microVMs -->
     <g>
-      <rect x="770" y="300" width="130" height="140" rx="12" fill="#12332F" stroke="#14B8A6"/>
-      <text x="835" y="328" font-size="14" fill="#99F6E4" text-anchor="middle" font-weight="700">microVM</text>
-      <text x="835" y="352" font-size="12" fill="#CBD5E1" text-anchor="middle">own kernel</text>
-      <text x="835" y="372" font-size="12" fill="#CBD5E1" text-anchor="middle">overlay root</text>
-      <text x="835" y="392" font-size="12" fill="#CBD5E1" text-anchor="middle">sandboxd (Rust)</text>
-      <rect x="930" y="300" width="130" height="140" rx="12" fill="#12332F" stroke="#14B8A6"/>
-      <text x="995" y="328" font-size="14" fill="#99F6E4" text-anchor="middle" font-weight="700">microVM</text>
-      <text x="995" y="352" font-size="12" fill="#CBD5E1" text-anchor="middle">own kernel</text>
-      <text x="995" y="372" font-size="12" fill="#CBD5E1" text-anchor="middle">overlay root</text>
-      <text x="995" y="392" font-size="12" fill="#CBD5E1" text-anchor="middle">sandboxd (Rust)</text>
+      <rect x="770" y="366" width="130" height="150" rx="12" fill="#12332F" stroke="#14B8A6"/>
+      <text x="835" y="394" font-size="14" fill="#99F6E4" text-anchor="middle" font-weight="700">microVM</text>
+      <text x="835" y="418" font-size="12" fill="#CBD5E1" text-anchor="middle">own kernel</text>
+      <text x="835" y="438" font-size="12" fill="#CBD5E1" text-anchor="middle">overlay root</text>
+      <text x="835" y="458" font-size="12" fill="#CBD5E1" text-anchor="middle">sandboxd (Rust)</text>
+      <text x="835" y="478" font-size="12" fill="#CBD5E1" text-anchor="middle">speaks envd</text>
+      <rect x="930" y="366" width="130" height="150" rx="12" fill="#12332F" stroke="#14B8A6"/>
+      <text x="995" y="394" font-size="14" fill="#99F6E4" text-anchor="middle" font-weight="700">microVM</text>
+      <text x="995" y="418" font-size="12" fill="#CBD5E1" text-anchor="middle">own kernel</text>
+      <text x="995" y="438" font-size="12" fill="#CBD5E1" text-anchor="middle">overlay root</text>
+      <text x="995" y="458" font-size="12" fill="#CBD5E1" text-anchor="middle">sandboxd (Rust)</text>
+      <text x="995" y="478" font-size="12" fill="#CBD5E1" text-anchor="middle">speaks envd</text>
     </g>
-    <line x1="740" y1="370" x2="768" y2="370" stroke="#64748B" stroke-width="2" marker-end="url(#a)"/>
-    <text x="835" y="424" font-size="12" fill="#94A3B8" text-anchor="middle">vsock</text>
+    <line x1="740" y1="440" x2="768" y2="440" stroke="#64748B" stroke-width="2" marker-end="url(#a)"/>
+    <text x="835" y="502" font-size="12" fill="#94A3B8" text-anchor="middle">vsock</text>
   </g>
 </svg>

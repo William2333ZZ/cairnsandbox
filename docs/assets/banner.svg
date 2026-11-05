@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 340" width="1280" height="340" role="img" aria-label="Cairn: a sandbox where agents can go back">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 340" width="1280" height="340" role="img" aria-label="Cairn: a sandbox cloud with an agent that runs on it">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B1220"/><stop offset="1" stop-color="#14263A"/></linearGradient>
     <linearGradient id="s1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5EEAD4"/><stop offset="1" stop-color="#14B8A6"/></linearGradient>
@@ -19,8 +19,12 @@
     <ellipse cx="60" cy="33" rx="15" ry="6.5" fill="url(#s3)"/>
     <circle cx="60" cy="19" r="5.5" fill="#F59E0B"/>
   </g>
-  <text x="420" y="152" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="92" font-weight="700" fill="#F8FAFC" letter-spacing="-2">Cairn</text>
-  <text x="424" y="204" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="30" fill="#5EEAD4">A sandbox where agents can go back.</text>
-  <text x="424" y="246" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="20" fill="#94A3B8">microVMs with checkpoints, rollback and fork</text>
-  <text x="424" y="276" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="20" fill="#94A3B8">egress that needs a yes · an audit trail you can verify</text>
+  <text x="420" y="136" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="92" font-weight="700" fill="#F8FAFC" letter-spacing="-2">Cairn</text>
+  <text x="424" y="184" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="30" fill="#5EEAD4">A sandbox cloud, with an agent that runs on it.</text>
+  <rect x="424" y="212" width="8" height="46" rx="4" fill="#14B8A6"/>
+  <text x="446" y="232" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="20" font-weight="700" fill="#E2E8F0">Sandbox cloud</text>
+  <text x="446" y="254" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="18" fill="#94A3B8">Firecracker microVMs · E2B-compatible · rewind, audit, approved egress</text>
+  <rect x="424" y="274" width="8" height="46" rx="4" fill="#F59E0B"/>
+  <text x="446" y="294" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="20" font-weight="700" fill="#E2E8F0">Agent layer <tspan font-weight="400" fill="#94A3B8">(optional)</tspan></text>
+  <text x="446" y="316" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="18" fill="#94A3B8">a hosted coding agent the sandbox knows by budget, tickets, events</text>
 </svg>

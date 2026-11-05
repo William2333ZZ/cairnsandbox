@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/banner.svg" alt="Cairn: a sandbox where agents can go back" width="100%">
+<img src="docs/assets/banner.svg" alt="Cairn: a sandbox cloud, with an agent that runs on it" width="100%">
 
 <br>
 
