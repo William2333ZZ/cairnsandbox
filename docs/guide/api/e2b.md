@@ -104,7 +104,7 @@ print(sbx.commands.run("echo hi").stdout)
 ```
 
 - **协议**:Connect 的 JSON 编码(官方 SDK 默认就是 JSON,不是二进制 protobuf):一元调用 `application/json`,服务端流 `application/connect+json`。明文 `http://` 下 SDK 说的是 HTTP/1.1(即使 SDK 的 `http_version` 默认是 `"2"`),我们只实现 HTTP/1.1。
-- **鉴权**:创建响应里的 `envdAccessToken` 是绑定到**这一台沙箱**的令牌(`HMAC(CP_ENVD_SECRET 或由 CP_TOKEN 派生, "envd|"+沙箱 id)`,各副本共享、不落盘),SDK 以 `X-Access-Token` 发来。别的沙箱的令牌打不开这台(401);令牌泄漏只影响一台沙箱。沙箱不存在或已被杀 → **502** 且消息含 `was not found`(SDK 的 `is_running()`、`SandboxNotRunningException` 就靠它判断)。账户被暂停时,写类请求被拒,免得中继把暂停的沙箱恢复。
+- **鉴权**:创建响应里的 `envdAccessToken` 是绑定到**这一台沙箱**的令牌(`HMAC(CP_ENVD_SECRET 或由 CP_TOKEN 派生, "envd|"+沙箱 id)`,各副本共享、不落盘),SDK 以 `X-Access-Token` 发来。别的沙箱的令牌打不开这台(401);令牌泄漏只影响一台沙箱。令牌只出现在**创建、connect、fork** 的响应里(这些要写权限),`GET /sandboxes`、`/v2/sandboxes`、`/sandboxes/<id>` 里的 `envdAccessToken` 恒为空,所以只读密钥列得出沙箱、拿不到能执行命令的令牌。沙箱不存在或已被杀 → **502** 且消息含 `was not found`(SDK 的 `is_running()`、`SandboxNotRunningException` 就靠它判断)。账户被暂停时,写类请求被拒,免得中继把暂停的沙箱恢复。
 - **审计**:控制面对每个数据面请求写审计(`op: envd`),`Start` 带命令行(`cmd`)、`cwd`、`user`、`pty`、`tag`,文件请求带路径;节点另写一条 `op: envd`。这些都在 `GET /audit`。
 - **用户**:SDK 的 `user=` 经 `Authorization: Basic` 带到沙箱;不指定时用 `agent`(不是 root,也不是 E2B 的 `user`;请求里写 `user` 而沙箱没有这个账号时,当作 `agent`)。`root` 需要显式写。
 - **环境变量**:创建时的 `envVars` 对 envd 起的进程同样可见(节点在创建与恢复时写进沙箱的 `/run/sandboxd/env.json`)。
