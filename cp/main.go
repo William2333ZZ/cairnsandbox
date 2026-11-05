@@ -5,6 +5,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -174,7 +175,7 @@ func main() {
 	log.Write(map[string]any{"op": "cp_start", "nodes": fl.Names(), "routes": len(life.Routes()), "registry": reg.Kind(), "db": sqldb.Kind})
 	if ep := os.Getenv("CP_E2B_PORT"); ep != "" { // the E2B-shaped surface on its own port (D40)
 		go func() {
-			es := &e2b.Server{Tenancy: tn, Life: life, Images: im, Default: os.Getenv("CP_E2B_DEFAULT_TEMPLATE")}
+			es := &e2b.Server{Tenancy: tn, Life: life, Images: im, Default: os.Getenv("CP_E2B_DEFAULT_TEMPLATE"), Fleet: fl, Audit: log, Secret: envdSecret()}
 			if err := (&http.Server{Addr: ":" + ep, Handler: es}).ListenAndServe(); err != nil {
 				fmt.Fprintln(os.Stderr, "e2b surface:", err)
 			}
@@ -186,4 +187,17 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+// envdSecret: the key envd access tokens (E2B SDK -> sandbox) are HMACed under. CP_ENVD_SECRET if set, else derived from the admin token, so every replica
+// that shares the token also shares the secret; with neither the tokens are disabled (the envd side then answers 401).
+func envdSecret() []byte {
+	if v := secret("CP_ENVD_SECRET"); v != "" {
+		return []byte(v)
+	}
+	if v := secret("CP_TOKEN"); v != "" {
+		h := sha256.Sum256([]byte("cairn-envd|" + v))
+		return h[:]
+	}
+	return nil
 }

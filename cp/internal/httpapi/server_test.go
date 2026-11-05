@@ -56,9 +56,10 @@ type fakeNode struct {
 	down      bool
 	vols      map[string]map[string]any // id -> {name, size_mib, attached: {sid: mode}}
 	creds     map[string]string
-	layers    []string // layer ids imported through /layers/import
-	memUsed   float64  // mem_mib_running to report when > 0 (else 256 per running sandbox)
-	memBudget float64  // mem_budget_mib to report when > 0 (else 100000)
+	layers    []string            // layer ids imported through /layers/import
+	memUsed   float64             // mem_mib_running to report when > 0 (else 256 per running sandbox)
+	memBudget float64             // mem_budget_mib to report when > 0 (else 100000)
+	envdSeen  []map[string]string // what the envd relay delivered (E2B surface): path, bearer, the SDK's own Authorization, body
 }
 
 // anyBox is the id of some sandbox the node holds (tests that only need one).
@@ -101,6 +102,23 @@ func (f *fakeNode) handle(w http.ResponseWriter, r *http.Request) {
 			}
 			c.Write(append([]byte("echo:"), b[:n]...))
 		}
+	}
+	if strings.Contains(r.URL.Path, "/envd/") { // the guest's envd, answering the way sandboxd does: a Connect server stream, flushed frame by frame
+		b, _ := io.ReadAll(r.Body)
+		f.mu.Lock()
+		f.envdSeen = append(f.envdSeen, map[string]string{"path": r.URL.RequestURI(), "bearer": r.Header.Get("Authorization"), "xauth": r.Header.Get("X-Envd-Authorization"), "body": string(b), "ct": r.Header.Get("Content-Type")})
+		f.mu.Unlock()
+		if strings.HasSuffix(r.URL.Path, "/health") {
+			w.WriteHeader(204)
+			return
+		}
+		w.Header().Set("Content-Type", "application/connect+json")
+		w.WriteHeader(200)
+		for _, fr := range []string{`{"event":{"start":{"pid":7}}}`, `{"event":{"data":{"stdout":"aGkK"}}}`, `{"event":{"end":{"exitCode":0,"exited":true,"status":"exit status 0"}}}`} {
+			w.Write(append(append([]byte{0}, byte(len(fr)>>24), byte(len(fr)>>16), byte(len(fr)>>8), byte(len(fr))), fr...))
+			w.(http.Flusher).Flush()
+		}
+		return
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -2608,4 +2626,114 @@ func TestWebhooksDeliverSandboxCreatedAndAccountEventsToTheOwnersEndpointSigned(
 	if st, e := call(t, ts.URL, "POST", "/projects/hook/webhooks", map[string]any{"url": "https://169.254.169.254/x"}, admin); st != 201 { // lax in tests; production refusal is covered in the webhook package
 		t.Fatalf("lax test mode: %d %v", st, e)
 	}
+}
+
+type recAudit struct {
+	mu  sync.Mutex
+	evs []map[string]any
+}
+
+func (a *recAudit) Write(e map[string]any) { a.mu.Lock(); a.evs = append(a.evs, e); a.mu.Unlock() }
+
+// The SDK -> sandbox half of the E2B surface: authenticated by a token bound to one sandbox, audited (the command line of a Start), relayed to the node
+// with the node bearer and the SDK's own Authorization moved aside, and the Connect stream handed back as it arrives.
+func TestTheE2BEnvdSideRelaysAuditsAndIsolates(t *testing.T) {
+	a := newFakeNode(t, "na", 5)
+	a.snaps = []string{"py312"}
+	reg, _ := registry.NewFileRegistry(t.TempDir())
+	s, _ := testServer(t, reg, "deployer-secret", a)
+	aud := &recAudit{}
+	es := httptest.NewServer(&e2b.Server{Tenancy: s.Tenancy, Life: s.Life, Images: s.Images, Fleet: s.Fleet, Audit: aud, Secret: []byte("k")})
+	defer es.Close()
+	mk := func() map[string]any {
+		req, _ := http.NewRequest("POST", es.URL+"/sandboxes", strings.NewReader(`{"templateID":"py312"}`))
+		req.Header.Set("X-API-Key", "deployer-secret")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var sb map[string]any
+		json.NewDecoder(resp.Body).Decode(&sb)
+		return sb
+	}
+	one, two := mk(), mk()
+	sid, tok := one["sandboxID"].(string), one["envdAccessToken"].(string)
+	if tok == "" || tok == two["envdAccessToken"] || one["envdVersion"] != e2b.EnvdVersion {
+		t.Fatalf("tokens must exist, differ per sandbox, and the version be announced: %v %v", one, two)
+	}
+	// the token that opens a shell is handed out by create / connect only; list and get (open to a read-only key) never carry it
+	for _, path := range []string{"/sandboxes", "/v2/sandboxes", "/sandboxes/" + sid} {
+		req, _ := http.NewRequest("GET", es.URL+path, nil)
+		req.Header.Set("X-API-Key", "deployer-secret")
+		resp, _ := http.DefaultClient.Do(req)
+		b, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if bytes.Contains(b, []byte(tok)) || !bytes.Contains(b, []byte(`"envdAccessToken":""`)) {
+			t.Fatalf("GET %s leaks or omits the token field: %s", path, b)
+		}
+	}
+	start := `{"process":{"cmd":"/bin/bash","args":["-l","-c","echo hi"],"cwd":"/work"},"stdin":false}`
+	env := append(append([]byte{0}, byte(len(start)>>24), byte(len(start)>>16), byte(len(start)>>8), byte(len(start))), start...)
+	do := func(sandbox, token, method, path string, body []byte) *http.Response {
+		req, _ := http.NewRequest(method, es.URL+path, bytes.NewReader(body))
+		req.Header.Set("E2b-Sandbox-Id", sandbox)
+		req.Header.Set("X-Access-Token", token)
+		req.Header.Set("Content-Type", "application/connect+json")
+		req.Header.Set("Authorization", "Basic cm9vdDo=")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+	resp := do(sid, tok, "POST", "/process.Process/Start", env)
+	got, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != 200 || !bytes.Contains(got, []byte(`"exitCode":0`)) || !bytes.Contains(got, []byte("aGkK")) {
+		t.Fatalf("stream not relayed: %d %q", resp.StatusCode, got)
+	}
+	a.mu.Lock()
+	seen := a.envdSeen[0]
+	a.mu.Unlock()
+	if seen["path"] != "/sandboxes/"+sid+"/envd/process.Process/Start" || seen["bearer"] != "Bearer tok-na" || seen["xauth"] != "Basic cm9vdDo=" || seen["body"] != string(env) {
+		t.Fatalf("what the node got: %v", seen)
+	}
+	aud.mu.Lock()
+	var logged map[string]any
+	for _, e := range aud.evs {
+		if e["rpc"] == "Start" {
+			logged = e
+		}
+	}
+	aud.mu.Unlock()
+	if logged == nil || logged["cmd"] != "/bin/bash -l -c echo hi" || logged["sandbox"] != sid || logged["user"] != "root" || logged["cwd"] != "/work" {
+		t.Fatalf("audit of the command: %v", logged)
+	}
+	// another sandbox's token, no token, a path outside envd, an unknown sandbox
+	if r := do(sid, two["envdAccessToken"].(string), "POST", "/process.Process/Start", env); r.StatusCode != 401 {
+		t.Fatalf("a token for another sandbox opened this one: %d", r.StatusCode)
+	}
+	if r := do(sid, "", "POST", "/process.Process/Start", env); r.StatusCode != 401 {
+		t.Fatalf("no token: %d", r.StatusCode)
+	}
+	if r := do(sid, tok, "POST", "/process.Process/../../sandboxes/x/exec", nil); r.StatusCode != 404 {
+		t.Fatalf("path traversal through envd: %d", r.StatusCode)
+	}
+	if r := do(sid, tok, "POST", "/sandboxes", nil); r.StatusCode != 404 {
+		t.Fatalf("control-plane path reachable through envd: %d", r.StatusCode)
+	}
+	if r := do("sb-nope", e2bTok(es.URL, "k", "sb-nope"), "GET", "/health", nil); r.StatusCode != 502 { // what is_running() reads as "gone"
+		t.Fatalf("unknown sandbox: %d", r.StatusCode)
+	} else if b, _ := io.ReadAll(r.Body); !bytes.Contains(b, []byte("was not found")) {
+		t.Fatalf("the SDKs match on the message: %s", b)
+	}
+	if r := do(sid, tok, "GET", "/health", nil); r.StatusCode != 204 {
+		t.Fatalf("health: %d", r.StatusCode)
+	}
+}
+
+// e2bTok recomputes an envd token the way the server does, for a sandbox the server never issued one for.
+func e2bTok(_ string, secret, sid string) string {
+	return (&e2b.Server{Secret: []byte(secret)}).EnvdToken(sid)
 }

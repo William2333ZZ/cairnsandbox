@@ -26,4 +26,11 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: cd sdk/js && npm ci && npm run build
+  guest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: sbx-runtime unit tests (envd protocol pieces; the process tests need root and skip themselves otherwise)
+        run: cd guest/sbx-runtime && cargo test
   # The end-to-end suite (node/test-*.py) needs KVM; run it on a self-hosted runner labelled `kvm` when one is available (see ROADMAP.md).
+  # The E2B conformance suites (ops/e2b-conformance.py, ops/e2b-conformance.mjs) also need a running stack with KVM: same self-hosted runner, `pip install e2b` / `npm install e2b`.

@@ -1,0 +1,153 @@
+{
+ "e2b_version": "2.63.0",
+ "api_url": "http://<control plane>:<e2b port>",
+ "summary": {
+  "PASS": 20,
+  "FAIL": 0,
+  "SKIP": 0
+ },
+ "results": [
+  {
+   "group": "commands",
+   "case": "run: stdout, stderr, exit code 0",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.17
+  },
+  {
+   "group": "commands",
+   "case": "run: non-zero exit throws CommandExitError with the code",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.1
+  },
+  {
+   "group": "commands",
+   "case": "run: streaming callbacks deliver output while it is produced",
+   "status": "PASS",
+   "why": "",
+   "seconds": 1.07
+  },
+  {
+   "group": "commands",
+   "case": "run: envs, cwd, user=root",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.13
+  },
+  {
+   "group": "commands",
+   "case": "background: handle, list, kill",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.23
+  },
+  {
+   "group": "commands",
+   "case": "stdin: sendStdin to a stdin-enabled process",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.67
+  },
+  {
+   "group": "commands",
+   "case": "connect: re-attach to a running background command",
+   "status": "PASS",
+   "why": "",
+   "seconds": 2.13
+  },
+  {
+   "group": "pty",
+   "case": "create, send input, read output, resize, kill",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.99
+  },
+  {
+   "group": "files",
+   "case": "write + read text and bytes",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.21
+  },
+  {
+   "group": "files",
+   "case": "writeFiles (several at once)",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.23
+  },
+  {
+   "group": "files",
+   "case": "a file written by the SDK is visible to commands and vice versa",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.21
+  },
+  {
+   "group": "files",
+   "case": "read of a missing file throws NotFoundError",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.05
+  },
+  {
+   "group": "files",
+   "case": "list, exists, getInfo",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.27
+  },
+  {
+   "group": "files",
+   "case": "makeDir (true, then false), rename, remove",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.32
+  },
+  {
+   "group": "files",
+   "case": "watchDir sees a created file",
+   "status": "PASS",
+   "why": "",
+   "seconds": 1.71
+  },
+  {
+   "group": "files",
+   "case": "a 20 MiB upload and download round-trips intact",
+   "status": "PASS",
+   "why": "",
+   "seconds": 6.46
+  },
+  {
+   "group": "sandbox",
+   "case": "getInfo, setTimeout, isRunning",
+   "status": "PASS",
+   "why": "",
+   "seconds": 0.2
+  },
+  {
+   "group": "sandbox",
+   "case": "pause then connect resumes with files intact",
+   "status": "PASS",
+   "why": "",
+   "seconds": 2.65
+  },
+  {
+   "group": "sandbox",
+   "case": "envs passed at create are visible to commands",
+   "status": "PASS",
+   "why": "",
+   "seconds": 1.22
+  },
+  {
+   "group": "sandbox",
+   "case": "kill, then the sandbox is gone",
+   "status": "PASS",
+   "why": "",
+   "seconds": 1.56
+  }
+ ],
+ "date": "2026-11-05",
+ "setup": "Cairn drill checkout on one Linux host (Firecracker, 1 node, jailer on, kernel 6.18.59, base image with the envd-capable sandboxd); SDK on a Mac through an SSH tunnel"
+}

@@ -944,3 +944,20 @@
 ### D87 多台真机:节点只靠 IP 加入(2026-11-05)
 
 **决定**:加一台机器 = 在那台机器上用 `deploy/node.sh` 起节点(令牌自动生成),再向控制面 `POST /nodes` 登记它的 URL 与令牌;不引入集群组建步骤。节点需要的本地东西只有 fc-node 镜像、检出的 `recipes/templates` 和 `images/layers/upper-template.ext4`,内核与基础镜像从分块仓库按需读。**风险写进文档**:分块仓库没有鉴权且存着内存快照,只能放私网并用防火墙限定;节点 API 默认明文 HTTP。**验证**:单机上两个 compose 项目经 Docker 网桥地址互访,覆盖登记、远端创建、迁移、杀节点后 evacuate;**没有**两台物理机、真实延迟、防火墙、TLS、反向代理的验证。**顺带发现**:节点 compose 里 `TEMPLATE_POOL` 默认空串使节点启动即崩(`json.loads('')`),主 compose 同样隐患,都改为默认 `[]`;远端节点创建沙箱还需要本地的 `upper-template.ext4`,最初的假设(只要仓库里的镜像)是错的,实测后改正。
+
+### D88 E2B 兼容做成真的:envd 协议由 sandboxd 说,官方 SDK 对着 E2B 口通过一致性用例(2026-11-05)
+
+**背景**:D40 只做了控制面 REST,把 envd 记为"不做",可推翻条件是"外部接入方只会讲 envd"。D43 说 E2B 兼容是入口、自己的 SDK 是正品。用户 2026-11-05 要求"尽量兼容 E2B",并提议让 sandboxd 直接兼容 envd。
+
+**取证(P0,读 e2b 2.63.0 的源码并抓请求)推翻了 D40 的两条判断**:①envd 并不要求泛域名:SDK 读 `E2B_SANDBOX_URL`,设了之后对沙箱的所有请求发到这一个地址,每个请求带 `E2b-Sandbox-Id` 头,一个入口按头路由就够。②官方 SDK 说的是 **Connect 的 JSON 编码**(`useBinaryFormat: false`),不是二进制 protobuf,服务端不需要 protobuf 库;明文 `http://` 下是 HTTP/1.1。另:新版 SDK 创建沙箱调 `POST /v2/sandboxes`,D40 的口只有 v1,所以当时的口连创建都对不上新版 SDK。
+
+**结论**:①**envd 的协议做在 sandboxd(`guest/sbx-runtime/src/envd.rs`)里**,听在 vsock 的第二个端口 49983(只认宿主 CID),一连接一请求(`Connection: close`),HTTP/1.1 手写、JSON 用 serde_json,没有新依赖。进程与文件的逻辑在它该在的地方;进程活在虚机内存里,所以**暂停、检查点、回滚、fork 之后 `commands.connect(pid)` 仍是同一个进程**(E2B 没有这条)。②**不放在沙箱网络的 TCP 上**:那样沙箱里任何低权限进程都能连 `localhost:49983` 以任意用户跑命令,绕过降权。走 vsock,宿主才连得上。③节点新增 `/sandboxes/<id>/envd/…` 流式中继(HTTP→vsock 的字节管道,复用端口暴露的隧道工具);控制面在 E2B 口按 `E2b-Sandbox-Id` 头路由,用**绑定到单台沙箱的令牌**(`HMAC(密钥, "envd|"+沙箱 id)`)鉴权,并**解析 `Start` 的首帧写审计**(命令行、cwd、用户),文件请求审计路径,因此数据面没有绕过审计。④控制面补齐:v2 创建/列表(`state`/`metadata` 过滤、分页)/connect、`fork`、快照(对应"提交成模板")、`update_network`(只有 owner/admin,因为这个口没有审批队列)、`get_metrics`。⑤沙箱不存在时按 E2B 代理的行为回 **502 + "was not found"**(SDK 的 `is_running` 靠它);`envdVersion` 报 0.5.7(我们完整实现的最高版本)。⑥创建时的 `envVars` 经新的 `set_env` 操作写进沙箱的 `/run/sandboxd/env.json`,envd 起的进程可见。
+
+**验证**:官方 Python SDK 2.63.0 的 31 条与 npm 包 2.63.0 的 20 条一致性用例全部通过(`ops/e2b-conformance.{py,mjs}`,结果在 `docs/research/e2b-conformance/`),在一台机器、1 个节点、jailer 开的环境;Rust 13 个单测、Go 测试通过;原生 SDK 快速开始 13/13 没有回归。**没验证**:别的 SDK 版本与语言(Go 等)、多节点下的 envd 路径、并发与压力、`commands.run` 延迟基准、"暂停中直接 `commands.run`"的单独用例。
+
+**局限(写进兼容矩阵)**:没有模板构建 API、端口子域、`gzip` 上传、`StreamInput`、`/files/compose`;`watch_dir` 靠 250 ms 轮询;默认用户是 `agent` 不是 root;新建沙箱要用带 envd 的基础镜像,已有模板快照要重建;E2B 的 `timeout` 映射成空闲 ttl;`allow_internet_access` 不带时用 Project 默认出口策略(不是 E2B 的"默认放开")。
+
+**D40/D43 的更正**:D40 "envd 要求泛域名入口"不成立(见上);D43 "E2B 兼容是入口"仍成立,但入口现在是完整的数据面。
+
+**可推翻条件**:若 SDK 改成强制 HTTP/2 或二进制编码,envd.rs 要加相应支持;若多个 SDK 版本的行为分叉到一致性用例维护不过来,就只承诺一个版本区间。
+

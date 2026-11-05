@@ -5,6 +5,7 @@
 ## 控制台外壳跟工作台一致(D84)
 
 ### 沙箱云
+- **E2B 兼容(D88)**:官方 E2B SDK(Python 与 npm 2.63.0)对着 E2B 口(18710)通过一致性用例(31 + 20 条):`commands.run`(流式输出、后台、stdin、PTY)、文件(读写、列目录、监视、20 MiB)、暂停与 connect、fork、快照、`update_network`、`get_metrics`。envd 协议做在 sandboxd(新模块 `envd.rs`,vsock 49983,没有新依赖);节点新增 `/sandboxes/<id>/envd/…` 流式中继;控制面按 `E2b-Sandbox-Id` 头路由、用绑定到单台沙箱的令牌鉴权、解析 `Start` 写审计;新增 v2 创建/列表/connect、fork、快照、网络、指标。进程跨检查点回滚仍在,`commands.connect` 可接回。要求带 envd 的基础镜像(重建;已有模板快照要重建)。矩阵与局限见 `docs/guide/api/e2b.md`。
 - 多台真机:`deploy/docker-compose.node.yml` 与 `deploy/node.sh`(`init` / `up` / `register`)在另一台机器上起一个节点;`STORE_BIND` 让分块仓库绑到私网 IP;新增 `docs/en/multi-machine.md`。在一台机器上用 Docker 网桥地址当"私网 IP"验证过登记、远端创建、经仓库迁移、杀掉后 evacuate;两台物理机没验证。顺手修了:`TEMPLATE_POOL` 没设时默认空串会让节点启动就崩(现在默认 `[]`)。
 - `deploy/multinode.sh`:单机多容器模拟多机。`up N` 起 N 个节点加控制面,`status`、`kill`、`start`、`partition`、`heal`、`evacuate`、`down`;内存预算按节点数自动分;`STORE_BW_MBPS` 给共享仓库限速。在 3 节点上实测:放置、节点断电后 evacuate 在别处恢复(文件内容还在)、节点回来后对账、断网与恢复。没做压力测试。
 - 对外默认英文:`README.md` 改为英文(中文版是 `README.zh.md`,`README.en.md` 删除);控制台默认英文,界面右下角可切中文,已保存的选择不受影响;英文界面里小写的字段名首字母大写;README 里的两张截图换成新控制台的英文截图(真实控制面上拍的)。

@@ -1,6 +1,8 @@
 # E2B 兼容设计(2026-11-05)
 
-状态:**设计稿,未动手。** 用户要求"尽量兼容 E2B"。D40/D43 当时只做了控制面 REST,并写下"若接入方只会讲 envd 再做 envd 壳"的可推翻条件;现在用户明确要兼容,条件满足。依据:读了 E2B 仓库里的 `spec/openapi.yml`、envd 的 `envd.yaml`、`process.proto`、`filesystem.proto`,和 Python SDK 的 `connection_config.py`、`sandbox_sync/main.py`、`sandbox/main.py`(都是 2026-11-05 读的 main 分支);以及我们现有的 `cp/internal/e2b/api.go` 与 [api/e2b.md](../guide/api/e2b.md)。
+状态:**已实现(2026-11-05),决定与结果见 [D88](../decisions.md)。**以下是动手前的设计;P0 取证的结论补在 §7 开头,与初稿不同之处以 §7 和 D88 为准。**
+
+(原状态:设计稿,未动手。) 用户要求"尽量兼容 E2B"。D40/D43 当时只做了控制面 REST,并写下"若接入方只会讲 envd 再做 envd 壳"的可推翻条件;现在用户明确要兼容,条件满足。依据:读了 E2B 仓库里的 `spec/openapi.yml`、envd 的 `envd.yaml`、`process.proto`、`filesystem.proto`,和 Python SDK 的 `connection_config.py`、`sandbox_sync/main.py`、`sandbox/main.py`(都是 2026-11-05 读的 main 分支);以及我们现有的 `cp/internal/e2b/api.go` 与 [api/e2b.md](../guide/api/e2b.md)。
 
 **修订(同日)**:用户提议让 sandboxd 直接兼容 envd,采纳为推荐方案,见 §5;§6 的结论随之改变。
 
@@ -83,7 +85,18 @@ E2B SDK ──REST──▶ cp:8710 (控制面,已有)
 
 **初稿推荐 A**(兼容性是这件事的全部价值,不该在编解码上省);**现在推荐**:Rust 侧用 prost 派生(消息少、字段号来自官方 `.proto`,用官方 SDK 的一致性用例兜底),Go 侧不引入新依赖,只解码需要审计的那几个字段。
 
-## 7. 没读到、动手前必须先确认的
+## 7. P0 取证结果(2026-11-05,读 e2b 2.63.0 源码并用日志服务端抓请求;先于下面的原清单)
+
+1. **编码是 Connect JSON**,不是二进制 protobuf(`e2b/envd/client_shared.py` 的 `ENVD_JSON_CODEC`,JS SDK 同样 `useBinaryFormat: false`)。→ §6 的 protobuf 问题消失,服务端用 serde_json。
+2. **明文 `http://` 下 SDK 说 HTTP/1.1**,即使 `http_version` 默认 `"2"`;请求体(服务端流的信封)是 **chunked**,服务端必须解析 chunked 请求。
+3. **`envdVersion` 的门槛**(`e2b/envd/versions.py`):0.1.4 递归 watch、0.3.0 stdin、0.4.0 默认用户由服务端定、0.5.2 close、0.5.7 octet-stream 上传、0.6.2 文件元数据、0.6.3 watch 条目信息、0.6.4 网络挂载 watch。我们报 0.5.7。
+4. **`commands.run` 的往返**:`Start`(服务端流,`/bin/bash -l -c <cmd>`,`stdin:false`,头 `Authorization: Basic base64(user:)` 与 `keepalive-ping-interval: 50`)。`files.write` 是 `POST /files?path=`(multipart,或 ≥0.5.7 且流式数据时 octet-stream)、`read` 是 `GET /files`,`exists`/`get_info` → `Stat`,`rename` → `Move`,`list` → `ListDir{depth:1}`,`watch_dir` → Python 用 `CreateWatcher`(轮询),JS 用 `WatchDir`(流)。`commands.list/kill/send_stdin/connect/pty` → `List/SendSignal/SendInput/Connect/Start{pty}+Update`。创建调 **`POST /v2/sandboxes`**。
+5. **快照**:`create_snapshot` → `POST /sandboxes/{id}/snapshots`,返回 `{snapshotID, names}`,快照 id 可当 `templateID`;映射到"提交成模板"并经实测(一致性用例)成立。
+6. **JS 与 Python 不完全一致**:watch 用法不同(上条);其余在两套一致性用例里都通过。
+
+**原清单(动手前)**:
+
+## 7a. 没读到、动手前必须先确认的
 
 1. Python/JS SDK 发 Connect 请求时用二进制还是 JSON、是否强制 HTTP/2(影响 A/B/C 选择和 h2c 要不要开)。
 2. `envdVersion` 的取值与 SDK 各版本的门槛。

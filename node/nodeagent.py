@@ -135,6 +135,7 @@ def audit(**ev):
 class Sandbox:
     def __init__(self, sid, spec, vm):
         self.id, self.spec, self.vm = sid, spec, vm
+        vm.guest_env = dict(spec.get("env") or {})
         self.created = time.time(); self.last_used = time.time(); self.lock = threading.RLock()
         self.boot_mode = None; self.tpl_key = None
     def touch(self): self.last_used = time.time()
@@ -604,7 +605,7 @@ def create(spec, name=None, pooled=False):
             if spec.get("boot") == "snapshot": detach_net(vm); REG.pop(sid, None); raise
             drop_template_snapshot(key)
             vm = VM(sid, t["kernel"], t["base"], t["upper"], spec["vcpu"], spec["mem"], f"{STATE}/vms", **vm_kwargs(spec, sid))
-            vm.net = sb.vm.net; sb.vm = vm; vm.boot(); sb.boot_mode = "cold"; sb.tpl_key = None
+            vm.net = sb.vm.net; vm.guest_env = dict(sb.spec.get("env") or {}); sb.vm = vm; vm.boot(); sb.boot_mode = "cold"; sb.tpl_key = None
     else:
         vm.boot(); sb.boot_mode = "cold"
         if spec.get("volumes"): volume_mount(sb)
@@ -984,6 +985,37 @@ def _tunnel_upgrade(h, sid, ip, port, path, method):
     h.connection.sendall(head + b"\r\n\r\n" + rest); up.settimeout(None)
     audit(op="port_upgrade", sandbox=sid, port=port, path=path[:120], status=101, s=round(time.monotonic() - t0, 3))
     egress_proxy._pipe(h.connection, up, idle=3600)          # closes both
+
+# ---- E2B envd relay (docs/research/e2b-compat-2026-11.md §5): /sandboxes/<id>/envd/<path> is relayed, byte for byte, to the guest's envd listener on vsock
+# port 49983 (sandboxd answers HTTP/1.1 there; one request per connection, Connection: close). The control plane has already authenticated the caller and parsed
+# what it audits; the node only resumes a paused sandbox, counts it as activity, and pipes both directions (streamed Connect responses flow as they are produced).
+ENVD_RE = re.compile(r"^/sandboxes/([^/]+)/envd(/.*)?$")
+ENVD_VSOCK_PORT = 49983
+ENVD_SKIP = ("host", "authorization", "x-envd-authorization", "connection", "proxy-authorization", "keep-alive", "te", "upgrade")
+
+def proxy_envd(h, sid, sub, method, qs):
+    sb = get_sb(sid)
+    with sb.lock: sb.ensure_running(); sb.touch(); vdir = sb.vm.dir
+    path = (sub or "/") + (f"?{qs}" if qs else "")
+    up = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); up.settimeout(15)
+    try:
+        up.connect(f"{vdir}/v.sock"); up.sendall(f"CONNECT {ENVD_VSOCK_PORT}\n".encode())
+        ack = b""
+        while not ack.endswith(b"\n") and len(ack) < 64:
+            c = up.recv(1)
+            if not c: break
+            ack += c
+        if not ack.startswith(b"OK"): raise OSError(f"guest has no envd listener ({ack!r}): rebuild the base image with this sandboxd")
+    except OSError as e:
+        up.close(); audit(op="envd", sandbox=sid, path=sub or "/", error=repr(e)[:160])
+        return h._send(503, {"code": "unavailable", "message": f"sandbox has no envd: {e}"})
+    hdrs = "".join(f"{k}: {v}\r\n" for k, v in h.headers.items() if k.lower() not in ENVD_SKIP)
+    user_auth = h.headers.get("X-Envd-Authorization")        # the SDK's own Authorization (Basic <user>:) cannot share the header the node bearer uses
+    if user_auth: hdrs += f"Authorization: {user_auth}\r\n"
+    up.sendall(f"{method} {path} HTTP/1.1\r\nHost: envd\r\n{hdrs}Connection: close\r\n\r\n".encode()); up.settimeout(None)
+    h.close_connection = True
+    audit(op="envd", sandbox=sid, method=method, path=(sub or "/")[:120])
+    egress_proxy._pipe(h.connection, up, idle=3600)           # closes both
 
 ROUTES = []
 def route(method, pattern):
@@ -1647,6 +1679,10 @@ class Handler(BaseHTTPRequestHandler):
         if path not in PUBLIC_ROUTES and self.headers.get("Authorization") != f"Bearer {NODE_TOKEN}":
             n = int(self.headers.get("Content-Length") or 0); self._body(n)
             return self._send(401, {"error": "missing or invalid bearer token"})
+        em = ENVD_RE.match(path)
+        if em:                                           # relayed unread: the request body (Content-Length or chunked) is still on the socket
+            try: return proxy_envd(self, em.group(1), em.group(2), method, qs)
+            except KeyError as e: return self._send(404, {"error": str(e)})
         n = int(self.headers.get("Content-Length") or 0); raw = self._body(n)
         pm = PORT_RE.match(path)
         if pm:

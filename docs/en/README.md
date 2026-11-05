@@ -7,6 +7,7 @@ The API is plain HTTP and the SDKs are self-describing, so most people never nee
 | --- | --- |
 | [quickstart.md](quickstart.md) | installing on a Linux host and running your first sandbox |
 | [architecture.md](architecture.md) | what the parts are and how a request flows through them |
+| [e2b.md](e2b.md) | using the official E2B SDKs against Cairn: what passes, what differs |
 | [multi-machine.md](multi-machine.md) | adding node machines to a control plane by IP (verified on one host only) |
 | [security-model.md](security-model.md) | what is isolated how, who is trusted, what is not done |
 

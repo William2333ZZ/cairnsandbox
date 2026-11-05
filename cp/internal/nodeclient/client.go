@@ -77,6 +77,26 @@ func (Client) Do(n *fleet.Node, method, path string, body []byte, timeout time.D
 	return (&http.Client{Timeout: timeout, Transport: tr}).Do(req)
 }
 
+// DoStream is Do with a streamed request body (the E2B envd relay: a Connect request may be chunked and a response may run for hours). contentLength <= 0
+// with a body means "unknown": the transport sends it chunked. The caller reads and closes the response body.
+func (Client) DoStream(n *fleet.Node, method, path string, body io.Reader, contentLength int64, hdr http.Header) (*http.Response, error) {
+	req, err := http.NewRequest(method, n.URL+path, body)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil && contentLength > 0 {
+		req.ContentLength = contentLength
+	}
+	for k, vs := range hdr {
+		for _, v := range vs {
+			req.Header.Add(k, v)
+		}
+	}
+	req.Header.Set("Authorization", "Bearer "+n.Token())
+	TLSConfig()
+	return (&http.Client{Transport: tr}).Do(req)
+}
+
 // JSON is Do for JSON in, JSON out.
 func (c Client) JSON(n *fleet.Node, method, path string, body any, timeout time.Duration) (int, map[string]any, error) {
 	var b []byte

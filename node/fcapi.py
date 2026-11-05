@@ -182,6 +182,9 @@ class VM:
 
     def _push_net(self):
         if self.net and self.guest: self.guest.call("net_config", **self.net.guest_cfg())
+        if getattr(self, "guest_env", None) and self.guest:    # the sandbox's envVars for the E2B envd path (sandboxd lays them under every envd process); old guests answer ok:false
+            try: self.guest.call("set_env", env=self.guest_env)
+            except Exception: pass                                                       # noqa: BLE001
 
     def new_conn(self):
         """A fresh vsock connection: exec/session traffic uses its own connection so it never blocks lifecycle ops."""

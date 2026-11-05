@@ -1,6 +1,7 @@
 //! sandboxd v1 in Rust: AF_VSOCK listener (host CID only), newline-delimited JSON.
 //! request : {"id","op",...}  response: {"id","ok",...}  streamed: {"id","event":"out"|"err","data"} during exec/session_exec.
 mod abi;
+mod envd;
 mod landlock;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use serde_json::{json, Map, Value};
@@ -419,6 +420,13 @@ fn op_thaw(_ctx: &Ctx, _req: &Value) -> R {
     let e = String::from_utf8_lossy(&o.stderr).to_string();
     Ok(obj(json!({"thawed": o.status.success() || e.contains("not frozen"), "detail": tail(e.trim(), 120)})))
 }
+/// The sandbox's `envVars` for the envd path (envd.rs lays them under every process it starts).
+fn op_set_env(_ctx: &Ctx, req: &Value) -> R {
+    let env = req.get("env").cloned().unwrap_or(json!({}));
+    fs::create_dir_all("/run/sandboxd").ok();
+    fs::write("/run/sandboxd/env.json", env.to_string()).map_err(|e| format!("OSError: {e}"))?;
+    Ok(obj(json!({"keys": env.as_object().map(|o| o.len()).unwrap_or(0)})))
+}
 fn op_shutdown(_ctx: &Ctx, _req: &Value) -> R {
     thread::spawn(|| { thread::sleep(Duration::from_millis(200)); unsafe { libc::sync(); libc::reboot(libc::LINUX_REBOOT_CMD_RESTART); } });
     Ok(obj(json!({"shutting_down": true})))
@@ -434,7 +442,7 @@ fn dispatch(op: &str, ctx: &Ctx, req: &Value) -> R {
         "add_entropy" => op_add_entropy(ctx, req), "net_config" => op_net_config(ctx, req), "quiesce" => op_quiesce(ctx, req),
         "thaw" => op_thaw(ctx, req), "shutdown" => op_shutdown(ctx, req),
         "abi_events" => op_abi_events(ctx, req), "budget_set" => op_budget_set(ctx, req), "abi_info" => op_abi_info(ctx, req),
-        "ticket_set" => op_ticket_set(ctx, req), "abi_input" => op_abi_input(ctx, req),
+        "ticket_set" => op_ticket_set(ctx, req), "abi_input" => op_abi_input(ctx, req), "set_env" => op_set_env(ctx, req),
         other => err("KeyError", format!("'{other}'")),
     }
 }
@@ -459,17 +467,31 @@ fn serve(stream: UnixStream, sessions: Sessions, boot: Instant, abi: Arc<abi::Ab
     }
 }
 
+fn vsock_listen(port: u32) -> RawFd {
+    let fd = unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM | libc::SOCK_CLOEXEC, 0) };
+    if fd < 0 { eprintln!("sandboxd: vsock socket failed"); std::process::exit(1); }
+    let mut addr: libc::sockaddr_vm = unsafe { std::mem::zeroed() }; addr.svm_family = libc::AF_VSOCK as _; addr.svm_port = port; addr.svm_cid = libc::VMADDR_CID_ANY;
+    let len = std::mem::size_of::<libc::sockaddr_vm>() as libc::socklen_t;
+    if unsafe { libc::bind(fd, &addr as *const _ as *const libc::sockaddr, len) } < 0 || unsafe { libc::listen(fd, 64) } < 0 { eprintln!("sandboxd: bind/listen failed on port {port}"); std::process::exit(1); }
+    fd
+}
+
 fn main() {
     let boot = Instant::now(); let sessions: Sessions = Arc::new(Mutex::new(HashMap::new()));
     unsafe { libc::signal(libc::SIGPIPE, libc::SIG_IGN); }
     let abi_srv = abi::Abi::new();
     { let a = abi_srv.clone(); let uids: Vec<u32> = ["root", "aios", "agent"].iter().filter_map(|n| user(n).ok().map(|u| u.0)).collect();
       thread::spawn(move || abi::serve(a, uids)); }
-    let fd = unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM | libc::SOCK_CLOEXEC, 0) };
-    if fd < 0 { eprintln!("sandboxd: vsock socket failed"); std::process::exit(1); }
-    let mut addr: libc::sockaddr_vm = unsafe { std::mem::zeroed() }; addr.svm_family = libc::AF_VSOCK as _; addr.svm_port = PORT; addr.svm_cid = libc::VMADDR_CID_ANY;
     let len = std::mem::size_of::<libc::sockaddr_vm>() as libc::socklen_t;
-    if unsafe { libc::bind(fd, &addr as *const _ as *const libc::sockaddr, len) } < 0 || unsafe { libc::listen(fd, 64) } < 0 { eprintln!("sandboxd: bind/listen failed"); std::process::exit(1); }
+    let fd = vsock_listen(PORT);
+    // E2B envd compatibility on its own vsock port (host CID only): Connect JSON + /files, see envd.rs
+    { let efd = vsock_listen(envd::PORT); thread::spawn(move || loop {
+        let mut peer: libc::sockaddr_vm = unsafe { std::mem::zeroed() }; let mut plen = std::mem::size_of::<libc::sockaddr_vm>() as libc::socklen_t;
+        let c = unsafe { libc::accept(efd, &mut peer as *mut _ as *mut libc::sockaddr, &mut plen) };
+        if c < 0 { continue; }
+        if peer.svm_cid != HOST_CID { unsafe { libc::close(c); } continue; }
+        let stream = unsafe { UnixStream::from_raw_fd(c) }; thread::spawn(move || envd::serve_conn(stream));
+    }); }
     println!("sandboxd v1 (rust) listening on vsock port {PORT} (host-only); abi v{} on {}", abi::ABI_VERSION, abi::SOCK);
     loop {
         let mut peer: libc::sockaddr_vm = unsafe { std::mem::zeroed() }; let mut plen = len;

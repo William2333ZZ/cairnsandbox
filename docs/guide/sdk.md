@@ -193,6 +193,8 @@ c = Client("http://cp:18700", token="…", project="acme", timeout=600)
 
 ## 和 E2B SDK 的对应
 
+**已经在用 E2B 官方 SDK 的,不用换:** 把 `E2B_API_URL` 与 `E2B_SANDBOX_URL` 指到控制面的 E2B 口(18710)就能用,覆盖面与实测结果见 [api/e2b.md](api/e2b.md)。下面是**我们自己的 SDK** `cairnbox` 与 E2B SDK 在调用形状上的对应(走主口 18700,多出检查点、回滚、预算等)。
+
 | E2B | 本 SDK |
 |---|---|
 | `Sandbox.create(template, timeout, envs, metadata)` | `client.sandboxes.create(template=, env=, metadata=, ttl_idle_s=)`;E2B 的 `timeout` ≈ `ttl_idle_s`;环境变量参数叫 `env` 不是 `envs` |
