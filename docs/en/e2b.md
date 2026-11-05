@@ -30,6 +30,10 @@ Not verified: other SDK versions or languages (Go, Java, ...), two physical mach
 - `get_host(port)` works when the control plane has `PREVIEW_DOMAIN` set (it is reported as the sandbox's `domain`, and a wildcard DNS name plus TLS in front are yours to provide); unlike E2B it is not public, it needs a token. `watch_dir` polls (every 250 ms), it has no inotify.
 - Sandboxes need a base image built with the envd-capable `sandboxd` (rebuild `recipes/base-debian-13`); templates created before that need rebuilding.
 
+## code-interpreter
+
+The official `e2b_code_interpreter` (`Sandbox.create()` and `run_code`, contexts) passes 14 cases for 2.10.5, 2.11.0 and 2.11.9 once the `code-interpreter-v1` template is built with `recipes/code-interpreter/build-template.py`. The server inside is our own small one (standard library only): stateful Python contexts, bash and JavaScript; no charts, no IPython magics, no numpy or pandas. Details and limits: [`docs/guide/code-interpreter.md`](../guide/code-interpreter.md) (Chinese).
+
 ## What E2B does not have
 
 A background process survives pause, checkpoint, rollback and fork, because it lives in the VM's memory: after a rollback, `sbx.commands.list()` still shows it and `sbx.commands.connect(pid)` re-attaches to the same process.

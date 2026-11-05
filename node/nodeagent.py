@@ -11,6 +11,7 @@ HTTP/JSON on a TCP port. One process manages many VMs under STATE_DIR.
 Env: IMAGES_DIR, STATE_DIR, PORT, TLS_CERT / TLS_KEY (serve HTTPS), MAX_VMS, FENCE_AFTER_S (self-fence when the control plane is silent that long; 0 = off), MEM_BUDGET_MIB, VCPU_OVERCOMMIT, HOST_VCPUS
 """
 import collections, glob, base64, hashlib, json, os, re, shlex, shutil, signal, socket, ssl, subprocess, sys, threading, time, urllib.error, urllib.parse, uuid
+import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -940,7 +941,7 @@ PORT_RE = re.compile(r"^/sandboxes/([^/]+)/ports/(\d+)(/.*)?$")
 HOP_HEADERS = ("host", "authorization", "connection", "transfer-encoding", "keep-alive", "proxy-authorization", "te", "upgrade")
 
 def proxy_port(h, sid, port, sub, method, raw, qs):
-    import http.client
+    import http.client            # (also used by _stream_port_response below)
     sb = get_sb(sid)
     with sb.lock: sb.ensure_running(); sb.touch(); ip = sb.vm.net.ip if sb.vm.net else None
     if not ip: return h._send(503, {"error": "sandbox has no network"})
@@ -952,7 +953,12 @@ def proxy_port(h, sid, port, sub, method, raw, qs):
         return _tunnel_upgrade(h, sid, ip, port, path, method)
     t0 = time.monotonic()
     try:
-        c = http.client.HTTPConnection(ip, port, timeout=60); c.request(method, path, body=raw or None, headers=hdr); r = c.getresponse(); data = r.read()
+        c = http.client.HTTPConnection(ip, port, timeout=60); c.request(method, path, body=raw or None, headers=hdr); r = c.getresponse()
+    except (OSError, http.client.HTTPException) as e:
+        audit(op="port", sandbox=sid, port=port, path=path[:120], error=repr(e)[:120]); return h._send(502, {"error": f"sandbox port {port}: {e}"})
+    if r.getheader("Content-Length") is None and r.status not in (204, 304):
+        return _stream_port_response(h, r, c, sid, port, method, path, t0)          # a streamed answer (NDJSON, SSE, chunked): pass it on as it arrives, not when it ends
+    try: data = r.read()
     except (OSError, http.client.HTTPException) as e:
         audit(op="port", sandbox=sid, port=port, path=path[:120], error=repr(e)[:120]); return h._send(502, {"error": f"sandbox port {port}: {e}"})
     h.send_response(r.status)
@@ -960,6 +966,29 @@ def proxy_port(h, sid, port, sub, method, raw, qs):
         if k.lower() not in ("connection", "transfer-encoding", "content-length", "keep-alive"): h.send_header(k, v)
     h.send_header("Content-Length", str(len(data))); h.end_headers(); h.wfile.write(data)
     audit(op="port", sandbox=sid, port=port, method=method, path=path[:120], status=r.status, bytes=len(data), s=round(time.monotonic() - t0, 3))
+
+def _stream_port_response(h, r, c, sid, port, method, path, t0):
+    """Relay a response that has no Content-Length chunk by chunk (Transfer-Encoding: chunked towards the caller), so a long-running stream such as code-interpreter's
+    /execute reaches the client while it runs. The read timeout of the upstream connection is lifted: such a stream may be quiet for a long time."""
+    n = 0
+    try:
+        h.send_response(r.status)
+        for k, v in r.getheaders():
+            if k.lower() not in ("connection", "transfer-encoding", "content-length", "keep-alive"): h.send_header(k, v)
+        h.send_header("Transfer-Encoding", "chunked"); h.end_headers()
+        c.sock.settimeout(None)
+        while True:
+            d = r.read1(65536)
+            if not d: break
+            n += len(d); h.wfile.write(f"{len(d):x}\r\n".encode() + d + b"\r\n")
+        h.wfile.write(b"0\r\n\r\n")
+    except (OSError, ValueError, http.client.HTTPException) as e:                # the caller went away or the service did: nothing more to say to either
+        h.close_connection = True; audit(op="port", sandbox=sid, port=port, path=path[:120], error=repr(e)[:120], bytes=n)
+        return
+    finally:
+        try: c.close()
+        except OSError: pass
+    audit(op="port", sandbox=sid, port=port, method=method, path=path[:120], status=r.status, bytes=n, streamed=True, s=round(time.monotonic() - t0, 3))
 
 def _tunnel_upgrade(h, sid, ip, port, path, method):
     """Relay the WebSocket handshake to the guest and, on 101, hand the two sockets to each other until one side closes (the handler reads unbuffered,

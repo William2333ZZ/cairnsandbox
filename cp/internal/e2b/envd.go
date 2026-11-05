@@ -17,9 +17,12 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"fcnode/cp/internal/fleet"
 )
 
 // Counters for the envd side, rendered by MetricsText (the main port's /metrics appends them). Process-wide and per replica, like the rest of /metrics.
@@ -173,6 +176,10 @@ func (s *Server) serveEnvd(w0 http.ResponseWriter, r *http.Request) {
 		}
 		envdCount(envdKind(path), sw.status)
 	}()
+	if port := r.Header.Get("E2b-Sandbox-Port"); port != "" && port != "49983" { // another service in the sandbox (code-interpreter's Jupyter-like server on 49999, a dev server, ...)
+		s.servePort(w, sw, r, sid, port, &upBytes)
+		return
+	}
 	if !isEnvdPath(path) {
 		connectErr(w, 404, "not_found", "no route")
 		return
@@ -249,55 +256,7 @@ func (s *Server) serveEnvd(w0 http.ResponseWriter, r *http.Request) {
 		s.Audit.Write(ev)
 	}
 
-	hdr := http.Header{}
-	for k, vs := range r.Header {
-		switch strings.ToLower(k) {
-		case "host", "authorization", "x-access-token", "x-api-key", "connection", "proxy-authorization", "keep-alive", "te", "upgrade":
-			continue
-		}
-		for _, v := range vs {
-			hdr.Add(k, v)
-		}
-	}
-	if a := r.Header.Get("Authorization"); a != "" {
-		hdr.Set("X-Envd-Authorization", a) // the node bearer takes the Authorization header on this hop
-	}
-	uri := "/sandboxes/" + sid + "/envd" + path
-	if r.URL.RawQuery != "" {
-		uri += "?" + r.URL.RawQuery
-	}
-	cl := r.ContentLength
-	if body != nil {
-		body = countingBody{Reader: body, n: &upBytes}
-	}
-	resp, err := s.NC.DoStream(node, r.Method, uri, body, cl, hdr)
-	if err != nil {
-		connectErr(w, 503, "unavailable", "node unreachable: "+err.Error())
-		return
-	}
-	defer resp.Body.Close()
-	for _, k := range []string{"Content-Type", "Content-Length"} {
-		if v := resp.Header.Get(k); v != "" {
-			w.Header().Set(k, v)
-		}
-	}
-	w.WriteHeader(resp.StatusCode)
-	flusher, _ := w.(http.Flusher)
-	buf := make([]byte, 32768)
-	for {
-		n, rerr := resp.Body.Read(buf)
-		if n > 0 {
-			if _, werr := w.Write(buf[:n]); werr != nil {
-				return // the SDK went away; the process keeps running in the sandbox
-			}
-			if flusher != nil {
-				flusher.Flush()
-			}
-		}
-		if rerr != nil {
-			return
-		}
-	}
+	s.forward(w, r, node, "/sandboxes/"+sid+"/envd"+path, body, &upBytes)
 }
 
 // id0Allowed: a suspended account cannot start processes or write files (a paused sandbox would be resumed by the relay, which is exactly what the
@@ -326,4 +285,108 @@ func clip(s string, n int) string {
 		return s[:n]
 	}
 	return s
+}
+
+// forward relays one request to the node's uri and streams the answer back; the SDK's own Authorization moves to X-Envd-Authorization because the node
+// bearer takes that header on this hop.
+func (s *Server) forward(w http.ResponseWriter, r *http.Request, node *fleet.Node, uri string, body io.Reader, upBytes *int64) {
+	hdr := http.Header{}
+	for k, vs := range r.Header {
+		switch strings.ToLower(k) {
+		case "host", "authorization", "x-access-token", "x-api-key", "e2b-traffic-access-token", "connection", "proxy-authorization", "keep-alive", "te", "upgrade":
+			continue
+		}
+		for _, v := range vs {
+			hdr.Add(k, v)
+		}
+	}
+	if a := r.Header.Get("Authorization"); a != "" {
+		hdr.Set("X-Envd-Authorization", a)
+	}
+	if r.URL.RawQuery != "" {
+		uri += "?" + r.URL.RawQuery
+	}
+	if body != nil && upBytes != nil {
+		body = countingBody{Reader: body, n: upBytes}
+	}
+	resp, err := s.NC.DoStream(node, r.Method, uri, body, r.ContentLength, hdr)
+	if err != nil {
+		connectErr(w, 503, "unavailable", "node unreachable: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	for _, k := range []string{"Content-Type", "Content-Length", "Content-Disposition", "Cache-Control", "Etag", "Last-Modified", "Location"} {
+		if v := resp.Header.Get(k); v != "" {
+			w.Header().Set(k, v)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	flusher, _ := w.(http.Flusher)
+	buf := make([]byte, 32768)
+	for {
+		n, rerr := resp.Body.Read(buf)
+		if n > 0 {
+			if _, werr := w.Write(buf[:n]); werr != nil {
+				return // the SDK went away; what it started in the sandbox keeps running
+			}
+			if flusher != nil {
+				flusher.Flush()
+			}
+		}
+		if rerr != nil {
+			return
+		}
+	}
+}
+
+// TrafficToken is the token for traffic to the sandbox's own ports (the SDKs send it as E2B-Traffic-Access-Token, and code-interpreter's context calls carry
+// no other credential): an HMAC of the sandbox id under another label than the envd token, so the two are not interchangeable by accident.
+func (s *Server) TrafficToken(sid string) string {
+	if len(s.Secret) == 0 {
+		return ""
+	}
+	m := hmac.New(sha256.New, s.Secret)
+	m.Write([]byte("traffic|" + sid))
+	return hex.EncodeToString(m.Sum(nil))
+}
+
+// servePort: SDK -> some TCP port of the sandbox (E2b-Sandbox-Port other than envd's 49983), relayed to the node's port proxy. Either token of this sandbox opens it
+// (X-Access-Token is the envd token, E2B-Traffic-Access-Token the traffic one); the node resumes a paused sandbox like for any port request.
+func (s *Server) servePort(w http.ResponseWriter, sw *statusWriter, r *http.Request, sid, port string, up *int64) {
+	n, err := strconv.Atoi(port)
+	path := r.URL.Path
+	if err != nil || n < 1 || n > 65535 || !strings.HasPrefix(path, "/") || strings.Contains(path, "..") {
+		connectErr(w, 400, "invalid_argument", "bad port or path")
+		return
+	}
+	okTok := func(got, want string) bool { return want != "" && hmac.Equal([]byte(got), []byte(want)) }
+	if !okTok(r.Header.Get("E2B-Traffic-Access-Token"), s.TrafficToken(sid)) && !okTok(r.Header.Get("X-Access-Token"), s.EnvdToken(sid)) {
+		envdStats.denied.Add(1)
+		connectErr(w, 401, "unauthenticated", "invalid or missing access token for this sandbox")
+		return
+	}
+	rt, rerr := s.Life.RouteErr(sid)
+	if rerr != nil {
+		connectErr(w, 503, "unavailable", "registry unavailable")
+		return
+	}
+	if rt == nil {
+		connectErr(w, 502, "unavailable", "The sandbox "+sid+" was not found")
+		return
+	}
+	node := s.Fleet.Get(rt.Node)
+	if node == nil || !node.Alive() {
+		connectErr(w, 502, "unavailable", "The sandbox "+sid+" exists but its port "+port+" is not open: the node is not reachable")
+		return
+	}
+	if !id0Allowed(s, s.Life.ProjectOf(sid), r) {
+		connectErr(w, 403, "permission_denied", "read-only or suspended")
+		return
+	}
+	s.Audit.Write(map[string]any{"op": "envd_port", "sandbox": sid, "project": s.Life.ProjectOf(sid), "port": n, "method": r.Method, "path": clip(path, 200)})
+	var body io.Reader = r.Body
+	if r.Body == nil || r.Body == http.NoBody {
+		body = nil
+	}
+	s.forward(w, r, node, "/sandboxes/"+sid+"/ports/"+port+path, body, up)
 }

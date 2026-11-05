@@ -289,6 +289,7 @@ func (s *Server) viewTok(sb map[string]any, withToken bool) map[string]any {
 	}
 	if withToken {
 		out["envdAccessToken"] = s.EnvdToken(id)
+		out["trafficAccessToken"] = s.TrafficToken(id)
 	}
 	return out
 }

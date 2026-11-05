@@ -158,6 +158,10 @@ print(sbx.commands.run("echo hi").stdout)
 - **暂停中直接 `commands.run`**(不先 `connect`):节点透明恢复,有一致性用例。
 - **栈本身的延迟**(`ops/e2b-latency-raw.py`,在控制面所在主机上用标准库客户端发同样的 Connect JSON,不含 SDK 与网络;1 台沙箱测延迟、4 台并行):`bash -l -c true` 从发出 `Start` 到收到结束 p50 8.6 ms / p95 9.4 ms;首个 stdout 字节 4.4 ms;1 KiB 文件写 / 读 p50 4.2 / 3.8 ms;64 MiB 文件写 290 MB/s、读 670 MB/s;4 台沙箱并行共 100 条命令 p50 10.6 ms、p95 21.8 ms、无错误(283 条/秒)。冷启动创建 0.4 s。**这是单机小规模的数字,开发机上还有别人的任务,不是和别的沙箱的对比基准。**用 SDK 经 SSH 隧道从笔记本测的数(命令 p50 66 ms)被隧道的 88 ms RTT 主导,没有参考价值。
 
+### code-interpreter
+
+官方 `e2b_code_interpreter`(`run_code`、上下文)的 2.10.5–2.11.9 通过 14 条用例,要先建 `code-interpreter-v1` 模板,范围与限制见 [../code-interpreter.md](../code-interpreter.md)。控制面对 `E2b-Sandbox-Port` 不是 49983 的请求,用沙箱的流量令牌(或 envd 令牌)鉴权后转给节点的端口代理(流式)。
+
 ### 没覆盖到的
 
 - 没有 Go、Java 等其他语言的 E2B SDK 的测试。

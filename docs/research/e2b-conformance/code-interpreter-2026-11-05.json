@@ -1,0 +1,44 @@
+{
+ "date": "2026-11-05",
+ "setup": "2-node drill stack, template code-interpreter-v1 built by recipes/code-interpreter/build-template.py on the agent-langs layer (CPython 3.13, bun)",
+ "suite": "ops/e2b-code-interpreter-conformance.py (14 cases)",
+ "results": [
+  {
+   "sdk": "e2b-code-interpreter 2.11.9",
+   "e2b_version": "2.63.0",
+   "summary": {
+    "PASS": 14,
+    "FAIL": 0,
+    "SKIP": 0
+   }
+  },
+  {
+   "sdk": "e2b-code-interpreter 2.11.0",
+   "e2b_version": "2.63.0",
+   "summary": {
+    "PASS": 14,
+    "FAIL": 0,
+    "SKIP": 0
+   }
+  },
+  {
+   "sdk": "e2b-code-interpreter 2.10.5",
+   "e2b_version": "2.63.0",
+   "summary": {
+    "PASS": 14,
+    "FAIL": 0,
+    "SKIP": 0
+   }
+  },
+  {
+   "sdk": "e2b-code-interpreter 2.4.1 / 2.0.0",
+   "summary": null,
+   "note": "not tested: these versions break against e2b 2.63.0 on their own (private attribute _transport); no matching old e2b was tried"
+  },
+  {
+   "sdk": "e2b-code-interpreter 1.5.2",
+   "summary": null,
+   "note": "refused: does not support a custom API URL, nothing was sent"
+  }
+ ]
+}

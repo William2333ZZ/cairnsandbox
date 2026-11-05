@@ -103,6 +103,18 @@ func (f *fakeNode) handle(w http.ResponseWriter, r *http.Request) {
 			c.Write(append([]byte("echo:"), b[:n]...))
 		}
 	}
+	if strings.Contains(r.URL.Path, "/ports/") && r.Header.Get("E2b-Sandbox-Port") != "" { // a service in the guest reached through the E2B surface: a streamed NDJSON answer
+		b, _ := io.ReadAll(r.Body)
+		f.mu.Lock()
+		f.envdSeen = append(f.envdSeen, map[string]string{"path": r.URL.RequestURI(), "bearer": r.Header.Get("Authorization"), "body": string(b), "traffic": r.Header.Get("E2B-Traffic-Access-Token"), "xtoken": r.Header.Get("X-Access-Token")})
+		f.mu.Unlock()
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		w.WriteHeader(200)
+		w.Write([]byte(`{"type":"stdout","text":"hi","timestamp":1}` + "\n"))
+		w.(http.Flusher).Flush()
+		w.Write([]byte(`{"type":"number_of_executions","execution_count":1}` + "\n"))
+		return
+	}
 	if strings.Contains(r.URL.Path, "/envd/") { // the guest's envd, answering the way sandboxd does: a Connect server stream, flushed frame by frame
 		b, _ := io.ReadAll(r.Body)
 		f.mu.Lock()
@@ -2733,6 +2745,52 @@ func TestTheE2BEnvdSideRelaysAuditsAndIsolates(t *testing.T) {
 	}
 	if r := do(sid, tok, "GET", "/health", nil); r.StatusCode != 204 {
 		t.Fatalf("health: %d", r.StatusCode)
+	}
+	// another port of the sandbox (code-interpreter's server on 49999): the traffic token or the envd token opens it, nothing else does
+	port := func(token map[string]string, p, path string) *http.Response {
+		req, _ := http.NewRequest("POST", es.URL+path, strings.NewReader(`{"code":"1+1"}`))
+		req.Header.Set("E2b-Sandbox-Id", sid)
+		req.Header.Set("E2b-Sandbox-Port", p)
+		req.Header.Set("Content-Type", "application/json")
+		for k, v := range token {
+			req.Header.Set(k, v)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+	traffic, _ := one["trafficAccessToken"].(string)
+	if traffic == "" || traffic == tok {
+		t.Fatalf("a distinct traffic token must be issued at create: %v", one["trafficAccessToken"])
+	}
+	r1 := port(map[string]string{"E2B-Traffic-Access-Token": traffic}, "49999", "/execute?x=1")
+	b1, _ := io.ReadAll(r1.Body)
+	r1.Body.Close()
+	if r1.StatusCode != 200 || !bytes.Contains(b1, []byte("execution_count")) {
+		t.Fatalf("port relay: %d %s", r1.StatusCode, b1)
+	}
+	a.mu.Lock()
+	ps := a.envdSeen[len(a.envdSeen)-1]
+	a.mu.Unlock()
+	if ps["path"] != "/sandboxes/"+sid+"/ports/49999/execute?x=1" || ps["bearer"] != "Bearer tok-na" || ps["body"] != `{"code":"1+1"}` || ps["traffic"] != "" {
+		t.Fatalf("what the node got for the port: %v", ps)
+	}
+	if r := port(map[string]string{"X-Access-Token": tok}, "49999", "/contexts"); r.StatusCode != 200 {
+		t.Fatalf("the envd token should open the sandbox's ports too: %d", r.StatusCode)
+	}
+	if r := port(map[string]string{"E2B-Traffic-Access-Token": two["trafficAccessToken"].(string)}, "49999", "/execute"); r.StatusCode != 401 {
+		t.Fatalf("another sandbox's traffic token: %d", r.StatusCode)
+	}
+	if r := port(nil, "49999", "/execute"); r.StatusCode != 401 {
+		t.Fatalf("no token: %d", r.StatusCode)
+	}
+	if r := port(map[string]string{"E2B-Traffic-Access-Token": traffic}, "99999", "/execute"); r.StatusCode != 400 {
+		t.Fatalf("bad port: %d", r.StatusCode)
+	}
+	if r := port(map[string]string{"E2B-Traffic-Access-Token": traffic}, "49999", "/a/../b"); r.StatusCode != 400 {
+		t.Fatalf("path traversal: %d", r.StatusCode)
 	}
 	m := e2b.MetricsText() // the envd side is counted, and the main port's /metrics carries these lines
 	for _, want := range []string{`cairn_envd_requests_total{kind="start",status="2xx"}`, `cairn_envd_requests_total{kind="health",status="2xx"}`, `cairn_envd_requests_total{kind="start",status="4xx"}`, "cairn_envd_active_relays 0", "cairn_envd_auth_denied_total"} {
