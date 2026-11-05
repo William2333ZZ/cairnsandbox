@@ -4,7 +4,7 @@
 
 <br>
 
-[![ci](https://github.com/William2333ZZ/cairn/actions/workflows/ci.yml/badge.svg)](https://github.com/William2333ZZ/cairn/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-Apache--2.0-14B8A6)](LICENSE) [![status](https://img.shields.io/badge/status-early_(0.x)-F59E0B)](#状态) [![platform](https://img.shields.io/badge/runs_on-Linux_x86__64_+_KVM-64748B)](docs/en/quickstart.md) [![stack](https://img.shields.io/badge/built_with-Go_·_Python_·_Rust_·_Firecracker-64748B)](docs/en/architecture.md)
+[![ci](https://github.com/William2333ZZ/cairnsandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/William2333ZZ/cairnsandbox/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-Apache--2.0-14B8A6)](LICENSE) [![status](https://img.shields.io/badge/status-early_(0.x)-F59E0B)](#状态) [![platform](https://img.shields.io/badge/runs_on-Linux_x86__64_+_KVM-64748B)](docs/en/quickstart.md) [![stack](https://img.shields.io/badge/built_with-Go_·_Python_·_Rust_·_Firecracker-64748B)](docs/en/architecture.md)
 
 **[English](README.md) · [中文](README.zh.md) · [快速开始](docs/en/quickstart.md) · [功能清单](docs/guide/features.md) · [路线图](ROADMAP.md) · [设计决定](docs/decisions-index.md)**
 

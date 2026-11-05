@@ -11,7 +11,7 @@
 ## Install
 
 ```bash
-git clone https://github.com/William2333ZZ/cairn && cd cairn
+git clone https://github.com/William2333ZZ/cairnsandbox && cd cairnsandbox
 scripts/bootstrap.sh          # Firecracker, docker images, guest kernel, guest runtime, base image, secrets, console, chunk store
 cd deploy && docker compose up -d
 curl -s -H "Authorization: Bearer $(cat secrets/cp.token)" http://127.0.0.1:18700/health

@@ -34,7 +34,7 @@ Allow your node machines' IPs to reach `10.0.0.1:18900` and nothing else. The co
 You need Docker, `/dev/kvm`, `/dev/vhost-vsock`, `/dev/net/tun` and `/dev/fuse` (same as any node), a checkout of this repository, the `fc-node` image, and one small file from the control plane machine. You do **not** need to build the kernel or the base image: the node reads them from the store.
 
 ```bash
-git clone https://github.com/William2333ZZ/cairn && cd cairn
+git clone https://github.com/William2333ZZ/cairnsandbox && cd cairnsandbox
 docker build -t fc-node:dev -f node/Dockerfile .
 mkdir -p images/layers
 rsync -S control-plane-host:cairn/images/layers/upper-template.ext4 images/layers/   # -S: it is a sparse 512 MiB file
