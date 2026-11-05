@@ -34,7 +34,7 @@ export default function Overview() {
         <EmptyState title={t('ov.start.title')} body={t('ov.start.body')}>
           <div className="space-y-2">
             <CodeBlock label={t('ov.start.install')} code="pip install -e sdk/python" />
-            <CodeBlock label={t('ov.start.run')} code={`from cairnbox import Client\n\nc = Client("${origin}", token="…", project="${project || 'default'}")\nwith c.sandboxes.create(mem=256) as sb:\n    print(sb.commands.run("echo hello").stdout)`} />
+            <CodeBlock label={t('ov.start.run')} code={`from cairnsandbox import Client\n\nc = Client("${origin}", token="…", project="${project || 'default'}")\nwith c.sandboxes.create(mem=256) as sb:\n    print(sb.commands.run("echo hello").stdout)`} />
           </div>
         </EmptyState>
       </>

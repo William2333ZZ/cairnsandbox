@@ -103,7 +103,7 @@ Apache 2.0,基于自研 RustVMM + KVM,兼容 E2B SDK;组件有 API、调度、�
 
 ## 12. 发布前只有你能做的事
 
-1. 在 USPTO 等处自己查一遍 Cairn / cairnbox 的商标(我的检索不是法律意见)。
+1. 在 USPTO 等处自己查一遍 Cairn / cairnsandbox 的商标(我的检索不是法律意见)。
 2. (已定:William2333ZZ/cairn,先私有)托管账号与仓库名,文档里的 `OWNER` 已换掉(`README`、`docs/en/quickstart.md`、`run-node.sh` 注释、各处 `William2333ZZ/cairn`)。
 3. 填联系方式:`SECURITY.md` 与 `CODE_OF_CONDUCT.md` 现在指向 GitHub 私有漏洞报告;要不要给一个邮箱,由你定。仓库初始提交用的是占位作者 `Cairn <noreply@cairn.invalid>`,发布前决定用谁的名字。
 4. 决定 DCO 还是 CLA,以及商业模式(§9)。

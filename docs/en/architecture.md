@@ -20,7 +20,7 @@
 | Chunk store | `node/imgstore.py` | Content-addressed chunks, local directory or any S3-compatible bucket (Garage in `deploy/`). Holds base images, layers, paused sandboxes and template snapshots; nodes load images lazily from it. |
 | Registry / DB | `deploy/` | Valkey (routes, nodes, leases) and PostgreSQL (tenancy, usage, billing, builds). |
 | Console | `console/` | Next.js static export served by the control plane. |
-| SDKs, CLI, MCP | `sdk/` | Python (`cairnbox`) and JS/TS (`cairnbox`), zero runtime dependencies. |
+| SDKs, CLI, MCP | `sdk/` | Python (`cairnsandbox`) and JS/TS (`cairnsandbox`), zero runtime dependencies. |
 | Agent layer (optional) | `aios/` `intake/` `eval/` `web/` | A coding agent, its intake service and evaluator. It uses the sandbox cloud only through the HTTP API / SDK; the sandbox cloud runs without it. |
 
 ## State and time travel

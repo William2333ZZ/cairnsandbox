@@ -1,9 +1,9 @@
-# cairnbox (Python SDK)
+# cairnsandbox (Python SDK)
 
 The client for the Cairn sandbox cloud's control plane (CONTRACT §1). Standard library only.
 
 ```python
-from cairnbox import Client
+from cairnsandbox import Client
 c = Client("http://cp:18700", token="…", project="acme")     # or CAIRN_URL / CAIRN_TOKEN / CAIRN_PROJECT
 with c.sandboxes.create(mem=512, network={"allow_hosts": ["pypi.org"]}, env={"MODE": "dev"}) as sb:
     print(sb.commands.run("python3 -V").check().stdout)
@@ -20,7 +20,7 @@ What is ours: `checkpoints` (take / rollback / fork from), `budget`, `ticket`, `
 
 Errors are `ApiError` subclasses with `.status`: `NotFound`, `Forbidden`, `NoCapacity` (429), `QuotaExceeded` (402), `NeedsApproval` (202, `.request`).
 
-**MCP**:`python3 -m cairnbox.mcp` 是一个 stdio 的 MCP 服务(`claude mcp add aios -- python3 -m cairnbox.mcp`),工具:sandbox_create / run / write_file / read_file / checkpoint / rollback / fork / pause / resume / kill / list / info;令牌与地址从环境变量来。
+**MCP**:`python3 -m cairnsandbox.mcp` 是一个 stdio 的 MCP 服务(`claude mcp add aios -- python3 -m cairnsandbox.mcp`),工具:sandbox_create / run / write_file / read_file / checkpoint / rollback / fork / pause / resume / kill / list / info;令牌与地址从环境变量来。
 
 `examples/quickstart.py http://cp:18700` runs the tour against a real control plane and prints `[OK]`/`[FAIL]` lines. `pip install -e sdk/python` installs it.
 

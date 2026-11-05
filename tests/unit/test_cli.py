@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "sdk", "python"))
 import pytest
 import test_sdk
-from cairnbox import cli
+from cairnsandbox import cli
 
 
 BUILDS = []

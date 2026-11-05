@@ -60,7 +60,7 @@ sbx.kill()
 **之后**(同一份任务,执行与文件换成我们的 SDK;文件路径里默认用户目录是 `/home/agent`):
 
 ```python
-from cairnbox import Client
+from cairnsandbox import Client
 
 c = Client("http://127.0.0.1:18700", token="…", project="acme")     # 或 CAIRN_URL / CAIRN_TOKEN / CAIRN_PROJECT
 sb = c.sandboxes.create(ttl_idle_s=300, env={"MODE": "dev"})        # E2B 的 timeout ≈ ttl_idle_s;envs → env
@@ -75,7 +75,7 @@ sb.kill()
 
 ```python
 from e2b import Sandbox                  # 指向 18710
-from cairnbox import Client           # 指向 18700
+from cairnsandbox import Client           # 指向 18700
 
 sbx = Sandbox.create(template="base", timeout=300)
 sb = Client("http://127.0.0.1:18700", token="…").sandboxes.get(sbx.sandbox_id)   # 同一个 id

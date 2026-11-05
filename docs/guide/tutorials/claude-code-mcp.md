@@ -1,6 +1,6 @@
 # 用 Claude Code 把沙箱当工具
 
-目标:在 Claude Code 里对话,让它自己建一台沙箱、在里面跑命令、写文件,危险的一步前打检查点、出错就回滚,最后清理干净。用的是 MCP 服务器 `cairnbox.mcp`;工具与协议细节见 [MCP 参考](../mcp.md)。
+目标:在 Claude Code 里对话,让它自己建一台沙箱、在里面跑命令、写文件,危险的一步前打检查点、出错就回滚,最后清理干净。用的是 MCP 服务器 `cairnsandbox.mcp`;工具与协议细节见 [MCP 参考](../mcp.md)。
 
 ## 前提
 
@@ -21,7 +21,7 @@ claude mcp add aios \
   -e CAIRN_URL=http://127.0.0.1:18700 \
   -e CAIRN_TOKEN=<你的令牌> \
   -e CAIRN_PROJECT=acme \
-  -- python3 -m cairnbox.mcp
+  -- python3 -m cairnsandbox.mcp
 ```
 
 三个环境变量:
@@ -32,7 +32,7 @@ claude mcp add aios \
 | `CAIRN_TOKEN` | Bearer 令牌 | 不发 `Authorization`,只有没设令牌的控制面才放行 |
 | `CAIRN_PROJECT` | 沙箱归哪个项目 | 令牌所在账户的 default 项目 |
 
-令牌也可以不写进注册命令:先在启动 Claude Code 的 shell 里 `export CAIRN_TOKEN=…`,再用 `claude mcp add aios -- python3 -m cairnbox.mcp`,子进程继承环境。令牌写进配置文件等于把它留在磁盘上,团队共享的配置里不要这样做。
+令牌也可以不写进注册命令:先在启动 Claude Code 的 shell 里 `export CAIRN_TOKEN=…`,再用 `claude mcp add aios -- python3 -m cairnsandbox.mcp`,子进程继承环境。令牌写进配置文件等于把它留在磁盘上,团队共享的配置里不要这样做。
 
 确认已注册:`claude mcp list` 应当看到 `aios`;在 Claude Code 里输入 `/mcp` 能看到它提供的 12 个工具:`sandbox_create`、`sandbox_run`、`sandbox_write_file`、`sandbox_read_file`、`sandbox_checkpoint`、`sandbox_rollback`、`sandbox_fork`、`sandbox_pause`、`sandbox_resume`、`sandbox_kill`、`sandbox_list`、`sandbox_info`。
 
@@ -86,7 +86,7 @@ claude mcp add aios \
 
 | 现象 | 原因与办法 |
 | --- | --- |
-| `/mcp` 里 `aios` 是失败状态 | 多半是 `python3` 找不到 `cairnbox`:确认 `pip install -e sdk/python` 装在 Claude Code 用的那个 `python3` 里 |
+| `/mcp` 里 `aios` 是失败状态 | 多半是 `python3` 找不到 `cairnsandbox`:确认 `pip install -e sdk/python` 装在 Claude Code 用的那个 `python3` 里 |
 | 工具返回 `401` | 令牌错、已被换掉或过期;让 owner 重发 |
 | `403` | `CAIRN_PROJECT` 不是你账户的项目 |
 | `429` / `402` | 没有容量或碰了配额 / 当天预算,见[手册第 14 节](../manual.md) |

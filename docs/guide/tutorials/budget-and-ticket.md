@@ -25,7 +25,7 @@ ABI 的全部定义在 [CONTRACT §7](../../../CONTRACT.md);SDK 的方法在 [sd
 前提:沙箱里有 harness(`/aios/bin/aios`,来自"agent-harness"与"agent-langs"两个层,层 id 由部署者放在 `deploy/.env` 的 `EVAL_LAYERS` / `INTAKE_LAYERS`),`/work/repo` 里有一个 git 仓库,并给了模型代理的地址与沙箱令牌(`CAIRN_MODEL_URL` / `CAIRN_MODEL_KEY`,令牌从模型代理 `POST /tokens` 领取),沙箱放行了模型代理的主机。下面用 `LAYERS`、`MODEL_ENV` 代指这些。
 
 ```python
-from cairnbox import Client
+from cairnsandbox import Client
 c = Client()                                                       # CAIRN_URL / CAIRN_TOKEN / CAIRN_PROJECT
 sb = c.sandboxes.create(layers=LAYERS, mem=1024, network={"allow_hosts": [MODEL_HOST]})
 sb.budget(max_usd=0.50)                                            # 这件事最多花 0.5 美元

@@ -1,6 +1,6 @@
 # Python SDK 参考
 
-源码:[client.py](../../sdk/python/cairnbox/client.py)(Client 与顶层集合)、[sandbox.py](../../sdk/python/cairnbox/sandbox.py)(单个沙箱)。HTTP 路由见 [api/README.md](api/README.md);括号里是该方法转发的路由,按主题查 [sandboxes](api/sandboxes.md)、[state](api/state.md)、[images](api/images.md)、[network](api/network.md)、[metering](api/metering.md)、[tenancy](api/tenancy.md)、[ops](api/ops.md)。
+源码:[client.py](../../sdk/python/cairnsandbox/client.py)(Client 与顶层集合)、[sandbox.py](../../sdk/python/cairnsandbox/sandbox.py)(单个沙箱)。HTTP 路由见 [api/README.md](api/README.md);括号里是该方法转发的路由,按主题查 [sandboxes](api/sandboxes.md)、[state](api/state.md)、[images](api/images.md)、[network](api/network.md)、[metering](api/metering.md)、[tenancy](api/tenancy.md)、[ops](api/ops.md)。
 
 ## 安装与配置
 
@@ -17,7 +17,7 @@ pip install -e sdk/python      # 零依赖(只用标准库),Python >= 3.9
 构造参数优先于环境变量。返回值一律是服务端的 JSON(dict / list),不包装成模型;`Sandbox` 与 `CommandResult` 例外。
 
 ```python
-from cairnbox import Client
+from cairnsandbox import Client
 c = Client()                                   # 读环境变量
 c = Client("http://cp:18700", token="…", project="acme", timeout=600)
 ```
@@ -193,7 +193,7 @@ c = Client("http://cp:18700", token="…", project="acme", timeout=600)
 
 ## 和 E2B SDK 的对应
 
-**已经在用 E2B 官方 SDK 的,不用换:** 把 `E2B_API_URL` 与 `E2B_SANDBOX_URL` 指到控制面的 E2B 口(18710)就能用,覆盖面与实测结果见 [api/e2b.md](api/e2b.md)。下面是**我们自己的 SDK** `cairnbox` 与 E2B SDK 在调用形状上的对应(走主口 18700,多出检查点、回滚、预算等)。
+**已经在用 E2B 官方 SDK 的,不用换:** 把 `E2B_API_URL` 与 `E2B_SANDBOX_URL` 指到控制面的 E2B 口(18710)就能用,覆盖面与实测结果见 [api/e2b.md](api/e2b.md)。下面是**我们自己的 SDK** `cairnsandbox` 与 E2B SDK 在调用形状上的对应(走主口 18700,多出检查点、回滚、预算等)。
 
 | E2B | 本 SDK |
 |---|---|
@@ -283,7 +283,7 @@ c.billing.settle(t0, t1)                               # 出账落库;c.billing.
 **放宽被 202**
 
 ```python
-from cairnbox import NeedsApproval
+from cairnsandbox import NeedsApproval
 try:
     sb.network.set(mode="audited", allow_hosts=["pypi.org"])
 except NeedsApproval as e:

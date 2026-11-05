@@ -35,7 +35,7 @@
 - POST /templates/everywhere {spec} ;GET /templates(经节点转发时用 /nodes/<n>/... 不提供,UI 只用 /nodes 的 health 字段)
 - 静态工作台:GET /ui/ → web/dist/index.html(没有 dist 时 web/legacy/index.html),GET /ui/<file> → 同目录下文件
 - GET /events/stream → text/event-stream:`event: hello` 后每条 `data: {"type": node|sandbox|ticket|batch, "at"}` 表示该类对象有变化(控制面每 2 秒轮询其前端服务并比对摘要),客户端收到后重拉对应列表;每轮一条 `: keepalive`
-- SDK:`sdk/python`(`cairnbox`)是这一节的客户端;形状照 E2B 的 SDK(create / commands.run / files / pty / ports / pause / resume / kill / set_timeout),多出检查点、预算、工单、inbox、事件、卷、构建、账单、项目(D43)
+- SDK:`sdk/python`(`cairnsandbox`)是这一节的客户端;形状照 E2B 的 SDK(create / commands.run / files / pty / ports / pause / resume / kill / set_timeout),多出检查点、预算、工单、inbox、事件、卷、构建、账单、项目(D43)
 - 令牌也可放在查询串 `?token=`(给 EventSource 这类带不了头的客户端;会进访问日志,别用在别处);`POST /nodes/<n>/evacuate`(admin)把死节点上的 durable 沙箱从最后一份 bundle 接管到别的节点,回 {moved, lost};接管不带卷
 - 评测器转发:/eval/<anything> → 评测服务同路径(去掉 /eval 前缀);接单层转发:/intake/<anything> → 接单服务同路径(去掉 /intake 前缀)
 

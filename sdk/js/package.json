@@ -1,5 +1,5 @@
 {
-  "name": "cairnbox",
+  "name": "cairnsandbox",
   "version": "0.1.0",
   "description": "JavaScript / TypeScript SDK for the Cairn sandbox cloud (CONTRACT \u00a71 over HTTP). No runtime dependencies; uses fetch (Node 18+, Deno, Bun, browsers).",
   "type": "module",

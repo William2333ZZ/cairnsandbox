@@ -7,7 +7,7 @@
 #       static_configs: [{ targets: ["cp-host:18700"] }]
 # 审计链没有指标(整文件校验不该放在抓取路径里):用 cron 跑 `curl -H "Authorization: Bearer $T" $CP/audit/verify`,ok 不为 true 就报警。
 groups:
-  - name: cairnbox-cloud
+  - name: cairnsandbox-cloud
     rules:
       - alert: AiosControlPlaneDown
         expr: up{job="aios-cp"} == 0

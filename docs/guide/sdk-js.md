@@ -6,7 +6,7 @@
 
 ```
 cd sdk/js && npm install && npm run build      # 产出 dist/;npm pack 得到可安装的包
-npm install ./cairnbox-0.1.0.tgz
+npm install ./cairnsandbox-0.1.0.tgz
 ```
 
 | 环境变量 | 作用 | 默认 |
@@ -16,7 +16,7 @@ npm install ./cairnbox-0.1.0.tgz
 | `CAIRN_PROJECT` | 项目(`X-Project`) | 空(令牌的默认项目) |
 
 ```ts
-import { Client } from "cairnbox";
+import { Client } from "cairnsandbox";
 const c = new Client({ url: "http://cp:18700", token: "…", project: "acme" });   // 或只读环境变量:new Client()
 const sb = await c.sandboxes.create({ mem: 512, network: { allow_hosts: ["pypi.org"] } });
 const r = await sb.commands.run("python3 -V", { timeout: 30 });

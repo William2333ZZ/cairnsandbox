@@ -14,5 +14,5 @@ The API is plain HTTP and the SDKs are self-describing, so most people never nee
 | [security-model.md](security-model.md) | what is isolated how, who is trusted, what is not done |
 
 Also in English: [`../../README.md`](../../README.md), [`../../ROADMAP.md`](../../ROADMAP.md), [`../../SECURITY.md`](../../SECURITY.md),
-[`../../CONTRIBUTING.md`](../../CONTRIBUTING.md). Machine-readable API and SDK references: `sdk/python/cairnbox/`, `sdk/js/src/`.
+[`../../CONTRIBUTING.md`](../../CONTRIBUTING.md). Machine-readable API and SDK references: `sdk/python/cairnsandbox/`, `sdk/js/src/`.
 Translation of the rest is on the roadmap; pull requests that translate a page are welcome.

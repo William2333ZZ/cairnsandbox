@@ -3,7 +3,7 @@ import base64, json, os, sys, threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "sdk", "python"))
 import pytest
-import cairnbox as S
+import cairnsandbox as S
 
 CALLS = []
 BOXES = {}
@@ -140,7 +140,7 @@ def test_volumes_builds_and_billing_shapes(cp):
 
 
 def test_mcp_server_lists_and_calls_tools_and_reports_api_errors_as_tool_errors(cp):
-    from cairnbox import mcp
+    from cairnsandbox import mcp
     srv = mcp.Server(S.Client(cp, token="tok"))
     init = srv.handle({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}}})
     assert init["result"]["protocolVersion"] == mcp.PROTOCOL and "tools" in init["result"]["capabilities"]
@@ -164,7 +164,7 @@ def test_mcp_server_lists_and_calls_tools_and_reports_api_errors_as_tool_errors(
 
 
 def test_mcp_names_a_missing_required_argument_instead_of_a_keyerror(cp):
-    from cairnbox import mcp
+    from cairnsandbox import mcp
     srv = mcp.Server(S.Client(cp, token="tok"))
     r = srv.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "sandbox_run", "arguments": {"cmd": "ls"}}})["result"]
     assert r["isError"] and "missing required argument(s): sandbox" in r["content"][0]["text"]

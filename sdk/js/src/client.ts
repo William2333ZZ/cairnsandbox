@@ -1,4 +1,4 @@
-// The HTTP client and the top-level collections. Mirrors the Python SDK (sdk/python/cairnbox): same names, snake_case on the wire,
+// The HTTP client and the top-level collections. Mirrors the Python SDK (sdk/python/cairnsandbox): same names, snake_case on the wire,
 // camelCase in the options. The server's JSON comes back as plain objects; nothing is hidden behind classes that lag the contract.
 import { Sandbox } from "./sandbox.ts";
 

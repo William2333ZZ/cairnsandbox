@@ -4,7 +4,7 @@
 
 ## 版本号
 
-- 沙箱云(控制面 + 节点 + SDK)用一个版本号,`MAJOR.MINOR.PATCH`;SDK 的版本跟着它(`cairnbox.__version__` 现在是 0.1.0)。
+- 沙箱云(控制面 + 节点 + SDK)用一个版本号,`MAJOR.MINOR.PATCH`;SDK 的版本跟着它(`cairnsandbox.__version__` 现在是 0.1.0)。
 - agent 层单独编号,不影响沙箱云的承诺(两层之间只有一道接缝,002)。
 - 0.x 期间接口可以变,但每次变化都进 CHANGELOG 的"已知不兼容";1.0 起按下面的规则。
 

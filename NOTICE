@@ -37,7 +37,7 @@ package is in its source distribution and, for built artifacts, inside the packa
   BSD-3-Clause and 0BSD. Next.js lists sharp and its prebuilt libvips (LGPL-3.0-or-later) as *optional* dependencies for server-side image optimization;
   a static export does not use or ship them, so they are not part of the console output. If you switch the console to a server build, re-check this.
   caniuse-lite (CC-BY-4.0) is build-time data and is not in the output.
-* Python: the SDK `cairnbox` (`sdk/python`) has no third-party dependencies. The agent layer and the node agent use the standard library plus
+* Python: the SDK `cairnsandbox` (`sdk/python`) has no third-party dependencies. The agent layer and the node agent use the standard library plus
   the packages named in their own files; check `pip show` for what your environment installs.
 
 Optional template layers (not in this repository; you build them)

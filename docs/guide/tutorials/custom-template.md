@@ -23,7 +23,7 @@ c.templates.build("py-data", base="python:3.12-slim", run=["pip install --user p
 节点能连上镜像仓库(默认 docker hub,可由部署者改成镜像站)时,直接给镜像名:
 
 ```python
-from cairnbox import Client
+from cairnsandbox import Client
 c = Client()                                               # CAIRN_URL / CAIRN_TOKEN / CAIRN_PROJECT
 b = c.builds.from_oci("python:3.12-slim", name="py312-base")   # 等价于 POST /builds {kind:"oci", image, name}
 b = c.builds.wait(b["id"])                                  # 轮询 GET /builds/<id> 到 done 或 failed

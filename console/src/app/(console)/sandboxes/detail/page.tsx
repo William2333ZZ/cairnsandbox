@@ -30,7 +30,7 @@ function Detail() {
   if (!id) return <ErrorLine>missing id</ErrorLine>
   const s = sb.data
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const equiv = `from cairnbox import Client\nc = Client("${origin}", token="…", project="${project || 'default'}")\nsb = c.sandboxes.get("${id}")\n` + ({
+  const equiv = `from cairnsandbox import Client\nc = Client("${origin}", token="…", project="${project || 'default'}")\nsb = c.sandboxes.get("${id}")\n` + ({
     overview: 'print(sb.info)', metrics: 'print(sb.usage())', terminal: 'print(sb.commands.run("uname -a").stdout)', network: 'print(sb.network.get())\nprint(sb.network.decisions())',
     checkpoints: 'sb.checkpoints.create("before")\nsb.checkpoints.rollback("before")\nclone = sb.fork(checkpoint="before")[0]', ports: `print(sb.ports.url(8080))`, events: 'events, last = sb.events()',
   } as Record<Tab, string>)[tab]

@@ -1,11 +1,11 @@
 # MCP 服务器
 
-源码:[mcp.py](../../sdk/python/cairnbox/mcp.py)。把沙箱云作为工具给任何会说 MCP 的 agent(Claude Code、Codex、Cursor 等)。stdio、JSON-RPC 2.0、按行分隔,零依赖。底层调用的是 [Python SDK](sdk.md);路由见 [api/sandboxes.md](api/sandboxes.md)。
+源码:[mcp.py](../../sdk/python/cairnsandbox/mcp.py)。把沙箱云作为工具给任何会说 MCP 的 agent(Claude Code、Codex、Cursor 等)。stdio、JSON-RPC 2.0、按行分隔,零依赖。底层调用的是 [Python SDK](sdk.md);路由见 [api/sandboxes.md](api/sandboxes.md)。
 
 ## 启动
 
 ```
-CAIRN_URL=http://cp:18700 CAIRN_TOKEN=… CAIRN_PROJECT=acme python3 -m cairnbox.mcp
+CAIRN_URL=http://cp:18700 CAIRN_TOKEN=… CAIRN_PROJECT=acme python3 -m cairnsandbox.mcp
 ```
 
 `CAIRN_URL`(默认 `http://127.0.0.1:18700`)、`CAIRN_TOKEN`、`CAIRN_PROJECT` 从环境读(`Client()` 无参构造)。需要先 `pip install -e sdk/python`,或把 `sdk/python` 放进 `PYTHONPATH`。
@@ -13,16 +13,16 @@ CAIRN_URL=http://cp:18700 CAIRN_TOKEN=… CAIRN_PROJECT=acme python3 -m cairnbox
 ### 接到 Claude Code
 
 ```
-claude mcp add aios -- python3 -m cairnbox.mcp
+claude mcp add aios -- python3 -m cairnsandbox.mcp
 ```
 
-`pip install -e sdk/python` 之后也有控制台命令 `cairnbox-mcp`,等价于 `python3 -m cairnbox.mcp`:
+`pip install -e sdk/python` 之后也有控制台命令 `cairnsandbox-mcp`,等价于 `python3 -m cairnsandbox.mcp`:
 
 ```bash
-claude mcp add aios -- cairnbox-mcp
+claude mcp add aios -- cairnsandbox-mcp
 ```
 
-要传环境变量:`claude mcp add aios -e CAIRN_URL=http://cp:18700 -e CAIRN_TOKEN=$CAIRN_TOKEN -- python3 -m cairnbox.mcp`(或在启动 Claude Code 的 shell 里先 export,子进程继承)。
+要传环境变量:`claude mcp add aios -e CAIRN_URL=http://cp:18700 -e CAIRN_TOKEN=$CAIRN_TOKEN -- python3 -m cairnsandbox.mcp`(或在启动 Claude Code 的 shell 里先 export,子进程继承)。
 
 ### Codex / Cursor / 其他
 
@@ -33,7 +33,7 @@ claude mcp add aios -- cairnbox-mcp
   "mcpServers": {
     "cairn": {
       "command": "python3",
-      "args": ["-m", "cairnbox.mcp"],
+      "args": ["-m", "cairnsandbox.mcp"],
       "env": { "CAIRN_URL": "http://cp:18700", "CAIRN_PROJECT": "acme" }
     }
   }
@@ -67,7 +67,7 @@ claude mcp add aios -- cairnbox-mcp
 
 | 方法 | 行为 |
 |---|---|
-| `initialize` | 返回 `protocolVersion: "2025-06-18"`(固定,不协商)、`capabilities: {tools: {}}`、`serverInfo {name: "cairnbox", version: "0.1.0"}`、一段 `instructions` |
+| `initialize` | 返回 `protocolVersion: "2025-06-18"`(固定,不协商)、`capabilities: {tools: {}}`、`serverInfo {name: "cairnsandbox", version: "0.1.0"}`、一段 `instructions` |
 | `notifications/initialized` | 记下,不回复 |
 | `ping` | `{}` |
 | `tools/list` | 上表 12 个工具及其 `inputSchema` |

@@ -29,7 +29,7 @@ python3 sdk/python/examples/quickstart.py
 ```
 
 ```python
-from cairnbox import Client
+from cairnsandbox import Client
 c = Client("http://127.0.0.1:18700", token="...", project="acme")
 with c.sandboxes.create(mem=512, network={"allow_hosts": ["pypi.org"]}) as sb:
     print(sb.commands.run("python3 -V").check().stdout)
@@ -40,7 +40,7 @@ with c.sandboxes.create(mem=512, network={"allow_hosts": ["pypi.org"]}) as sb:
 ```
 
 The web console is at `http://127.0.0.1:18700/ui/` (log in with the same token). The CLI is `cairn` (installed with the Python SDK);
-for agents, `claude mcp add cairn -- python3 -m cairnbox.mcp`. The official E2B SDKs work against port 18710 (`E2B_API_URL` and `E2B_SANDBOX_URL` both set to it); see [e2b.md](e2b.md).
+for agents, `claude mcp add cairn -- python3 -m cairnsandbox.mcp`. The official E2B SDKs work against port 18710 (`E2B_API_URL` and `E2B_SANDBOX_URL` both set to it); see [e2b.md](e2b.md).
 
 ## When something fails
 

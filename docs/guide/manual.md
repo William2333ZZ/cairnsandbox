@@ -61,7 +61,7 @@
 点"创建"后跳到这台沙箱的详情页。表单只覆盖最常用的四项;**允许的域名留空 = 用项目的默认网络**(不是"全关"),填了就以表单为准。要带**卷、环境变量、层、命名模板、优先级、暂停保留期**等,用 SDK 或 `POST /sandboxes`(字段见 [CONTRACT §1](../../CONTRACT.md) 与 [api/sandboxes.md](api/sandboxes.md)):
 
 ```python
-from cairnbox import Client
+from cairnsandbox import Client
 c = Client()    # CAIRN_URL / CAIRN_TOKEN / CAIRN_PROJECT
 sb = c.sandboxes.create(mem=1024, cls="persistent", env={"MODE": "dev"},
                         network={"allow_hosts": ["pypi.org"]}, retain_paused_s=86400)

@@ -2,8 +2,8 @@
 create a sandbox, run commands, read / write files, checkpoint / rollback / fork, pause / resume / kill, list. Zero dependencies; the protocol
 surface implemented is what tool use needs: initialize, tools/list, tools/call, ping, notifications/initialized.
 
-    python3 -m cairnbox.mcp                       # CAIRN_URL / CAIRN_TOKEN / CAIRN_PROJECT from the environment
-    claude mcp add aios -- python3 -m cairnbox.mcp
+    python3 -m cairnsandbox.mcp                       # CAIRN_URL / CAIRN_TOKEN / CAIRN_PROJECT from the environment
+    claude mcp add aios -- python3 -m cairnsandbox.mcp
 """
 import json, sys, traceback
 
@@ -42,7 +42,7 @@ class Server:
         """One JSON-RPC message in, a response dict (or None for notifications) out."""
         mid, method, params = msg.get("id"), msg.get("method", ""), msg.get("params") or {}
         if method == "initialize":
-            return self._ok(mid, {"protocolVersion": PROTOCOL, "capabilities": {"tools": {}}, "serverInfo": {"name": "cairnbox", "version": "0.1.0"},
+            return self._ok(mid, {"protocolVersion": PROTOCOL, "capabilities": {"tools": {}}, "serverInfo": {"name": "cairnsandbox", "version": "0.1.0"},
                                   "instructions": "Sandboxes are microVMs: create one, run commands and write files in it, checkpoint before risky steps and roll back; kill it when done (idle ones pause by themselves)."})
         if method == "notifications/initialized": self.initialized = True; return None
         if method == "ping": return self._ok(mid, {})

@@ -3,7 +3,7 @@
 Prints [OK]/[FAIL] lines and a RESULT line, so CI can run it too."""
 import os, sys, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from cairnbox import Client, NeedsApproval, NotFound  # noqa: E402
+from cairnsandbox import Client, NeedsApproval, NotFound  # noqa: E402
 
 c = Client(sys.argv[1] if len(sys.argv) > 1 else None)
 R = {"ok": 0, "fail": 0}

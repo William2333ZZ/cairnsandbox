@@ -113,7 +113,7 @@
 
 ## 沙箱云:加一个 MCP 工具
 
-1. `sdk/python/cairnbox/mcp.py`:`TOOLS` 加一项(名字、描述、`inputSchema`),`Server.call` 里加分支,调 SDK 的方法(SDK 没有就先在 `sandbox.py` / `client.py` 加)。
+1. `sdk/python/cairnsandbox/mcp.py`:`TOOLS` 加一项(名字、描述、`inputSchema`),`Server.call` 里加分支,调 SDK 的方法(SDK 没有就先在 `sandbox.py` / `client.py` 加)。
 2. `tests/unit/test_sdk.py` 的 MCP 测试加一次调用,并在假控制面里补上对应路由。
 3. `docs/guide/mcp.md` 的工具表加一行。工具名一律 `sandbox_` 开头,参数用沙箱 id 字符串,返回 JSON 文本。
 

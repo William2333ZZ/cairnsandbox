@@ -5,6 +5,7 @@
 ## 控制台外壳跟工作台一致(D84)
 
 ### 沙箱云
+- 改名:SDK 包 `cairnbox` → `cairnsandbox`(Python 模块、npm 包、MCP 入口 `cairnsandbox.mcp` / `cairnsandbox-mcp`)。`cairn` 命令与 `CAIRN_*` 环境变量不变。
 - 修了一个竞态:删除沙箱时控制面在把 200 写给客户端**之后**才去掉路由,客户端收到 200 后立刻查路由偶尔还能查到(CI 上出现过一次 `route survived the delete`)。现在在响应头写出之前先去掉路由。
 - code-interpreter 常用包:新增 `recipes/ci-pylibs/`(numpy、pandas、matplotlib、seaborn、scipy、scikit-learn、pillow 等的离线安装层,wheel 用 `fetch-wheels.sh` 在有网的机器上取);服务端把 matplotlib 的图作为 PNG 结果返回,默认内核预加载 numpy/pandas/matplotlib;`build-template.py` 支持多个 `--layer` 并替换同名模板。一致性用例 17 条,2.10.5/2.11.0/2.11.9 全过。
 - 发布路径:`bootstrap.sh` 校验 Firecracker 与内核源码的下载(同处发布的校验文件,或 `FC_SHA256`/`KERNEL_SHA256` 钉摘要),新增 `--dry-run`、`--artifacts DIR`(用发布包跳过内核编译)、`--skip-images`、`--skip-console`;`scripts/release-artifacts.sh` 打包产物(含 `SHA256SUMS` 与内核的 `SOURCE-OFFER.md`,不上传)。在一个干净目录里用这样的包装好并通过 36 条 SDK 用例;干净机器与真实下载没验证。
@@ -29,9 +30,9 @@
 
 | 旧 | 新 |
 |---|---|
-| Python 包 `aios_sandbox` / `pip install aios-sandbox` | `cairnbox` |
-| JS 包 `@aios/sandbox` | `cairnbox` |
-| CLI `aios`、`aios-sandbox-mcp` | `cairn`、`cairnbox-mcp` |
+| Python 包 `aios_sandbox` / `pip install aios-sandbox` | `cairnsandbox` |
+| JS 包 `@aios/sandbox` | `cairnsandbox` |
+| CLI `aios`、`aios-sandbox-mcp` | `cairn`、`cairnsandbox-mcp` |
 | 环境变量 `AIOS_URL`、`AIOS_TOKEN`、`AIOS_PROJECT`、`AIOS_HOME`、`AIOS_MODEL_*`…… | `CAIRN_*` |
 | Prometheus 指标 `aios_*`、Grafana 面板 `aios-overview` | `cairn_*`、`cairn-overview` |
 | API 密钥前缀 `aios_` | `cairn_`(旧前缀的密钥在新部署里不存在;自己的部署换密钥) |
@@ -97,7 +98,7 @@
 - `fc-store` 新增 S3 兼容后端(Garage,`deploy/garage/`);`imgstore.py migrate` 迁移现有数据;`STORE_BACKEND=s3 ./run-node.sh store` 启用,不带即回退。
 - 账户停用(D53):`POST /accounts/<a>/suspend`,暂停其运行中沙箱,成员只能读和清理;`/suspensions`、指标 `cairn_accounts_suspended`、控制台红色提示。
 - 节点自我围栏(`FENCE_AFTER_S`)与可选自动接管(`AUTO_EVACUATE_AFTER_S`)(D54),默认关。
-- JS/TS SDK `cairnbox`(`sdk/js/`,零依赖,fetch;与 Python SDK 同形状,8 个单测),文档 `docs/guide/sdk-js.md`。
+- JS/TS SDK `cairnsandbox`(`sdk/js/`,零依赖,fetch;与 Python SDK 同形状,8 个单测),文档 `docs/guide/sdk-js.md`。
 - 预览域名(D55):`PREVIEW_DOMAIN` 设了后,`<端口>-<沙箱>.<域名>` 在浏览器直接打开沙箱里的服务,token 经 cookie 携带。
 - 命名 API 密钥(单项目、member / viewer、可过期、可撤销)与只读角色(D56);控制台密钥区;两个 SDK 的 `keys` 接口。
 - 沙箱实时指标(D57):节点每 5 秒采 cgroup 的 CPU / 内存 / 出站,`GET /sandboxes/<id>/metrics`;控制台指标页三条曲线。
@@ -137,7 +138,7 @@
 - 计量与账单:CPU / 内存 / 存储 / 出站 / 模型 token;价目表版本化;结算账本、CSV。
 - 调度:优先级类与抢占(先暂停、再结束 ephemeral)、节点余量、内存感知负载、cordon / drain / balance、层与模板分发。
 - 镜像:OCI 与 docker save 归档成层(base 赢)、运行中沙箱提交为模板、Build 记录。
-- 接入:E2B 形状的 REST(第二端口)、Python SDK `cairnbox`、MCP 服务、`POST /sandboxes/import`。
+- 接入:E2B 形状的 REST(第二端口)、Python SDK `cairnsandbox`、MCP 服务、`POST /sandboxes/import`。
 - 运维:`/metrics`、审计哈希链与 `/audit/verify`、`/audit`(按账户过滤)、compose 一键部署、`ops/bench.py` 与首批数字。
 - 控制台:项目切换、概览、项目与成员、账单、卷、模板与构建(分发矩阵)、审计;沙箱详情的检查点与端口。
 
