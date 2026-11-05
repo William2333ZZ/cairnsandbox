@@ -25,9 +25,9 @@ export default function Audit() {
         {msg && <span className="text-ui-sm text-fg-subtle">{msg}</span>}
       </div>}>
         <Table cols={[
-          { h: 'time', w: '170px', cell: e => when(e.ts) }, { h: 'op', cell: e => <span className="font-medium">{e.op}</span> }, { h: 'project', cell: e => String(e.project ?? e.for_project ?? '-') },
-          { h: 'sandbox', cell: e => <span className="font-mono">{e.sandbox ?? ''}</span> }, { h: 'by', cell: e => e.by ?? '' },
-          { h: '', cell: e => <code className="inline text-ui-sm text-fg-subtle">{JSON.stringify(Object.fromEntries(Object.entries(e).filter(([k]) => !['op', 'ts', 'project', 'for_project', 'sandbox', 'by', 'replica', 'h', 'prev'].includes(k)))).slice(0, 140)}</code> },
+          { h: 'time', w: '170px', cell: e => <span className="whitespace-nowrap">{when(e.ts)}</span> }, { h: 'op', cell: e => <span className="font-medium">{e.op}</span> }, { h: 'project', cell: e => String(e.project ?? e.for_project ?? '-') },
+          { h: 'sandbox', cell: e => <span className="whitespace-nowrap font-mono">{e.sandbox ?? ''}</span> }, { h: 'by', cell: e => e.by ?? '' },
+          { h: '', cell: e => <code className="inline-block max-w-[28rem] truncate align-middle text-ui-sm text-fg-subtle" title={JSON.stringify(e)}>{JSON.stringify(Object.fromEntries(Object.entries(e).filter(([k]) => !['op', 'ts', 'project', 'for_project', 'sandbox', 'by', 'replica', 'h', 'prev'].includes(k)))).slice(0, 140)}</code> },
         ]} rows={au.data ? rows : null} keyOf={e => `${e.h ?? ''}${e.ts}${e.op}`} empty={t('common.empty')} />
       </Panel>
     </>
