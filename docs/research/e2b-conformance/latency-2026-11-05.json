@@ -1,0 +1,51 @@
+{
+ "date": "2026-11-05",
+ "what": "E2B data plane cost without an SDK or a tunnel: stdlib client on the control plane's host (ops/e2b-latency-raw.py), 1 sandbox for latency, 4 for the parallel part, one Linux host, 2 nodes",
+ "caveats": "single host, small scale, the shared dev box was not otherwise idle; commands are `bash -l -c <cmd>` like the SDKs send; not a benchmark against any other sandbox",
+ "results": {
+  "http GET /health (control plane only)": {
+   "n": 50,
+   "p50_ms": 0.7,
+   "p95_ms": 1.1,
+   "max_ms": 2.7
+  },
+  "create (cold boot)": {
+   "seconds": 0.396
+  },
+  "Start: true -> end": {
+   "n": 50,
+   "p50_ms": 8.6,
+   "p95_ms": 9.4,
+   "max_ms": 9.8
+  },
+  "files write 1 KiB": {
+   "n": 50,
+   "p50_ms": 4.2,
+   "p95_ms": 5.3,
+   "max_ms": 6.1
+  },
+  "files read 1 KiB": {
+   "n": 50,
+   "p50_ms": 3.8,
+   "p95_ms": 4.1,
+   "max_ms": 6.4
+  },
+  "files 64 MiB": {
+   "write_MBps": 289.5,
+   "read_MBps": 669.8
+  },
+  "first stdout byte after Start sent (ms)": 4.4,
+  "parallel": {
+   "sandboxes": 4,
+   "create_all_s": 1.67,
+   "commands": 100,
+   "errors": [],
+   "wall_s": 0.35,
+   "commands_per_s": 283.8,
+   "n": 100,
+   "p50_ms": 10.6,
+   "p95_ms": 21.8,
+   "max_ms": 42.5
+  }
+ }
+}

@@ -115,7 +115,7 @@ print(sbx.commands.run("echo hi").stdout)
 
 ## 兼容矩阵(官方 SDK 实测)
 
-**测的是什么**:官方 `e2b` Python SDK 2.63.0(31 条)与 npm `e2b` 2.63.0(20 条)对着同一个控制面,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开、1 个节点)跑,**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
+**测的是什么**:官方 `e2b` Python SDK 2.63.0(32 条)与 npm `e2b` 2.63.0(20 条)对着同一个控制面,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,两套都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
 
 图例:**可用** = 一致性用例通过;**已实现未测** = 代码有、没有用例;**部分** = 有但语义不同;**没有** = 不提供。
 
@@ -150,9 +150,14 @@ print(sbx.commands.run("echo hi").stdout)
 | `commands` 的 `StreamInput`(客户端流)、`/files/compose`、`/init`、`/metrics`、`/freeze` 等 envd 内部接口 | 没有 | `StreamInput` 要 HTTP/2 全双工,SDK 的 `send_stdin` 用的是一元的 `SendInput`,不受影响 |
 | 端口:`<port>-<id>.<domain>` 子域、`get_host(port)` | 没有 | 用原生 `ANY /sandboxes/<id>/ports/<port>/<path>`(支持 WebSocket 升级) |
 
+### 多节点与延迟(2026-11-05,同一台机器上的 2 个节点容器)
+
+- **多节点**:`ops/e2b-multinode-check.py`:4 台沙箱按负载分到两个节点,每台经 E2B 口跑命令与文件操作都正常;把持有一台已暂停沙箱的节点 `docker kill` 后 `evacuate`,该沙箱在另一个节点恢复,文件还在、SDK 的 `commands.run` 正常。没暂停过的那台沙箱因为没有 bundle 被标为 `lost`(这是 evacuate 的既定语义)。
+- **暂停中直接 `commands.run`**(不先 `connect`):节点透明恢复,有一致性用例。
+- **栈本身的延迟**(`ops/e2b-latency-raw.py`,在控制面所在主机上用标准库客户端发同样的 Connect JSON,不含 SDK 与网络;1 台沙箱测延迟、4 台并行):`bash -l -c true` 从发出 `Start` 到收到结束 p50 8.6 ms / p95 9.4 ms;首个 stdout 字节 4.4 ms;1 KiB 文件写 / 读 p50 4.2 / 3.8 ms;64 MiB 文件写 290 MB/s、读 670 MB/s;4 台沙箱并行共 100 条命令 p50 10.6 ms、p95 21.8 ms、无错误(283 条/秒)。冷启动创建 0.4 s。**这是单机小规模的数字,开发机上还有别人的任务,不是和别的沙箱的对比基准。**用 SDK 经 SSH 隧道从笔记本测的数(命令 p50 66 ms)被隧道的 88 ms RTT 主导,没有参考价值。
+
 ### 没覆盖到的
 
 - 没有 Go、Java 等其他语言的 E2B SDK 的测试。
-- 一致性用例都在**单节点**上跑;多节点下 envd 经控制面找到所属节点的路径与单节点相同,但没有单独测。
-- 没有压力和并发测试;没有对 `commands.run` 的延迟做过基准。
-- 暂停中的沙箱收到 envd 请求会被节点透明恢复(与原生接口一致),但没有用例单独覆盖"暂停时直接 `commands.run`"。
+- 多节点只在**同一台机器上的两个节点容器**之间验证,没有两台物理机。
+- 并发只到 4 台沙箱并行,没有压力测试(共享开发机)。

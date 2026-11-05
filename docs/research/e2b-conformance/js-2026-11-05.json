@@ -26,63 +26,63 @@
    "case": "run: streaming callbacks deliver output while it is produced",
    "status": "PASS",
    "why": "",
-   "seconds": 1.08
+   "seconds": 1.25
   },
   {
    "group": "commands",
    "case": "run: envs, cwd, user=root",
    "status": "PASS",
    "why": "",
-   "seconds": 0.2
+   "seconds": 0.14
   },
   {
    "group": "commands",
    "case": "background: handle, list, kill",
    "status": "PASS",
    "why": "",
-   "seconds": 0.14
+   "seconds": 0.15
   },
   {
    "group": "commands",
    "case": "stdin: sendStdin to a stdin-enabled process",
    "status": "PASS",
    "why": "",
-   "seconds": 0.69
+   "seconds": 0.67
   },
   {
    "group": "commands",
    "case": "connect: re-attach to a running background command",
    "status": "PASS",
    "why": "",
-   "seconds": 2.08
+   "seconds": 2.22
   },
   {
    "group": "pty",
    "case": "create, send input, read output, resize, kill",
    "status": "PASS",
    "why": "",
-   "seconds": 1
+   "seconds": 1.05
   },
   {
    "group": "files",
    "case": "write + read text and bytes",
    "status": "PASS",
    "why": "",
-   "seconds": 0.32
+   "seconds": 0.26
   },
   {
    "group": "files",
    "case": "writeFiles (several at once)",
    "status": "PASS",
    "why": "",
-   "seconds": 0.14
+   "seconds": 0.23
   },
   {
    "group": "files",
    "case": "a file written by the SDK is visible to commands and vice versa",
    "status": "PASS",
    "why": "",
-   "seconds": 0.2
+   "seconds": 0.24
   },
   {
    "group": "files",
@@ -96,58 +96,58 @@
    "case": "list, exists, getInfo",
    "status": "PASS",
    "why": "",
-   "seconds": 0.26
+   "seconds": 0.28
   },
   {
    "group": "files",
    "case": "makeDir (true, then false), rename, remove",
    "status": "PASS",
    "why": "",
-   "seconds": 0.37
+   "seconds": 0.31
   },
   {
    "group": "files",
    "case": "watchDir sees a created file",
    "status": "PASS",
    "why": "",
-   "seconds": 1.62
+   "seconds": 1.69
   },
   {
    "group": "files",
    "case": "a 20 MiB upload and download round-trips intact",
    "status": "PASS",
    "why": "",
-   "seconds": 6.92
+   "seconds": 8.52
   },
   {
    "group": "sandbox",
    "case": "getInfo, setTimeout, isRunning",
    "status": "PASS",
    "why": "",
-   "seconds": 0.23
+   "seconds": 0.25
   },
   {
    "group": "sandbox",
    "case": "pause then connect resumes with files intact",
    "status": "PASS",
    "why": "",
-   "seconds": 2.54
+   "seconds": 2.48
   },
   {
    "group": "sandbox",
    "case": "envs passed at create are visible to commands",
    "status": "PASS",
    "why": "",
-   "seconds": 0.92
+   "seconds": 0.91
   },
   {
    "group": "sandbox",
    "case": "kill, then the sandbox is gone",
    "status": "PASS",
    "why": "",
-   "seconds": 1.42
+   "seconds": 1.56
   }
  ],
  "date": "2026-11-05",
- "setup": "Cairn drill checkout on one Linux host (Firecracker, 1 node, jailer on, kernel 6.18.59, base image with the envd-capable sandboxd); SDK on a Mac through an SSH tunnel"
+ "setup": "Cairn drill checkout on one Linux host (Firecracker, jailer on, kernel 6.18.59, base image with the envd-capable sandboxd), TWO node containers behind one control plane; SDK on a Mac through an SSH tunnel"
 }

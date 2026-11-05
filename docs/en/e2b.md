@@ -16,9 +16,11 @@ print(sbx.commands.run("echo hi").stdout)
 
 ## What was verified
 
-The official `e2b` Python SDK 2.63.0 (31 cases) and the npm `e2b` package 2.63.0 (20 cases) pass a conformance suite against this port: `ops/e2b-conformance.py` and `ops/e2b-conformance.mjs`, results in [`docs/research/e2b-conformance/`](../research/e2b-conformance). It ran on **one Linux host with one node** (Firecracker, jailer on). Covered: `commands.run` with output streamed as it is produced, exit codes, `envs`/`cwd`/`user`, background commands (`list`, `kill`, `connect`), stdin, PTY (create, input, resize, kill), files (text, bytes, 20 MiB, `write_files`, list, exists, info, make_dir, rename, remove, `watch_dir`), pause and `connect`, `set_timeout`, `get_metrics`, fork, snapshots (create, start from one, list, delete), `update_network`, list filters.
+The official `e2b` Python SDK 2.63.0 (32 cases) and the npm `e2b` package 2.63.0 (20 cases) pass a conformance suite against this port: `ops/e2b-conformance.py` and `ops/e2b-conformance.mjs`, results in [`docs/research/e2b-conformance/`](../research/e2b-conformance). It ran on **one Linux host with two node containers** (Firecracker, jailer on). Covered: `commands.run` with output streamed as it is produced, exit codes, `envs`/`cwd`/`user`, background commands (`list`, `kill`, `connect`), stdin, PTY (create, input, resize, kill), files (text, bytes, 20 MiB, `write_files`, list, exists, info, make_dir, rename, remove, `watch_dir`), pause and `connect`, `set_timeout`, `get_metrics`, fork, snapshots (create, start from one, list, delete), `update_network`, list filters.
 
-Not verified: other SDK versions or languages (Go, Java, ...), several nodes, concurrency and load, command latency. A new SDK release can change request shapes, so rerun the suite after upgrading.
+Also checked: sandboxes spread over two nodes, and a paused sandbox moved by `evacuate` after its node was killed (`ops/e2b-multinode-check.py`); a command sent to a paused sandbox resumes it. On the control plane's own host, `bash -l -c true` takes about 9 ms (p50) from `Start` to its end event, 1 KiB file reads and writes about 4 ms, and four sandboxes ran 100 commands in parallel without errors (`ops/e2b-latency-raw.py`; single host, small scale, not a benchmark against anything).
+
+Not verified: other SDK versions or languages (Go, Java, ...), two physical machines, load beyond four parallel sandboxes. A new SDK release can change request shapes, so rerun the suite after upgrading.
 
 ## What differs from E2B
 

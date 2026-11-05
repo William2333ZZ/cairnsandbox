@@ -253,6 +253,18 @@ def _(sb):
     assert sb2.commands.run("echo back").stdout == "back\n"
 
 
+@case("sandbox", "a command sent to a paused sandbox resumes it transparently")
+def _(_sb):
+    s = Sandbox.create(template=TEMPLATE, timeout=120)
+    try:
+        s.files.write("/tmp/e2b/pp.txt", "kept")
+        s.pause()
+        r = s.commands.run("cat /tmp/e2b/pp.txt")     # no Sandbox.connect in between
+        assert r.stdout == "kept", r.stdout
+    finally:
+        s.kill()
+
+
 @case("sandbox", "envs passed at create are visible to commands")
 def _(_sb):
     s = Sandbox.create(template=TEMPLATE, envs={"CREATE_ENV": "yes"}, timeout=120)
