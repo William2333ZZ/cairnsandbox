@@ -30,7 +30,7 @@ services:
     image: *node_image
     entrypoint: ["/usr/bin/python3", "/usr/local/bin/imgstore.py", "serve", "/store", "8900", "--bw-mbps", "${STORE_BW_MBPS:-0}"]
     volumes: ["${DATA_DIR:-.}/store:/store"]
-    ports: ["127.0.0.1:18900:8900"]
+    ports: ["${STORE_BIND:-127.0.0.1}:18900:8900"]      # on several real machines: this machine's private IP (see "Several machines" in README.md); the store has NO authentication
     restart: unless-stopped
 
   fc-node:
@@ -59,7 +59,7 @@ services:
       STORE: http://fc-store:8900
       DEFAULT_TEMPLATE: ${DEFAULT_TEMPLATE:-debian-13}
       REGISTRY_MIRROR: ${REGISTRY_MIRROR:-https://registry-1.docker.io}
-      TEMPLATE_POOL: ${TEMPLATE_POOL:-}
+      TEMPLATE_POOL: ${TEMPLATE_POOL:-[]}
     volumes:
       - "${REPO_DIR:-..}/images:/work/images:ro"
       - "${REPO_DIR:-..}/recipes/templates:/work/templates:ro"

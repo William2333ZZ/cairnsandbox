@@ -5,6 +5,7 @@
 ## 控制台外壳跟工作台一致(D84)
 
 ### 沙箱云
+- 多台真机:`deploy/docker-compose.node.yml` 与 `deploy/node.sh`(`init` / `up` / `register`)在另一台机器上起一个节点;`STORE_BIND` 让分块仓库绑到私网 IP;新增 `docs/en/multi-machine.md`。在一台机器上用 Docker 网桥地址当"私网 IP"验证过登记、远端创建、经仓库迁移、杀掉后 evacuate;两台物理机没验证。顺手修了:`TEMPLATE_POOL` 没设时默认空串会让节点启动就崩(现在默认 `[]`)。
 - `deploy/multinode.sh`:单机多容器模拟多机。`up N` 起 N 个节点加控制面,`status`、`kill`、`start`、`partition`、`heal`、`evacuate`、`down`;内存预算按节点数自动分;`STORE_BW_MBPS` 给共享仓库限速。在 3 节点上实测:放置、节点断电后 evacuate 在别处恢复(文件内容还在)、节点回来后对账、断网与恢复。没做压力测试。
 - 对外默认英文:`README.md` 改为英文(中文版是 `README.zh.md`,`README.en.md` 删除);控制台默认英文,界面右下角可切中文,已保存的选择不受影响;英文界面里小写的字段名首字母大写;README 里的两张截图换成新控制台的英文截图(真实控制面上拍的)。
 - 控制台把顶栏加窄侧栏换成工作台那样的左侧栏:应用标记、项目选择、"新沙箱"、带图标的导航、底部的节点状态与账户行;窄于 1024 px 自动收成图标条,窄于 768 px 变抽屉;侧栏可手动收起并记住。

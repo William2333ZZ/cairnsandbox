@@ -48,7 +48,7 @@ for agents, `claude mcp add cairn -- python3 -m cairnbox.mcp`. An E2B-shaped RES
 
 ## Several "machines" on one host
 
-`deploy/multinode.sh up 3` starts three node containers plus one control plane, each node in its own network namespace with its own state directory, so the control plane treats them as separate machines. `kill`, `partition`, `evacuate` and `STORE_BW_MBPS` inject failures and throttle the link to the shared chunk store. On a 3-node run (2 VMs per node) placement, evacuating a killed node's durable sandbox onto another node, reconciliation when the node came back, and partition/heal behaved as designed. It does not model real network latency, shared-host resource contention or clock skew, and it has not been load-tested. Details (in Chinese): `deploy/README.md`.
+`deploy/multinode.sh up 3` starts three node containers plus one control plane, each node in its own network namespace with its own state directory, so the control plane treats them as separate machines. `kill`, `partition`, `evacuate` and `STORE_BW_MBPS` inject failures and throttle the link to the shared chunk store. On a 3-node run (2 VMs per node) placement, evacuating a killed node's durable sandbox onto another node, reconciliation when the node came back, and partition/heal behaved as designed. It does not model real network latency, shared-host resource contention or clock skew, and it has not been load-tested. Details (in Chinese): `deploy/README.md`. For real separate machines see [multi-machine.md](multi-machine.md).
 
 ## What is verified
 

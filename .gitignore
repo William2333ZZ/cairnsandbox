@@ -26,3 +26,4 @@ node_modules/
 .venv/
 .DS_Store
 deploy/.multinode.compose.json
+deploy/node.env

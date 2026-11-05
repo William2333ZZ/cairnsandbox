@@ -76,9 +76,34 @@ PORT_OFFSET=1000 MEM_BUDGET_MIB=1024 ./multinode.sh up 3     # 3 个节点;端�
 
 **这种模拟不能验证的**:跨机的网络带宽和延迟(这里多一跳只有毫秒级;可以用 `STORE_BW_MBPS` 限仓库,但限不了节点之间的直连)、几个节点共用同一台机器的内存和磁盘带来的互相挤占、真正的网络分区与丢包、时钟偏差、跨机的页缓存行为。这里也**没有做过压力测试**:共享的开发机上别人也在跑任务,所以只用了每节点 2 台 VM 的规模。注意:节点目录是容器里的 root 写的,清理要用容器(`docker run --rm --entrypoint rm -v "$PWD:/d" fc-node:dev -rf /d/state-2`)。
 
-## 第二个节点(手工)
+## 多台真机
 
-同一台机器上:复制 `fc-node` 这个 service 为 `fc-node-2`,改 `hostname`、`NODE_NAME`、状态目录(`state-2`)、宿主端口(18802),在 `fc-cp` 的 `NODES` 里加一项 `{"name":"fc-node-2","url":"http://fc-node-2:8800","token_file":"/nodes/state-2/node-token"}`。另一台机器上:那边只起 `fc-node` + `fc-store` 的访问(`LAZY_STORE` 指向这边的仓库),把它的 `node-token` 复制到这边 `DATA_DIR/<name>/node-token`,控制面 `POST /nodes` 登记即可;两边网络要互通 8800 / 8900。
+一台**控制面机器**(控制面、注册表、数据库、分块仓库,也可以自带一个节点)加任意多台**节点机器**(只跑节点和微虚机)。加一台机器就是:在那台机器上起一个节点,再告诉控制面它的 IP 和令牌;没有集群组建步骤,别的节点也不用改配置。完整的英文步骤见 [docs/en/multi-machine.md](../docs/en/multi-machine.md),这里是摘要。
+
+**网络**:控制面 → 每个节点的 8800(控制面调用节点的全部 API,头里带令牌);每个节点 → 控制面机器上分块仓库的 18900(按需读内核和基础镜像、迁移和接管用的 bundle、模板快照)。节点之间不通信(迁移是"导出到仓库、从仓库导入")。**分块仓库没有任何鉴权**,里面有沙箱的内存快照:所有机器放在私网里(VPC、WireGuard),两个端口只绑私网地址并用防火墙限定到集群内的机器,绝不要把 18900 或 8800 暴露在公网网卡上。节点 API 有令牌但默认是明文 HTTP;要 TLS 见 `deploy/tls/gen-certs.sh`(D62),`node.sh` 没接这一项,也没验证过。
+
+**控制面机器**:在 `.env` 里加 `STORE_BIND=<本机私网 IP>`(仓库的绑定地址,默认只绑 127.0.0.1),照常 `docker compose up -d`。
+
+**每台节点机器**:Docker、`/dev/kvm` 等设备(和任何节点一样)、本仓库的检出、`fc-node` 镜像,以及控制面机器 `images/layers/upper-template.ext4` 这一个小文件(512 MiB 的稀疏文件,用 `rsync -S`);**不用**自己构建内核和基础镜像,节点从仓库读。
+
+```bash
+docker build -t fc-node:dev -f node/Dockerfile .
+rsync -S 控制面机器:cairn/images/layers/upper-template.ext4 images/layers/
+cd deploy
+./node.sh init fc-node-b 10.0.0.2 http://10.0.0.1:18900     # 节点名、本机私网 IP、仓库地址
+./node.sh up
+```
+
+`init` 写出 `deploy/node.env`(0600,里面有新生成的令牌)。然后在控制面机器上以 admin 登记这台节点(令牌取自节点机器的 `node.env`):
+
+```bash
+curl -fsS -X POST http://127.0.0.1:18700/nodes -H "Authorization: Bearer $(cat secrets/cp.token)" -H 'Content-Type: application/json' \
+  -d '{"name":"fc-node-b","url":"http://10.0.0.2:8800","token":"<node.env 里的 NODE_TOKEN>"}'
+```
+
+登记写进注册表,每个控制面副本下一次轮询就认识它。之后:创建时 `"node":"fc-node-b"` 钉住、`POST /sandboxes/<id>/migrate {"to":"fc-node-b"}` 迁移、`POST /nodes/fc-node-b/evacuate` 接管挂掉节点上的 durable 沙箱。`FENCE_AFTER_S`(节点)与 `AUTO_EVACUATE_AFTER_S`(控制面,须大于节点的 `FENCE_AFTER_S` 加 30 秒)配合处理失联;各机器时钟要同步。
+
+**验证到哪一步**:这些文件(`docker-compose.node.yml`、`node.sh`、登记请求)在**一台**机器上跑过:两个独立的 compose 项目只通过 Docker 网桥地址 172.17.0.1 互相访问(把它当作"私网 IP"),第二份检出的 `images/` 里只有 `upper-template.ext4`。覆盖了:按 IP 登记、在远端节点创建并执行、经仓库在线迁移(256 MiB 暂停沙箱,总共 2.6 秒,拉取 60 MiB)、杀掉节点后 evacuate、文件内容完好。**没有**覆盖:两台物理机、真实网络延迟、防火墙、控制面与节点之间的 TLS、控制面前面的反向代理。先在单机上用上面的 `multinode.sh` 排练过再上真机更稳妥。
 
 ## 和 run-node.sh 的差别
 

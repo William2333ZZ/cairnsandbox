@@ -101,6 +101,7 @@ web/ ──HTTP──▶ cp/ (fc-cp, Go) ──bearer──▶ nodeagent.py ─�
 | `node/test-ckpt.py` | 节点 e2e:运行中打检查点、链增长、原地回滚(磁盘与内存都回去、id 与网络不变)、来回回滚、与暂停 / 恢复共存、删一个检查点不伤另一个(层被钉住) |
 | `tests/unit/test_home.py` | 个人 harness 目录:规则按文件名序且注释不算、config 合并、提示替换且 instance 必须带 {{task}}、技能按名字与说明列出、自己的中间件、整次运行带着规则/笔记/摘要、坏目录不开跑、机器提案只在 apply 后生效且坏提案原样放回(`aios/home.py`) |
 | `tests/unit/test_layers.py` | 分层:agent 层只走 HTTP / SDK 到沙箱云,沙箱层不 import agent 层 |
+| `deploy/node.sh`、`deploy/docker-compose.node.yml` | 在另一台机器上起一个节点并登记到控制面(D87) |
 | `deploy/multinode.sh` | 单机多容器模拟多机:`up N` 起 N 个节点加控制面,`kill` / `partition` / `evacuate` 注入故障(D86) |
 | `scripts/bootstrap.sh` | 新机器上的一键准备:Firecracker、镜像、内核、runtime、基础镜像、密钥、控制台、分块仓库(开源发布设计 §7 P5) |
 | `tests/unit/test_docs_index.py` | 文档:每个模块都在本文索引里;编号文档只向前引用;无断链 |
