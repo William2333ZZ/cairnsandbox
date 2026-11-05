@@ -10,7 +10,14 @@
 
 </div>
 
-agent 写代码、跑命令、装依赖,总会出错,也总有一天会做不该做的事。Cairn 把它放进一台**随时可以倒回去**的虚拟机里:每台沙箱是独立的 microVM,有自己的内核,不和宿主或别的沙箱共用。
+**Cairn 是一个沙箱云,上面跑着一个 agent。** 两层,可以只要其中一层:
+
+| | |
+| :-- | :-- |
+| 🧱 **沙箱云**(底座) | 跑在你自己机器上的 Firecracker microVM:每台沙箱有自己的内核,不和宿主或别的沙箱共用。多节点调度、模板、卷、账户与计费。**官方 E2B SDK 原样就能连上来**,为 E2B 写的代码直接能跑,另外多出 E2B 没有的:回滚、审计、要批准才出得去的网络。可以单独用,不需要我们的 agent。 |
+| 🧠 **agent 层**(我们不一样的地方) | 跑在这个沙箱云上的托管编码 agent,沙箱认得它的预算、工单和事件:个人 harness、inbox、评测与自我改进。可选:它只通过公开 API 接触沙箱云,沙箱云没有它也能跑。 |
+
+agent 总会出错,也总有一天会做不该做的事。所以沙箱这一层是围绕"**倒得回去**"设计的:
 
 | | |
 | :-- | :-- |
@@ -56,7 +63,7 @@ with c.sandboxes.create(mem=512, network={"allow_hosts": ["pypi.org"]}) as sb:
 </div>
 
 底下是 Firecracker microVM(由 jailer 启动),上面是控制面、Python 与 JS SDK、CLI、MCP 和控制台。**agent 层是可选的**:一个托管的个人编码 agent,
-沙箱认识它的预算、工单和事件;它只通过 HTTP 或 SDK 要沙箱,不用它,沙箱云照样跑(`tests/unit/test_layers.py` 强制这条边界)。
+沙箱认识它的预算、工单和事件;它只通过 HTTP 或 SDK 要沙箱,不用它,沙箱云照样跑(`tests/unit/test_layers.py` 强制这条边界)。只想要沙箱云的话,起控制面和节点,把 E2B 或 Cairn 的 SDK 指过去就行,不需要 agent 层。
 
 <div align="center">
 <img src="docs/assets/shot-sandbox.png" alt="沙箱详情" width="92%"><br><sub>一台沙箱的检查点:原地回滚,或从任一检查点 fork 出新沙箱(控制台界面默认英文,可切换中文)</sub>

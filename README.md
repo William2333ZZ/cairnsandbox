@@ -10,7 +10,14 @@
 
 </div>
 
-Agents write code, run commands and install packages. They get things wrong, and one day they will do something they should not. Cairn puts them in a microVM you can **rewind**: each sandbox is its own microVM with its own kernel, shared with neither the host nor other sandboxes.
+**Cairn is a sandbox cloud, with an agent that runs on it.** Two layers, and you can take either one:
+
+| | |
+| :-- | :-- |
+| 🧱 **Sandbox cloud** (the base) | Firecracker microVMs on your own machines: each sandbox has its own kernel, shared with neither the host nor other sandboxes. Multi-node scheduling, templates, volumes, accounts and billing. **The official E2B SDKs connect to it as they are**, so code you wrote for E2B runs here, and you also get what E2B does not have: rewind, audit and an approved-only network. Use it on its own, without our agent. |
+| 🧠 **Agent layer** (what is different) | A hosted coding agent that runs on that sandbox cloud and is known to it by its budget, tickets and events: a personal harness, an inbox, evaluation and self-improvement. Optional: it reaches the sandbox cloud only through the public API, and the sandbox cloud runs without it. |
+
+Agents get things wrong, and one day they will do something they should not. So the sandbox layer is built around being able to **rewind**:
 
 | | |
 | :-- | :-- |
@@ -64,7 +71,7 @@ await sb.kill();
 </div>
 
 Underneath are Firecracker microVMs under the jailer; on top are a control plane, Python and JS SDKs, a CLI, an MCP server and a web console. The **agent layer is optional**: a hosted personal coding agent
-that the sandbox knows by its budget, tickets and events. It reaches the sandbox cloud only through the HTTP API or the SDK, and the sandbox cloud runs without it (`tests/unit/test_layers.py` enforces the boundary).
+that the sandbox knows by its budget, tickets and events. It reaches the sandbox cloud only through the HTTP API or the SDK, and the sandbox cloud runs without it (`tests/unit/test_layers.py` enforces the boundary). If you only want a sandbox cloud, run the control plane and nodes and point your E2B or Cairn SDK at it; the agent layer is not needed.
 
 <div align="center">
 <img src="docs/assets/shot-sandbox.png" alt="A sandbox" width="92%"><br><sub>One sandbox's checkpoints: roll back in place, or fork a new sandbox from any of them</sub>
