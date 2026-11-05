@@ -15,10 +15,16 @@ def trig(i, text, threads, human=True, actor="alice"):
 def the_ticket(e): return e.store.all("tickets")[0]
 
 
+def the_pr_ticket(e):
+    """The approval shows up a moment before the Ticket records the PR it opened (both are written by the job thread): wait for the PR, not just the Ticket."""
+    wait(e, lambda: (e.store.all("tickets") or [{}])[0].get("pr"))
+    return the_ticket(e)
+
+
 def test_the_pr_a_ticket_opens_is_followed_by_that_ticket_and_a_comment_there_continues_the_work():
     e, ap = pr_job([{"filename": "pkg/a.py", "status": "modified", "additions": 1, "deletions": 1}])
-    t = the_ticket(e); assert t["pr"]["number"] == 7
-    assert t["id"] in (e.store.get("threads", PR_THREAD) or {}).get("subscriptions", [])
+    t = the_pr_ticket(e); assert t["pr"]["number"] == 7
+    assert wait(e, lambda: t["id"] in (e.store.get("threads", PR_THREAD) or {}).get("subscriptions", []))
     assert e.receive(trig("c1", "please also handle the empty case", [PR_THREAD])) == "fanned-out"          # the Ticket's, not a fresh judgement
     assert any(i.get("trigger") == "c1" and not i.get("context") for i in the_ticket(e)["inputs"])
     assert any(f["thread"] == PR_THREAD and f["mode"] == "own" for f in e.ticket_view(t["id"])["follows"])
