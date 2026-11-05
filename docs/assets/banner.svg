@@ -19,7 +19,7 @@
     <ellipse cx="60" cy="33" rx="15" ry="6.5" fill="url(#s3)"/>
     <circle cx="60" cy="19" r="5.5" fill="#F59E0B"/>
   </g>
-  <text x="420" y="136" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="92" font-weight="700" fill="#F8FAFC" letter-spacing="-2">CairnSandbox<tspan fill="#5EEAD4" font-weight="400">Sandbox</tspan></text>
+  <text x="420" y="136" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="92" font-weight="700" fill="#F8FAFC" letter-spacing="-2">Cairn<tspan fill="#5EEAD4" font-weight="400">Sandbox</tspan></text>
   <text x="424" y="184" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="30" fill="#5EEAD4">A sandbox cloud, with an agent that runs on it.</text>
   <rect x="424" y="212" width="8" height="46" rx="4" fill="#14B8A6"/>
   <text x="446" y="232" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="20" font-weight="700" fill="#E2E8F0">Sandbox cloud</text>
