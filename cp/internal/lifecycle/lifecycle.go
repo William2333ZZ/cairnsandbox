@@ -271,6 +271,7 @@ func (l *Lifecycle) Create(body map[string]any, project string) Result {
 	tried := map[string]bool{}
 	attempts := max(1, len(l.fleet.All()))
 	preempted := 0
+	var noTemplate *Result // the last "no template" answer: if every node we try lacks the template, that is the honest error, not "no capacity"
 	for i := 0; i < attempts; i++ {
 		var n *fleet.Node
 		if nodeName != "" {
@@ -286,6 +287,9 @@ func (l *Lifecycle) Create(body map[string]any, project string) Result {
 				continue
 			}
 			preempted = 2
+		}
+		if (n == nil || !n.Alive()) && noTemplate != nil {
+			return *noTemplate
 		}
 		if n == nil || !n.Alive() {
 			l.audit.Write(map[string]any{"op": "create", "status": 429, "reason": "no node with capacity", "tried": keys(tried)})
@@ -337,6 +341,12 @@ func (l *Lifecycle) Create(body map[string]any, project string) Result {
 			n.AddNum("vms_total", 1)
 			n.AddNum("vms_running", 1)
 			n.AddNum("mem_mib_running", mem) // feedback until the next poll
+		case st == 400 && nodeName == "" && key != "" && strings.HasPrefix(fmt.Sprint(info["error"]), "no template"):
+			// placement goes by the health it last polled, which can lag a commit by a poll: this node does not have the template, another may
+			tried[n.Name] = true
+			noTemplate = &Result{st, info}
+			l.audit.Write(map[string]any{"op": "create_retry", "node": n.Name, "error": info["error"]})
+			continue
 		case st == 429 && nodeName == "":
 			for _, k := range []string{"vms_total", "vms_running", "mem_mib_running"} {
 				if v, ok := info[k].(float64); ok {
@@ -349,6 +359,9 @@ func (l *Lifecycle) Create(body map[string]any, project string) Result {
 		}
 		l.audit.Write(map[string]any{"op": "create", "node": n.Name, "status": st, "sandbox": info["id"], "project": project, "boot_mode": info["boot_mode"], "error": info["error"]})
 		return Result{st, info}
+	}
+	if noTemplate != nil {
+		return *noTemplate
 	}
 	return Result{429, map[string]any{"error": "no node with capacity"}}
 }

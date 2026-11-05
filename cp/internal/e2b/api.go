@@ -30,7 +30,8 @@ type Server struct {
 	Tenancy *tenancy.Tenancy
 	Life    *lifecycle.Lifecycle
 	Images  *images.Images
-	Default string // the template name to use when the SDK names none (E2B's "base")
+	Builds  *images.Builds // template builds (templates.go)
+	Default string         // the template name to use when the SDK names none (E2B's "base")
 	// The envd side (envd.go): the SDKs' data plane, relayed to the node that owns the sandbox.
 	Fleet  *fleet.Fleet
 	NC     nodeclient.Client
@@ -39,6 +40,9 @@ type Server struct {
 	// PreviewDomain (D55): when set, sandboxes report it as their `domain`, so the SDKs' get_host(port) = "<port>-<sandboxID>.<domain>" is a host this control plane
 	// already routes to /sandboxes/<id>/ports/<port>/ (the browser opens it with ?token=, see docs/guide/manual.md).
 	PreviewDomain string
+	// Template builds (templates.go): where the SDK's COPY uploads are kept, and the URL by which the SDK can reach this port (empty = taken from the request).
+	UploadDir string
+	PublicURL string
 }
 
 var reSandbox = regexp.MustCompile(`^/(?:v2/)?sandboxes/([^/]+)(/(pause|resume|timeout|refreshes|connect|fork|network|metrics|snapshots))?$`)
@@ -61,6 +65,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := strings.TrimSuffix(r.URL.Path, "/")
+	if strings.HasPrefix(path, "/e2b-uploads/") { // a presigned-style link: no API key, an HMAC in the query instead
+		s.serveUpload(w, r)
+		return
+	}
 	if path == "/health" {
 		send(w, 200, map[string]any{"ok": true, "surface": "e2b"})
 		return
@@ -108,6 +116,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		scope = nil
+	}
+	if s.Builds != nil && s.templateRoutes(w, r, path, id, project, scope, body) {
+		return
 	}
 	switch {
 	case (path == "/sandboxes" || path == "/v2/sandboxes") && r.Method == "POST":
@@ -524,8 +535,13 @@ func (s *Server) deleteSnapshot(w http.ResponseWriter, id tenancy.Identity, scop
 			own = true
 		}
 	}
-	if !strings.HasPrefix(name, "snap-") || !own {
-		e2bErr(w, 404, "snapshot not found")
+	if !strings.HasPrefix(name, "snap-") && s.Builds != nil && s.Builds.CommittedBy(scope, name) {
+		own = true // a template this caller's projects built
+	} else if !strings.HasPrefix(name, "snap-") {
+		own = false
+	}
+	if !own {
+		e2bErr(w, 404, "template not found")
 		return
 	}
 	res := s.Images.DeleteTemplate(name)

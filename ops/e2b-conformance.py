@@ -300,6 +300,36 @@ def _(_sb):
         s.kill()
 
 
+@case("template", "Template().from_base_image()... .build(), then a sandbox from it has the steps' effects and the running start command")
+def _(_sb):
+    import tempfile
+    from e2b import Template
+    d = tempfile.mkdtemp()
+    open(os.path.join(d, "copyme.txt"), "w").write("copied-by-template")
+    name = "conf-tpl-" + os.urandom(3).hex()
+    t = (Template(file_context_path=d).from_base_image().set_envs({"TPL_ENV": "from-template"})
+         .run_cmd("echo built-by-run > /opt/built.txt", user="root").copy("copyme.txt", "/opt/copyme.txt")
+         .set_start_cmd("sh -c 'while true; do date +%s > /tmp/tick; sleep 1; done'", "test -s /tmp/tick"))
+    logs = []
+    try:
+        Template.build(t, name, on_build_logs=lambda e: logs.append(e.message))
+        assert any("ready" in m for m in logs), logs[-5:]
+        s = new_sandbox(template=name, timeout=120)
+        try:
+            assert s.commands.run("cat /opt/built.txt").stdout == "built-by-run\n"
+            assert s.files.read("/opt/copyme.txt") == "copied-by-template"
+            assert s.commands.run("echo $TPL_ENV").stdout == "from-template\n"
+            a = s.commands.run("cat /tmp/tick").stdout; time.sleep(2.2); b = s.commands.run("cat /tmp/tick").stdout
+            assert a.strip() and int(b) > int(a), (a, b)        # the start command was running when the template was committed, and still is
+        finally:
+            s.kill()
+    finally:
+        try:
+            Template.delete(name)
+        except Exception:
+            pass
+
+
 @case("sandbox", "kill, then the sandbox is gone")
 def _(_sb):
     s = new_sandbox(template=TEMPLATE, timeout=120)

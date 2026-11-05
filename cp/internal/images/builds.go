@@ -366,9 +366,43 @@ func (b *Builds) CommittedBy(projects map[string]bool, name string) bool {
 		return false
 	}
 	for _, x := range bs {
-		if x.Kind == "commit" && x.Status == "done" && x.Input["name"] == name {
+		if (x.Kind == "commit" || x.Kind == "e2b") && x.Status == "done" && x.Input["name"] == name {
 			return true
 		}
 	}
 	return false
 }
+
+// E2B template builds (kind "e2b"; docs/research/e2b-compat-2026-11.md): the record is created when the SDK asks for a template (POST /v3/templates, status
+// "waiting"), the steps arrive with the build trigger and the control plane's own runner executes them in a build sandbox. Progress lines live in Result
+// ("logs"), so any replica can answer the status poll. Statuses: waiting | running | done | failed.
+func (b *Builds) NewE2B(project string, input map[string]any) (Build, error) {
+	bl := Build{ID: "b-" + registry.NewToken()[:10], Project: project, Kind: "e2b", Input: input, Status: "waiting", Created: now()}
+	in, _ := json.Marshal(input)
+	_, err := b.db.Exec(`INSERT INTO builds(id, project, kind, input, node, status, created) VALUES ($1, $2, $3, $4, $5, $6, $7)`, bl.ID, bl.Project, bl.Kind, string(in), "", bl.Status, bl.Created)
+	return bl, err
+}
+
+// SetE2B updates an E2B build's input (the steps), node, status, result and error in one write.
+func (b *Builds) SetE2B(id string, input map[string]any, node, status string, result map[string]any, errMsg string) error {
+	in, _ := json.Marshal(input)
+	res, _ := json.Marshal(result)
+	fin := 0.0
+	if status == "done" || status == "failed" {
+		fin = now()
+	}
+	_, err := b.db.Exec(`UPDATE builds SET input = $1, node = $2, status = $3, result = $4, error = $5, finished = $6 WHERE id = $7`, string(in), node, status, string(res), errMsg, fin, id)
+	return err
+}
+
+// TemplateExists / CommittedBy tell whether a template name is taken, and whether one of these projects committed or built it.
+func (im *Images) TemplateExists(name string) bool {
+	for _, t := range im.Templates() {
+		if k, _ := t["key"].(string); k == name {
+			return true
+		}
+	}
+	return false
+}
+
+func NameOK(name string) bool { return nameRe.MatchString(name) }

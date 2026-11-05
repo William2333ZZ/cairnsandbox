@@ -59,6 +59,9 @@ type fakeNode struct {
 	layers    []string            // layer ids imported through /layers/import
 	memUsed   float64             // mem_mib_running to report when > 0 (else 256 per running sandbox)
 	memBudget float64             // mem_budget_mib to report when > 0 (else 100000)
+	strict    bool                // creating from a template_key the node does not hold answers 400 "no template", like a real node
+	execs     []map[string]any    // every exec body the node received (template build test)
+	putFiles  []string            // paths of PUT .../files
 	envdSeen  []map[string]string // what the envd relay delivered (E2B surface): path, bearer, the SDK's own Authorization, body
 }
 
@@ -218,6 +221,9 @@ func (f *fakeNode) handle(w http.ResponseWriter, r *http.Request) {
 		js(201, map[string]any{"id": "L-oci", "name": body["name"], "from": body["image"]})
 	case strings.HasPrefix(p, "/builds/log/") && r.Method == "GET":
 		js(200, map[string]any{"build": strings.TrimPrefix(p, "/builds/log/"), "lines": f.logs, "next": len(f.logs)})
+	case strings.HasSuffix(p, "/files") && r.Method == "PUT":
+		f.putFiles = append(f.putFiles, r.URL.Query().Get("path"))
+		js(200, map[string]any{"bytes": len(raw)})
 	case strings.HasSuffix(p, "/commit"):
 		id := strings.TrimSuffix(strings.TrimPrefix(p, "/sandboxes/"), "/commit")
 		if _, ok := f.boxes[id]; !ok {
@@ -309,6 +315,16 @@ func (f *fakeNode) handle(w http.ResponseWriter, r *http.Request) {
 		if float64(len(f.boxes)+1) > f.maxVMs {
 			js(429, map[string]any{"error": "full", "vms_total": len(f.boxes), "vms_running": len(f.boxes), "mem_mib_running": 256 * len(f.boxes)})
 			return
+		}
+		if tk, _ := body["template_key"].(string); tk != "" && f.strict {
+			have := false
+			for _, k := range f.snaps {
+				have = have || k == tk
+			}
+			if !have {
+				js(400, map[string]any{"error": "no template " + tk})
+				return
+			}
 		}
 		f.seq++
 		id := fmt.Sprintf("%s-sb%d", f.name, f.seq)
@@ -406,6 +422,11 @@ func (f *fakeNode) handle(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimSuffix(strings.TrimPrefix(p, "/sandboxes/"), "/exec")
 		if _, ok := f.boxes[id]; !ok {
 			js(404, map[string]any{"error": "no sandbox"})
+			return
+		}
+		f.execs = append(f.execs, body)
+		if c, _ := body["cmd"].(string); strings.Contains(c, "FAIL_THIS_STEP") {
+			js(200, map[string]any{"exit": 3, "stdout": "", "stderr": "boom: it failed"})
 			return
 		}
 		js(200, map[string]any{"exit": 0, "stdout": fmt.Sprintf("%s:%v", f.name, body["cmd"]), "idem": r.Header.Get("Idempotency-Key")})
@@ -2806,4 +2827,160 @@ func TestTheE2BEnvdSideRelaysAuditsAndIsolates(t *testing.T) {
 // e2bTok recomputes an envd token the way the server does, for a sandbox the server never issued one for.
 func e2bTok(_ string, secret, sid string) string {
 	return (&e2b.Server{Secret: []byte(secret)}).EnvdToken(sid)
+}
+
+func TestE2BTemplateBuildRunsStepsAndCommitsATemplate(t *testing.T) {
+	a := newFakeNode(t, "na", 5)
+	reg, _ := registry.NewFileRegistry(t.TempDir())
+	s, _ := testServer(t, reg, "deployer-secret", a)
+	es := httptest.NewServer(&e2b.Server{Tenancy: s.Tenancy, Life: s.Life, Images: s.Images, Builds: s.Builds, Fleet: s.Fleet, Audit: &recAudit{}, Secret: []byte("k"), UploadDir: t.TempDir()})
+	defer es.Close()
+	do := func(method, path string, body any, key bool) (int, map[string]any, []byte) {
+		var rd io.Reader
+		if body != nil {
+			b, _ := json.Marshal(body)
+			rd = bytes.NewReader(b)
+		}
+		req, _ := http.NewRequest(method, es.URL+path, rd)
+		if key {
+			req.Header.Set("X-API-Key", "deployer-secret")
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		raw, _ := io.ReadAll(resp.Body)
+		var m map[string]any
+		json.Unmarshal(raw, &m)
+		return resp.StatusCode, m, raw
+	}
+	if st, _, _ := do("POST", "/v3/templates", map[string]any{"name": "Bad Name"}, true); st != 400 {
+		t.Fatalf("bad name: %d", st)
+	}
+	if st, _, _ := do("POST", "/v3/templates", map[string]any{"name": "t:v2"}, true); st != 400 {
+		t.Fatalf("tags are not supported: %d", st)
+	}
+	st, tpl, _ := do("POST", "/v3/templates", map[string]any{"name": "mytpl", "cpuCount": 2, "memoryMB": 512}, true)
+	if st != 202 || tpl["templateID"] != "mytpl" || tpl["buildID"] == nil || tpl["aliases"] == nil {
+		t.Fatalf("request: %d %v", st, tpl)
+	}
+	bid := tpl["buildID"].(string)
+	// the COPY upload: a link without credentials, valid only for this hash
+	hash := strings.Repeat("ab", 32)
+	st, up, _ := do("GET", "/templates/mytpl/files/"+hash, nil, true)
+	if st != 201 || up["present"] != false || up["url"] == nil {
+		t.Fatalf("upload link: %d %v", st, up)
+	}
+	url := up["url"].(string)
+	req, _ := http.NewRequest("PUT", strings.Replace(url, "http://", "http://", 1), strings.NewReader("not a real tar, the fake node does not unpack"))
+	if resp, _ := http.DefaultClient.Do(req); resp.StatusCode != 200 {
+		t.Fatalf("upload: %d", resp.StatusCode)
+	}
+	if st, up, _ := do("GET", "/templates/mytpl/files/"+hash, nil, true); st != 201 || up["present"] != true {
+		t.Fatalf("after the upload: %d %v", st, up)
+	}
+	bad, _ := http.NewRequest("PUT", es.URL+"/e2b-uploads/"+hash+"?exp=9999999999&sig=00", strings.NewReader("x"))
+	if resp, _ := http.DefaultClient.Do(bad); resp.StatusCode != 403 {
+		t.Fatalf("a forged upload link was accepted: %d", resp.StatusCode)
+	}
+	if st, _, _ := do("GET", "/templates/mytpl/builds/"+bid+"/status", nil, false); st != 401 {
+		t.Fatalf("status without a key: %d", st)
+	}
+	steps := []any{
+		map[string]any{"type": "ENV", "args": []any{"A", "1"}},
+		map[string]any{"type": "WORKDIR", "args": []any{"/work"}},
+		map[string]any{"type": "RUN", "args": []any{"echo from-run", "root"}},
+		map[string]any{"type": "COPY", "args": []any{"copyme.txt", "/work/copyme.txt", "", ""}, "filesHash": hash},
+	}
+	if st, _, _ := do("POST", "/v2/templates/mytpl/builds/"+bid, map[string]any{"fromImage": "e2bdev/base", "steps": steps, "startCmd": "sleep 1000", "readyCmd": "true"}, true); st != 202 {
+		t.Fatalf("trigger: %d", st)
+	}
+	if st, _, _ := do("POST", "/v2/templates/mytpl/builds/"+bid, map[string]any{"fromImage": "e2bdev/base"}, true); st != 409 {
+		t.Fatalf("a build can only be started once: %d", st)
+	}
+	var status map[string]any
+	for i := 0; i < 100; i++ {
+		_, status, _ = do("GET", "/templates/mytpl/builds/"+bid+"/status?logsOffset=0&limit=100", nil, true)
+		if status["status"] == "ready" || status["status"] == "error" {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if status["status"] != "ready" {
+		t.Fatalf("build did not finish: %v", status)
+	}
+	// the log is paged by logsOffset, and the SDK stops when a page comes back empty
+	n := len(status["logEntries"].([]any))
+	if _, rest, _ := do("GET", "/templates/mytpl/builds/"+bid+"/status?logsOffset="+fmt.Sprint(n), nil, true); len(rest["logEntries"].([]any)) != 0 {
+		t.Fatalf("the offset is not honoured: %v", rest)
+	}
+	a.mu.Lock()
+	snaps, execs, puts := append([]string{}, a.snaps...), append([]map[string]any{}, a.execs...), append([]string{}, a.putFiles...)
+	a.mu.Unlock()
+	if len(snaps) != 1 || snaps[0] != "mytpl" {
+		t.Fatalf("the template was not committed: %v", snaps)
+	}
+	var sawRun, sawStart, sawEnvFile, sawCopy bool
+	for _, e := range execs {
+		c, _ := e["cmd"].(string)
+		env, _ := e["env"].(map[string]any)
+		sawRun = sawRun || (c == "echo from-run" && e["user"] == "root" && e["cwd"] == "/work" && env["A"] == "1")
+		sawStart = sawStart || strings.Contains(c, "setsid nohup bash -lc 'sleep 1000'")
+		sawEnvFile = sawEnvFile || strings.Contains(c, "/etc/profile.d/99-e2b-template-env.sh") && strings.Contains(c, "export A=")
+		sawCopy = sawCopy || strings.Contains(c, "tar -xzf") && strings.Contains(c, "/work/copyme.txt")
+	}
+	if !sawRun || !sawStart || !sawEnvFile || !sawCopy || len(puts) != 1 {
+		t.Fatalf("steps not carried out as planned: run=%v start=%v envfile=%v copy=%v puts=%v\n%v", sawRun, sawStart, sawEnvFile, sawCopy, puts, execs)
+	}
+	if st, e, _ := do("GET", "/templates/aliases/mytpl", nil, true); st != 200 || e["templateID"] != "mytpl" {
+		t.Fatalf("alias: %d %v", st, e)
+	}
+	// a failing step ends the build with the step number, and nothing is committed
+	_, t2, _ := do("POST", "/v3/templates", map[string]any{"name": "broken"}, true)
+	b2 := t2["buildID"].(string)
+	do("POST", "/v2/templates/broken/builds/"+b2, map[string]any{"fromImage": "ubuntu:22.04", "steps": []any{map[string]any{"type": "RUN", "args": []any{"echo ok"}}, map[string]any{"type": "RUN", "args": []any{"FAIL_THIS_STEP"}}}}, true)
+	for i := 0; i < 100; i++ {
+		_, status, _ = do("GET", "/templates/broken/builds/"+b2+"/status", nil, true)
+		if status["status"] == "error" || status["status"] == "ready" {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	reason, _ := status["reason"].(map[string]any)
+	if status["status"] != "error" || reason == nil || reason["step"] != "1" || !strings.Contains(fmt.Sprint(reason["message"]), "step 2") {
+		t.Fatalf("failure not reported: %v", status)
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, k := range a.snaps {
+		if k == "broken" {
+			t.Fatal("a failed build was committed")
+		}
+	}
+	if len(a.boxes) != 0 {
+		t.Fatalf("the build sandboxes were not removed: %v", a.boxes)
+	}
+}
+
+// Placement goes by the health it last polled; a template committed since is unknown to it. A node that answers "no template" must not fail the create while
+// another node holds it.
+func TestCreateFromATemplateRetriesOnTheNodeThatHasIt(t *testing.T) {
+	a, b := newFakeNode(t, "na", 20), newFakeNode(t, "nb", 20)
+	a.strict, b.strict = true, true
+	reg, _ := registry.NewFileRegistry(t.TempDir())
+	s, ts := testServer(t, reg, "", a, b)
+	s.pollOnce()
+	b.mu.Lock()
+	b.snaps = []string{"fresh"} // committed after the last poll
+	b.mu.Unlock()
+	for i := 0; i < 8; i++ {
+		st, info := call(t, ts.URL, "POST", "/sandboxes", map[string]any{"mem": 256, "template_key": "fresh", "boot": "snapshot"}, nil)
+		if st != 201 || info["node"] != "nb" {
+			t.Fatalf("create %d: %d %v", i, st, info)
+		}
+	}
+	if st, e := call(t, ts.URL, "POST", "/sandboxes", map[string]any{"mem": 256, "template_key": "nowhere", "boot": "snapshot"}, nil); st != 400 || !strings.Contains(fmt.Sprint(e["error"]), "no template") {
+		t.Fatalf("a template no node holds should say so, not claim there is no capacity: %d %v", st, e)
+	}
 }
