@@ -955,7 +955,7 @@
 
 **验证**:官方 Python SDK 2.63.0 的 31 条与 npm 包 2.63.0 的 20 条一致性用例全部通过(`ops/e2b-conformance.{py,mjs}`,结果在 `docs/research/e2b-conformance/`),在一台机器、1 个节点、jailer 开的环境;Rust 13 个单测、Go 测试通过;原生 SDK 快速开始 13/13 没有回归。**没验证**:别的 SDK 版本与语言(Go 等)、两台物理机、压力测试。**同日补**:创建响应的 `domain` 在设了 `PREVIEW_DOMAIN` 时填它,SDK 的 `get_host(port)` 因此得到 D55 预览主机,一致性用例(沙箱里起 perl 小服务)端到端通过。**同日补验证**:2 个节点容器下两套官方 SDK 用例整套重跑(Python 32、npm 20 全过,新增"暂停中直接 `commands.run`"用例);4 台沙箱按负载分到两节点、杀掉持有已暂停沙箱的节点后 evacuate、SDK 照常用;栈本身的延迟(控制面主机上无 SDK 无隧道):`Start` 到结束 p50 8.6 ms,文件 1 KiB 读写约 4 ms,64 MiB 写 290 / 读 670 MB/s,4 台并行 100 条命令无错误。
 
-**局限(写进兼容矩阵)**:没有模板构建 API、端口子域、`gzip` 上传、`StreamInput`、`/files/compose`;`watch_dir` 靠 250 ms 轮询;默认用户是 `agent` 不是 root;新建沙箱要用带 envd 的基础镜像,已有模板快照要重建;E2B 的 `timeout` 映射成空闲 ttl;`allow_internet_access` 不带时用 Project 默认出口策略(不是 E2B 的"默认放开")。
+**局限(写进兼容矩阵)**:没有模板构建 API、`gzip` 上传、`StreamInput`、`/files/compose`;端口 URL 只在设了 `PREVIEW_DOMAIN` 时可用(见同日补充);`watch_dir` 靠 250 ms 轮询;默认用户是 `agent` 不是 root;新建沙箱要用带 envd 的基础镜像,已有模板快照要重建;E2B 的 `timeout` 映射成空闲 ttl;`allow_internet_access` 不带时用 Project 默认出口策略(不是 E2B 的"默认放开")。
 
 **D40/D43 的更正**:D40 "envd 要求泛域名入口"不成立(见上);D43 "E2B 兼容是入口"仍成立,但入口现在是完整的数据面。
 
