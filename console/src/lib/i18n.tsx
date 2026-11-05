@@ -98,6 +98,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={{ lang, setLang, t: (k, v) => translate(lang, k, v) }}>{children}</Ctx.Provider>
 }
 // 页面里直接写的英文词(表头、面板标题):字典里有 w.<词> 就换,没有原样显示
+// 控制面返回的英文错误,中文界面里翻成中文;没收录的原样显示。
+const SERVER_ERR: Record<string, string> = {
+  'invite code is not valid': '邀请码无效或已被用过', 'account exists': '账户名已被占用', 'user exists': '用户名已被占用', 'too many attempts': '尝试次数太多,请稍后再试',
+  'code, account and user are required': '邀请码、账户名和用户名都要填',
+}
+export function serverError(lang: Lang, msg: string) {
+  if (lang !== 'zh') return msg
+  if (SERVER_ERR[msg]) return SERVER_ERR[msg]
+  const m = /^(account id|user|project id): lowercase letters, digits, _ or -, 2-32 chars$/.exec(msg)
+  return m ? '名称只能用小写字母、数字、_ 或 -,2-32 位' : msg
+}
 export function word(lang: Lang, x: unknown) {
   return typeof x === 'string' && x ? (DICT[lang]['w.' + x] ?? (lang === 'zh' ? zh['w.' + x] : undefined) ?? x) : x
 }

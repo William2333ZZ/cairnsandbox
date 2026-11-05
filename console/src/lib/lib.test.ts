@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api, headers, setProjectKey, setToken } from './api'
 import { age, bytes, mib, pct, usd } from './format'
-import { translate } from './i18n'
+import { serverError, translate } from './i18n'
 import { navFor, roleOf, canManage, NAV } from './roles'
 
 beforeEach(() => { localStorage.clear() })
@@ -70,5 +70,14 @@ describe('format', () => {
     expect(age(100, 130)).toBe('30s'); expect(age(0)).toBe('-'); expect(age(1000, 1000 + 3 * 3600)).toBe('3h')
     expect(usd(0.0021)).toBe('$0.002'); expect(usd(3.2)).toBe('$3.20'); expect(usd(null)).toBe('-')
     expect(mib(512)).toBe('512 MiB'); expect(mib(2048)).toBe('2.0 GiB'); expect(bytes(1536)).toBe('2 KiB'); expect(pct(0.476)).toBe('48%')
+  })
+})
+
+describe('serverError', () => {
+  it('translates known control-plane errors in zh and leaves the rest alone', () => {
+    expect(serverError('zh', 'invite code is not valid')).toBe('邀请码无效或已被用过')
+    expect(serverError('zh', 'account id: lowercase letters, digits, _ or -, 2-32 chars')).toContain('小写字母')
+    expect(serverError('zh', 'something new')).toBe('something new')
+    expect(serverError('en', 'account exists')).toBe('account exists')
   })
 })
