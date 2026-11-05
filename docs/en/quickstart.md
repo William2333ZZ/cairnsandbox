@@ -46,6 +46,10 @@ for agents, `claude mcp add cairn -- python3 -m cairnbox.mcp`. An E2B-shaped RES
 * The first sandbox is slow: templates are built at node start; give it a minute and look at `GET /health`.
 * Egress denied: the sandbox's network starts **closed**. Ask for hosts with `PUT /sandboxes/<id>/network`; a project member's request to loosen it waits for an owner's approval.
 
+## Several "machines" on one host
+
+`deploy/multinode.sh up 3` starts three node containers plus one control plane, each node in its own network namespace with its own state directory, so the control plane treats them as separate machines. `kill`, `partition`, `evacuate` and `STORE_BW_MBPS` inject failures and throttle the link to the shared chunk store. On a 3-node run (2 VMs per node) placement, evacuating a killed node's durable sandbox onto another node, reconciliation when the node came back, and partition/heal behaved as designed. It does not model real network latency, shared-host resource contention or clock skew, and it has not been load-tested. Details (in Chinese): `deploy/README.md`.
+
 ## What is verified
 
 A clean copy of this tree was built and run on one Linux host (Ubuntu 22.04, kernel 5.15, behind regional mirrors): the node and control-plane images (the control plane's `go vet` and tests run inside

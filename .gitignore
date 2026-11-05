@@ -25,3 +25,4 @@ node_modules/
 .pytest_cache/
 .venv/
 .DS_Store
+deploy/.multinode.compose.json

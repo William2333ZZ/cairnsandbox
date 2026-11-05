@@ -55,7 +55,28 @@ docker compose exec fc-db pg_dump -U cp cp | gzip > backup/cp-$(date +%F).sql.gz
 tar czf backup/store-$(date +%F).tgz store/
 ```
 
-## 第二个节点
+## 单机多容器模拟多机
+
+`./multinode.sh up N` 在一台机器上起 N 个节点容器加一个控制面、注册表、数据库和分块仓库(单独的 compose 项目 `cairn-multi`,和平常的 `docker compose up` 互不干扰)。每个节点有自己的网络命名空间、状态目录(`state`、`state-2`、…)、端口和令牌,对控制面来说就是 N 台独立的机器。
+
+```bash
+cd deploy
+PORT_OFFSET=1000 MEM_BUDGET_MIB=1024 ./multinode.sh up 3     # 3 个节点;端口整体加 1000,避开本机已有的栈
+./multinode.sh status                                         # 控制面眼里的节点:存活、VM 数、内存
+./multinode.sh kill 3        # 节点 3 断电(SIGKILL,没有"先暂停再退出")
+./multinode.sh evacuate 3    # 把它的 durable 沙箱从最近一次暂停的 bundle 在别的节点恢复
+./multinode.sh start 3       # 节点回来;控制面对账,删掉它手里已经搬走的旧副本
+./multinode.sh partition 3   # 断网但进程还活着(`heal 3` 接回去)
+./multinode.sh down -v
+```
+
+可调:`MEM_BUDGET_MIB`(**每个节点**的内存预算;不设就取本机内存的一半除以节点数,每个至多 8192)、`MAX_VMS`、`STORE_BW_MBPS`(给共享的分块仓库限速,模拟机器之间的链路;影响 bundle 迁移和镜像按需读取)、`FENCE_AFTER_S` 与 `AUTO_EVACUATE_AFTER_S`(自我围栏与自动接管,见 `.env.example`)。节点 `k` 的宿主端口是节点 1 的端口加 `k-1`。脚本先用 `docker compose config` 展开 `docker-compose.yml` 再复制节点,所以你在 `.env` 或 compose 文件里改过的镜像名、端口、预算都会带上。
+
+**在一台机器上实测过的**(3 个节点,每个最多 2 台 VM、1 GiB,2026-11-05,在一份干净检出上):4 台 256 MiB 沙箱分到三个节点(2/1/1);对一台 durable 沙箱写文件后暂停,`kill` 它所在的节点,控制面把节点标为不可用;`evacuate` 把它从 bundle(拉取约 60 MiB)在另一个节点恢复,文件内容还在;`start` 之后节点回到 0 台 VM(旧副本被对账删掉);`partition` 后节点被标为不可用,`heal` 后恢复。
+
+**这种模拟不能验证的**:跨机的网络带宽和延迟(这里多一跳只有毫秒级;可以用 `STORE_BW_MBPS` 限仓库,但限不了节点之间的直连)、几个节点共用同一台机器的内存和磁盘带来的互相挤占、真正的网络分区与丢包、时钟偏差、跨机的页缓存行为。这里也**没有做过压力测试**:共享的开发机上别人也在跑任务,所以只用了每节点 2 台 VM 的规模。注意:节点目录是容器里的 root 写的,清理要用容器(`docker run --rm --entrypoint rm -v "$PWD:/d" fc-node:dev -rf /d/state-2`)。
+
+## 第二个节点(手工)
 
 同一台机器上:复制 `fc-node` 这个 service 为 `fc-node-2`,改 `hostname`、`NODE_NAME`、状态目录(`state-2`)、宿主端口(18802),在 `fc-cp` 的 `NODES` 里加一项 `{"name":"fc-node-2","url":"http://fc-node-2:8800","token_file":"/nodes/state-2/node-token"}`。另一台机器上:那边只起 `fc-node` + `fc-store` 的访问(`LAZY_STORE` 指向这边的仓库),把它的 `node-token` 复制到这边 `DATA_DIR/<name>/node-token`,控制面 `POST /nodes` 登记即可;两边网络要互通 8800 / 8900。
 
