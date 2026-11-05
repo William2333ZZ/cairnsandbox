@@ -115,7 +115,7 @@ print(sbx.commands.run("echo hi").stdout)
 
 ## 兼容矩阵(官方 SDK 实测)
 
-**测的是什么**:官方 `e2b` Python SDK(35 条)与 npm `e2b`(20 条)对着同一个控制面。**版本矩阵**(2026-11-05,`ops/e2b-matrix.sh`,每个版本一个独立环境,[结果](../../research/e2b-conformance/matrix-2026-11-05.json)):Python 2.52.1、2.55.1、2.57.0、2.60.0、2.62.1、2.63.0 与 npm 2.52.1、2.55.0、2.57.0、2.60.0、2.62.2、2.63.0 **全部通过**;**1.x 不支持**(Python 1.11.1、npm 1.13.2 不认自定义 API 地址,只能连 e2b.app,套件拒绝向它们发请求)。其余说明针对,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
+**测的是什么**:官方 `e2b` Python SDK(36 条)与 npm `e2b`(20 条)对着同一个控制面。**版本矩阵**(2026-11-05,`ops/e2b-matrix.sh`,每个版本一个独立环境,[结果](../../research/e2b-conformance/matrix-2026-11-05.json)):Python 2.52.1、2.55.1、2.57.0、2.60.0、2.62.1、2.63.0 与 npm 2.52.1、2.55.0、2.57.0、2.60.0、2.62.2、2.63.0 **全部通过**;**1.x 不支持**(Python 1.11.1、npm 1.13.2 不认自定义 API 地址,只能连 e2b.app,套件拒绝向它们发请求)。其余说明针对,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
 
 图例:**可用** = 一致性用例通过;**已实现未测** = 代码有、没有用例;**部分** = 有但语义不同;**没有** = 不提供。
 
@@ -134,7 +134,8 @@ print(sbx.commands.run("echo hi").stdout)
 | `GET /sandboxes/metrics?sandbox_ids=a,b`(批量) | 可用 | 返回各沙箱最新一个点;不是你的或不存在的 id 被略去 |
 | `get_metrics` | 可用 | 内存、CPU 来自节点的 cgroup 采样;`diskUsed` 恒 0 |
 | 读模板(`GET /templates`) | 部分 | 只读各节点的模板快照;`public` 恒 false |
-| 模板构建(`Template.build()`、`/v3/templates`、tags)、团队与密钥管理、沙箱日志(`/logs`) | 没有 | 构建用原生 `POST /builds`([images.md](images.md));成员与令牌见 [tenancy.md](tenancy.md);日志见原生 `/events` |
+| 模板构建(`Template().from_…().run_cmd(…).build()`、`/v3/templates`) | 部分 | 见下面的"模板构建"一节 |
+| 模板标签(tags)、团队与密钥管理、沙箱日志(`/logs`) | 没有 | 成员与令牌见 [tenancy.md](tenancy.md);日志见原生 `/events` |
 
 ### 数据面(envd)
 
@@ -157,6 +158,19 @@ print(sbx.commands.run("echo hi").stdout)
 - **多节点**:`ops/e2b-multinode-check.py`:4 台沙箱按负载分到两个节点,每台经 E2B 口跑命令与文件操作都正常;把持有一台已暂停沙箱的节点 `docker kill` 后 `evacuate`,该沙箱在另一个节点恢复,文件还在、SDK 的 `commands.run` 正常。没暂停过的那台沙箱因为没有 bundle 被标为 `lost`(这是 evacuate 的既定语义)。
 - **暂停中直接 `commands.run`**(不先 `connect`):节点透明恢复,有一致性用例。
 - **栈本身的延迟**(`ops/e2b-latency-raw.py`,在控制面所在主机上用标准库客户端发同样的 Connect JSON,不含 SDK 与网络;1 台沙箱测延迟、4 台并行):`bash -l -c true` 从发出 `Start` 到收到结束 p50 8.6 ms / p95 9.4 ms;首个 stdout 字节 4.4 ms;1 KiB 文件写 / 读 p50 4.2 / 3.8 ms;64 MiB 文件写 290 MB/s、读 670 MB/s;4 台沙箱并行共 100 条命令 p50 10.6 ms、p95 21.8 ms、无错误(283 条/秒)。冷启动创建 0.4 s。**这是单机小规模的数字,开发机上还有别人的任务,不是和别的沙箱的对比基准。**用 SDK 经 SSH 隧道从笔记本测的数(命令 p50 66 ms)被隧道的 88 ms RTT 主导,没有参考价值。
+
+### 模板构建(`Template.build()`)
+
+官方 SDK 的模板构建器可以用:`Template().from_base_image()` / `from_template(…)` / `from_ubuntu_image()` / `from_debian_image()`,加 `run_cmd`、`copy`、`set_envs`、`set_workdir`、`set_user`、`set_start_cmd(…, ready_cmd)`,再 `Template.build(t, "名字")`(或 `build_in_background`)。**控制面自己跑构建**:起一台构建沙箱,按步骤执行(经节点的 exec 与文件接口),启动 start 命令并等 ready 命令成功,最后把**正在运行的沙箱**提交成模板(内存加磁盘),所以用它创建的沙箱出来时 start 命令还在跑。一致性用例(`ops/e2b-conformance.py` 的 `template` 组)用 `run_cmd`、`copy`、`set_envs`、`set_start_cmd` 建了一个模板,再创建沙箱,验证文件、复制进去的文件、环境变量都在,启动命令在持续跑。
+
+| | |
+|---|---|
+| 步骤类型 | `RUN`(默认以 root 执行)、`COPY`(SDK 把上下文打成 tar 上传到 `/e2b-uploads/<hash>`,链接带 HMAC 与过期时间,不需要 API key)、`ENV`、`WORKDIR`、`USER`;别的类型报错。`pip_install`、`apt_install` 等便捷方法在 SDK 里应当展开成 `RUN`,**没有逐个测过** |
+| 基础 | `fromImage`:`e2bdev/base` → 节点的默认模板,`ubuntu`/`ubuntu:*` → `ubuntu-24.04`,`debian`/`debian:*` → `debian-13`(**不是真的拉取这些镜像**,日志里写明用了哪个基础);别的镜像(`from_python_image` 等)报错,要用别的镜像先用原生 `POST /builds {kind:\"oci\"}` 建层。`fromTemplate`:我们的模板名 |
+| 出口 | 构建沙箱用 **Project 的默认出口策略**(默认全拒),所以联网的步骤(`pip install`、`apt-get`)默认会失败;要放开就改 Project 默认策略。这是有意的:否则成员能通过构建绕过"放宽要审批" |
+| 环境变量 | `ENV` 写进 `/etc/profile.d/99-e2b-template-env.sh`,对登录 shell(SDK 的 `commands.run` 用 `bash -l`)生效;`WORKDIR` 只在构建步骤里生效,不会成为沙箱的默认目录 |
+| 名字与权限 | 名字是模板的全局名(小写字母开头,字母数字 `_ . -`,至多 40 字符),不带 `:tag`(带了返回 400);别人的同名模板 → 409;自己的同名模板会被替换。删除用 `DELETE /templates/<名字>`(只能删自己构建的,admin 任意) |
+| 限制 | 每个控制面副本同时至多 4 个构建;COPY 上传放在副本本地目录(`CP_E2B_UPLOAD_DIR`),**多副本时上传与触发落到不同副本会找不到文件**;状态与日志在数据库里,任何副本都能答;`CP_E2B_PUBLIC_URL` 设上传链接里的对外地址(默认取请求的 Host);提交出的模板住在构建它的节点上,没有可用节点时创建报"没有这个模板" |
 
 ### code-interpreter
 

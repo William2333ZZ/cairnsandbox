@@ -6,6 +6,7 @@
 
 ### 沙箱云
 - 修了一个竞态:删除沙箱时控制面在把 200 写给客户端**之后**才去掉路由,客户端收到 200 后立刻查路由偶尔还能查到(CI 上出现过一次 `route survived the delete`)。现在在响应头写出之前先去掉路由。
+- E2B 模板构建:官方 SDK 的 `Template().from_base_image()…run_cmd/copy/set_envs/set_start_cmd…Template.build()` 通过一致性用例(Python 36 条);控制面自己跑构建并把运行中的沙箱提交成模板;COPY 上传走带 HMAC 的链接。创建时节点回 "no template" 会换节点重试。限制与范围见 `docs/guide/api/e2b.md` 的"模板构建"。
 - code-interpreter:官方 `e2b_code_interpreter` 的 `run_code` 通过 14 条用例(2.10.5–2.11.9)。新增 `recipes/code-interpreter/`(服务 `server.py` 与模板构建脚本)、`docs/guide/code-interpreter.md`;控制面对非 envd 端口按流量令牌鉴权后转给节点端口代理,创建响应新增 `trafficAccessToken`;节点端口代理对无 Content-Length 的响应改为流式转发。
 - E2B envd 收口:所有解析客户端字节的代码加变异压力测试(sandboxd 发布版 panic 即退出);multipart 改流式;支持 `gzip=True` 上传(自写 DEFLATE 解码,带校验与上限);`/files/compose`;批量指标;控制面 `/metrics` 增加 `cairn_envd_*`。Python 一致性用例 35 条、npm 20 条通过。
 - E2B SDK 版本矩阵:`ops/e2b-matrix.sh` 对每个版本建独立环境跑同一套用例;Python 与 npm 各 6 个 2.x 版本全过,1.x 不支持。一致性套件现在先核对 SDK 的 API 地址等于 `E2B_API_URL` 才发请求(1.x 会把密钥发去 e2b.app);SDK 里没有的 API 报 SKIP 并写原因。
