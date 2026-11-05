@@ -70,7 +70,7 @@ export function Icon({ name, className }: { name: string; className?: string }) 
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={cx('size-4 shrink-0', className)} aria-hidden="true"><path d={PATHS[name] || PATHS.overview} /></svg>
 }
 
-/** 应用标记:三块叠起来的石头(Cairn 的标志),只用前景色阶,品牌色只给最上面那一粒。 */
+/** 应用标记:三块叠起来的石头(CairnSandbox 的标志),只用前景色阶,品牌色只给最上面那一粒。 */
 function Mark() {
   return (
     <svg viewBox="0 0 24 24" className="size-6 shrink-0" aria-hidden="true">
@@ -117,7 +117,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const side = (full: boolean) => (
     <>
       <div className={cx('flex items-center gap-2 px-3 pb-2 pt-3', !full && 'justify-center px-0')}>
-        {full && <Link href="/overview/" className="flex items-center gap-2 text-ui-base font-medium text-fg no-underline hover:no-underline"><Mark />Cairn <span className="font-normal text-fg-subtle">{t('app.name')}</span></Link>}
+        {full && <Link href="/overview/" className="flex items-center gap-2 text-ui-base font-medium text-fg no-underline hover:no-underline"><Mark />CairnSandbox <span className="font-normal text-fg-subtle">{t('app.name')}</span></Link>}
         {full && <div className="flex-1" />}
         {!auto && <button className="rounded-lg px-1.5 py-1 text-fg-subtle hover:bg-hover hover:text-fg" onClick={toggleCollapsed} title={t('nav.collapse')} aria-label={t('nav.collapse')}><Icon name="panel" /></button>}
         {!full && auto && <Mark />}
@@ -164,7 +164,7 @@ export function Shell({ children }: { children: ReactNode }) {
       {!narrow && <aside style={{ width: leftW }} className="flex shrink-0 flex-col bg-sidebar">{side(!collapsed)}</aside>}
       {narrow && drawer && <div className="fixed inset-0 z-20 bg-bg/80" onClick={() => setDrawer(false)}><aside className="flex h-full w-72 flex-col bg-sidebar" onClick={e => e.stopPropagation()}>{side(true)}</aside></div>}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {narrow && <div className="flex items-center gap-2 px-2 py-1"><button className="rounded-lg px-2 py-1 hover:bg-hover" onClick={() => setDrawer(true)} aria-label="menu">☰</button><span className="text-ui-base font-medium">Cairn</span></div>}
+        {narrow && <div className="flex items-center gap-2 px-2 py-1"><button className="rounded-lg px-2 py-1 hover:bg-hover" onClick={() => setDrawer(true)} aria-label="menu">☰</button><span className="text-ui-base font-medium">CairnSandbox</span></div>}
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-5xl space-y-5 px-6 py-6">
             {me?.suspended && <div role="alert" className="rounded-xl border border-destructive bg-destructive-surface px-3 py-2 text-ui-base text-destructive">{t('suspended.banner', { reason: me.suspended.reason })}</div>}

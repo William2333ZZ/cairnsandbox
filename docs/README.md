@@ -1,6 +1,6 @@
 # 文档
 
-一个让 agent 在隔离沙箱里运行、并在可信评测下让它的运行系统(Cairn)自我改进的平台。代码在 [`prototype/fc-node/`](../),接口逐字约定在 [`CONTRACT.md`](../CONTRACT.md)。
+一个让 agent 在隔离沙箱里运行、并在可信评测下让它的运行系统(CairnSandbox)自我改进的平台。代码在 [`prototype/fc-node/`](../),接口逐字约定在 [`CONTRACT.md`](../CONTRACT.md)。
 
 ## 按顺序读
 

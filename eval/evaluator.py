@@ -824,7 +824,7 @@ class Evaluator:
     def add_version(self, body):
         vid = new_id("v")
         self.store.insert("versions", {"id": vid, "label": body.get("label", vid), "agent_cmd": body.get("agent_cmd") or None,   # None = current default at run time
-                                       "runtime": body.get("runtime"), "harness_layer": body.get("harness_layer"),   # Cairn version = runtime hash + harness layer
+                                       "runtime": body.get("runtime"), "harness_layer": body.get("harness_layer"),   # CairnSandbox version = runtime hash + harness layer
                                        "layers": body.get("layers") or [], "note": body.get("note", ""), "parent": body.get("parent"),
                                        "template": body.get("template"), "created": now()})
         return vid

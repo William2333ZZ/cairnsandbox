@@ -1,7 +1,7 @@
 [project]
 name = "cairnsandbox"
 version = "0.1.0"
-description = "Python SDK for the Cairn sandbox cloud: sandboxes, commands, files, PTY, ports, checkpoints, volumes, budgets, billing"
+description = "Python SDK for the CairnSandbox cloud: sandboxes, commands, files, PTY, ports, checkpoints, volumes, budgets, billing"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []

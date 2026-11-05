@@ -28,13 +28,13 @@ DSec 是给 RL 训练框架用的沙箱平台,评测和打分在它之外("奖�
 |---|---|---|
 | 评测器 `eval/evaluator.py` | 任务集、版本、批次;agent 沙箱 → 导出工作区 → 独立无网络验证沙箱;基础设施失败单独计;avg@k、pass^k、半分法噪声带 δ、配对 bootstrap CI、McNemar、级联、接受门、作弊信号、导入检查 | RRSI、HGM、HarnessBank、Miller、Terminal-Bench 2.0,见 `rsi-algorithms-survey.md` |
 | 模型 API 代理 `node/modelproxy.py` | 沙箱外计量:每沙箱令牌与预算、价格表、超预算 402;成本不信 agent 自报 | D4 的"成本上限放在 agent 够不到的地方" |
-| 种子 agent `aios/` | mini-swe-agent 裁剪移植,Cairn stage 0,装在开发层 `/opt/aios` | DGM/SICA 的种子思路,mini-swe-agent 的 Bash-Only 榜做坐标 |
+| 种子 agent `aios/` | mini-swe-agent 裁剪移植,CairnSandbox stage 0,装在开发层 `/opt/aios` | DGM/SICA 的种子思路,mini-swe-agent 的 Bash-Only 榜做坐标 |
 | 工作台 `web/` | 沙箱、流式执行、PTY 终端、文件、网络策略、节点、实验、批次矩阵、轨迹 | `archive/feature-design-2026-11-01.md` 第 2、3 节 |
 | 开发工具层 | git、gcc、libc6-dev、make、jinja2、pytest + `/opt/aios`;apt 经出口代理走镜像 | DSec §6.1 的"agent 自建环境、构建账号分离" |
 
 ### 0.3 这一天学到的、改了的
 
-- 评测器的任务必须来自用户自己的工作:自建玩具任务对 V4.1 Flash 全满分,噪声基线无信息,已取消(花费 0.42 美元);公开基准只做回归。下一步任务集从这个仓库本身挖(挖空带测试的函数,隐藏测试做验收),让 Cairn 改进开发这个平台的能力。
+- 评测器的任务必须来自用户自己的工作:自建玩具任务对 V4.1 Flash 全满分,噪声基线无信息,已取消(花费 0.42 美元);公开基准只做回归。下一步任务集从这个仓库本身挖(挖空带测试的函数,隐藏测试做验收),让 CairnSandbox 改进开发这个平台的能力。
 - DeepSeek V4.1 Flash 直连可用(`deepseek-flash`),第一个真实任务 7 次调用、29 秒、0.016 美元。
 - CI 用带后缀的独立产品层容器,避免把正在跑真实批次的代理换成 mock。
 
@@ -87,7 +87,7 @@ DSec 用四种后端,其中**容器和 FnCall 跑在 QEMU 虚拟机里**,再在�
 | microVM 暂停 | 保存内存和执行状态为快照,**杀掉 Firecracker 进程**释放内存;恢复 = 新进程 + 加载快照 | 已实现;暂停改为 Diff 快照链(写出 86 MiB 而非 512 MiB),恢复合并链 0.28 s;模板快照直启 0.16 s(冷启动 1.06 s),预留池领取 7 ms;链恢复可走 userfaultfd 按需供页(非 jail);SIGTERM 排空把运行中沙箱暂停到盘 | 一致,见原型文档 §14–15 |
 | 透明恢复 | 对暂停沙箱的**任何请求自动先恢复**再执行 | 已实现(`ensure_running`) | 一致 |
 | 触发 | 训练框架主动对被抢占任务的所有沙箱发 pause | 无 | 工作台:空闲超时自动暂停(`archive/feature-design-2026-11-01.md` 2.1);实验:评测结束即销毁,不暂停 |
-| pack_diff | 任意时刻对沙箱做**增量磁盘快照**,可恢复为新沙箱;用于让 agent 自己构建环境;构建账号与运行账号分离,打包前清掉可写层残留 | `POST /sandboxes/<id>/pack` 把可写层固化为新只读层;开发工具层、以后的 Cairn 版本制品都这么产出 | 一致;"打包前清残留"要在构建脚本里做(apt clean、删 lists) |
+| pack_diff | 任意时刻对沙箱做**增量磁盘快照**,可恢复为新沙箱;用于让 agent 自己构建环境;构建账号与运行账号分离,打包前清掉可写层残留 | `POST /sandboxes/<id>/pack` 把可写层固化为新只读层;开发工具层、以后的 CairnSandbox 版本制品都这么产出 | 一致;"打包前清残留"要在构建脚本里做(apt clean、删 lists) |
 | 容器暂停 | `docker pause` + swap + `memory.reclaim` | 不适用 | 不适用 |
 
 **优先级:透明恢复与校时 P1;pack_diff 在分层磁盘之后 P1。**

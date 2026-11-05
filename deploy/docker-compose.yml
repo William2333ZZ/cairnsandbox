@@ -1,4 +1,4 @@
-# The whole Cairn sandbox cloud on one host (docs/010 部署; D44). Mirrors run-node.sh service by service so either can run the stack.
+# The whole CairnSandbox cloud on one host (docs/010 部署; D44). Mirrors run-node.sh service by service so either can run the stack.
 #   cp .env.example .env; edit it; docker compose up -d            (first time: see README.md for images, layers and the token)
 # Services: fc-registry (Redis: routes, nodes, leases), fc-db (Postgres: tenancy, usage, statements), fc-store (chunk store: bundles, lazy images),
 # fc-node (node agent: microVMs; privileged by necessity), fc-cp (control plane, Go; web UI at /ui/, E2B surface on 8710), fc-model (model proxy),

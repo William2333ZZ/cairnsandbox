@@ -1,21 +1,21 @@
-# 云端沙箱管理系统 + RSI + Cairn 开发架构
+# 云端沙箱管理系统 + RSI + CairnSandbox 开发架构
 
 版本:v0.1(设计草案)
-范围:第一部分是平台架构,第二部分是在沙箱内用 RSI(递归自我改进)开发 Cairn 的方法。
+范围:第一部分是平台架构,第二部分是在沙箱内用 RSI(递归自我改进)开发 CairnSandbox 的方法。
 
 ---
 
 ## 0. 一页摘要
 
 - 要做的是一个**云端沙箱管理系统**:一个用户可以拥有多个沙箱,每个沙箱里有执行环境和 agent。
-- 在此之上做 **RSI**:Cairn 就是 agent 的 harness,RSI 改进的是 Cairn 的可变服务层(调度、上下文、记忆、工具、提示与技能),由**沙箱外的评测器**判定好坏。
+- 在此之上做 **RSI**:CairnSandbox 就是 agent 的 harness,RSI 改进的是 CairnSandbox 的可变服务层(调度、上下文、记忆、工具、提示与技能),由**沙箱外的评测器**判定好坏。
 - 客户端有 **Web 端**和**桌面端**,桌面端可以在本地运行同一套 agent 运行时(本地站点)。
-- 用这套系统去开发 **Cairn**(面向 agent 的操作系统内核/运行时)。Cairn 同时是后续"端云统一内核"的基础。
+- 用这套系统去开发 **CairnSandbox**(面向 agent 的操作系统内核/运行时)。CairnSandbox 同时是后续"端云统一内核"的基础。
 - 刻意保持最小:加固的 Docker 隔离、文件系统级 fork;沙箱与节点解耦(可写层增量定期同步到对象存储)。microVM 与内存快照后置。
 
 核心设计原则:
 
-1. **三区分离**:固定基础设施与 Cairn 不可变内核(agent 不可写)、Cairn 可变服务(agent 可写)、外部评测器(agent 看不见)。
+1. **三区分离**:固定基础设施与 CairnSandbox 不可变内核(agent 不可写)、CairnSandbox 可变服务(agent 可写)、外部评测器(agent 看不见)。
 2. **接口先行**:沙箱协议、事件格式、状态格式一次定好,后端(Docker、Firecracker、本地进程)可替换。
 3. **评测可信优先于功能丰富**:没有可信评测,RSI 没有意义。
 4. **能不自研就不自研**:不写 VMM、不写 OS 内核、不写分布式存储。
@@ -36,7 +36,7 @@
 │   Gateway      认证、WebSocket 转发、签发范围令牌                │
 │   Sandbox API  创建/暂停/恢复/fork/销毁                          │
 │   Scheduler    选节点                                           │
-│   Registry     模板、快照清单、Cairn 版本                         │
+│   Registry     模板、快照清单、CairnSandbox 版本                         │
 │   Accounts     用户、项目、配额                                  │
 │   Model Proxy  模型调用代理,按沙箱令牌计量成本                    │
 │   Memory Svc   长期记忆(按项目),带来源与信任等级                │
@@ -53,9 +53,9 @@
 │   ┌────────────────────────────────────────────────────┐     │
 │   │ 沙箱(每个项目多个)                                   │     │
 │   │   Sandbox Daemon  exec/终端/文件/事件(区域 A)         │     │
-│   │   Cairn 内核       特权分离的薄层(区域 A)               │     │
+│   │   CairnSandbox 内核       特权分离的薄层(区域 A)               │     │
 │   │   Workspace       本地可写层,定期增量同步到对象存储     │     │
-│   │   Cairn 可变服务   非特权用户运行(区域 B)               │     │
+│   │   CairnSandbox 可变服务   非特权用户运行(区域 B)               │     │
 │   └────────────────────────────────────────────────────┘     │
 └──────────────────────────────────────────────────────────────┘
 
@@ -89,7 +89,7 @@
 - **Gateway**:认证(OAuth/API key)、把客户端 WebSocket 转发到对应沙箱 daemon、为沙箱签发**范围令牌**(声明用户、项目、沙箱、任务标识)。
 - **Sandbox API**:生命周期管理,见第 4 节。**无状态**,可多实例部署。沙箱 ID 由随机部分和路由提示(创建时所在节点或分片)组成;沙箱的当前位置以路由存储为准,恢复到别的节点后更新路由,API 实例先用提示、查不到再查路由存储。
 - **Scheduler**:先按健康与能力过滤节点,再随机采样几台取最空闲的;每个实例把自己刚做的、尚未反映到节点上报里的放置叠加到本地视图,不需要跨实例协调。**节点保留最终准入权**,容量不够就拒绝并重选。沙箱与节点解耦(见 `data-and-storage.md`),调度不依赖沙箱原来在哪台机器。对评测沙箱按项目的并发上限做节流排队,避免创建风暴。
-- **Registry**:管理模板、快照清单、Cairn 版本(带 `parent_id` 的树形谱系)。
+- **Registry**:管理模板、快照清单、CairnSandbox 版本(带 `parent_id` 的树形谱系)。
 - **Accounts**:用户、项目、沙箱数量和资源配额。
 - **Model Proxy**:沙箱调用模型的唯一出口;按沙箱令牌计量 token 与成本,执行预算上限;用户的模型密钥只在这里使用。
 - **Memory Svc**:长期记忆服务,按项目隔离;沙箱只能凭范围令牌经接口读写;条目带来源与信任等级。
@@ -118,11 +118,11 @@
 | 部件 | 区域 | 职责 |
 |---|---|---|
 | Sandbox Daemon | A(只读) | exec、PTY、文件读写、事件上报、健康检查;协议见第 5 节 |
-| Cairn 不可变内核 | A(只读) | ABI、能力检查、预算计量、审计、检查点原语、与 daemon 的桥 |
+| CairnSandbox 不可变内核 | A(只读) | ABI、能力检查、预算计量、审计、检查点原语、与 daemon 的桥 |
 | Workspace | 任务相关 | 项目文件、依赖、任务输出;位于本地可写层,定期增量同步到对象存储 |
-| Cairn 可变服务 | B(可写) | 调度、上下文、记忆、工具管理、提示与技能;RSI 的改动对象 |
+| CairnSandbox 可变服务 | B(可写) | 调度、上下文、记忆、工具管理、提示与技能;RSI 的改动对象 |
 
-Cairn 的不可变内核与 stage 0 由人编写。任务 agent 和起点实现可参考 DGM/SICA 开源种子 agent 或 Claude Agent SDK,通过事件协议接入,保证可替换。
+CairnSandbox 的不可变内核与 stage 0 由人编写。任务 agent 和起点实现可参考 DGM/SICA 开源种子 agent 或 Claude Agent SDK,通过事件协议接入,保证可替换。
 
 ---
 
@@ -212,13 +212,13 @@ Cairn 的不可变内核与 stage 0 由人编写。任务 agent 和起点实现�
 
 | 区域 | 内容 | agent 权限 |
 |---|---|---|
-| A 固定基础设施 | daemon、Cairn 不可变内核(ABI、能力检查、预算计量、审计、检查点原语) | 只读 |
-| B 可变 harness | Cairn 的可变服务层(上下文、记忆、工具、调度、提示与技能);详见 `aios-rsi.md` | 读写 |
+| A 固定基础设施 | daemon、CairnSandbox 不可变内核(ABI、能力检查、预算计量、审计、检查点原语) | 只读 |
+| B 可变 harness | CairnSandbox 的可变服务层(上下文、记忆、工具、调度、提示与技能);详见 `aios-rsi.md` | 读写 |
 | C 外部评测器 | 任务集、隐藏测试、打分、晋升决策 | 沙箱外,不可见 |
 
 ### 6.2 起步层级
 
-Cairn 即 harness,RSI 的对象是 Cairn 的可变服务层。开放程度分级:R1 只改配置/文本层(提示词、技能、记忆与上下文策略),R2 开放服务实现代码,R3 允许架构变更(需人工审批);不可变内核、ABI、评测器永不在自动循环内。详见 `aios-rsi.md`。
+CairnSandbox 即 harness,RSI 的对象是 CairnSandbox 的可变服务层。开放程度分级:R1 只改配置/文本层(提示词、技能、记忆与上下文策略),R2 开放服务实现代码,R3 允许架构变更(需人工审批);不可变内核、ABI、评测器永不在自动循环内。详见 `aios-rsi.md`。
 
 ### 6.3 循环
 
@@ -279,8 +279,8 @@ Cairn 即 harness,RSI 的对象是 Cairn 的可变服务层。开放程度分级
 | 前端 | React + TypeScript |
 | 桌面 | Tauri |
 | 存储 | PostgreSQL(元数据)、S3 兼容对象存储(快照、检查点、产物、冷事件)、向量/检索索引(记忆)、独立的审计与评测器存储;详见 `data-and-storage.md` |
-| Cairn 不可变内核 | Rust 或 Go,需端云都能运行;尽量小(待决,见 `aios-rsi.md`) |
-| Cairn 可变服务 / 任务 agent | 取决于种子实现(Python 或 TypeScript),在事件协议之后 |
+| CairnSandbox 不可变内核 | Rust 或 Go,需端云都能运行;尽量小(待决,见 `aios-rsi.md`) |
+| CairnSandbox 可变服务 / 任务 agent | 取决于种子实现(Python 或 TypeScript),在事件协议之后 |
 
 ---
 
@@ -306,6 +306,6 @@ Cairn 即 harness,RSI 的对象是 Cairn 的可变服务层。开放程度分级
 
 ---
 
-# 第二部分:Cairn 自举式 RSI
+# 第二部分:CairnSandbox 自举式 RSI
 
-原第二部分已被取代。Cairn 本身就是 agent 的 harness,RSI 的对象是 Cairn 的可变服务层,不可变内核(TCB)保持冻结。完整方案见 [aios-rsi.md](aios-rsi.md)。
+原第二部分已被取代。CairnSandbox 本身就是 agent 的 harness,RSI 的对象是 CairnSandbox 的可变服务层,不可变内核(TCB)保持冻结。完整方案见 [aios-rsi.md](aios-rsi.md)。

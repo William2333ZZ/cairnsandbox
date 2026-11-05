@@ -5,6 +5,7 @@
 ## 控制台外壳跟工作台一致(D84)
 
 ### 沙箱云
+- 项目改名为 CairnSandbox(文档、横幅、控制台标题);`cairn` 命令、`CAIRN_*` 环境变量、`X-Cairn-*` 头与 `cairn_*` 指标名不变。
 - 改名:SDK 包 `cairnbox` → `cairnsandbox`(Python 模块、npm 包、MCP 入口 `cairnsandbox.mcp` / `cairnsandbox-mcp`)。`cairn` 命令与 `CAIRN_*` 环境变量不变。
 - 修了一个竞态:删除沙箱时控制面在把 200 写给客户端**之后**才去掉路由,客户端收到 200 后立刻查路由偶尔还能查到(CI 上出现过一次 `route survived the delete`)。现在在响应头写出之前先去掉路由。
 - code-interpreter 常用包:新增 `recipes/ci-pylibs/`(numpy、pandas、matplotlib、seaborn、scipy、scikit-learn、pillow 等的离线安装层,wheel 用 `fetch-wheels.sh` 在有网的机器上取);服务端把 matplotlib 的图作为 PNG 结果返回,默认内核预加载 numpy/pandas/matplotlib;`build-template.py` 支持多个 `--layer` 并替换同名模板。一致性用例 17 条,2.10.5/2.11.0/2.11.9 全过。
@@ -24,9 +25,9 @@
 - 逐页检查后的小修:中文界面里一批英文表头与详情标签补了译文;成员表补了两列表头;沙箱详情的"事件"面板标题改正;webhook 示例地址去掉旧名。在真实控制面上再看一遍后,审计页的沙箱 id 不再换行、详情改成单行截断(悬停看全文)、表头补了"时间/操作"。再看了登录、注册、退出与令牌失效:退出后不再回到填着旧邀请码的注册表单;登录、注册和公开状态页现在跟随已保存的主题(之前只有控制台外壳里生效);注册失败的几种英文报错在中文界面里译成中文。
 - 没改:路由、数据请求、权限;令牌与设计令牌本来就和工作台是同一套。
 
-## 更名为 Cairn 与开源准备(2026-11-04,D82、D83)
+## 更名为 CairnSandbox 与开源准备(2026-11-04,D82、D83)
 
-项目从 AIOS 更名为 **Cairn**,按 Apache-2.0 开源。**不兼容的改名**(旧名不再识别):
+项目从 AIOS 更名为 **CairnSandbox**,按 Apache-2.0 开源。**不兼容的改名**(旧名不再识别):
 
 | 旧 | 新 |
 |---|---|

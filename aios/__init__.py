@@ -1,4 +1,4 @@
-"""Cairn stage 0: the smallest harness that can do a task — one bash tool, one model, one loop.
+"""CairnSandbox stage 0: the smallest harness that can do a task — one bash tool, one model, one loop.
 
 Layout (what the self-improvement loop may edit lives in this package; the sandbox daemon, proxy and evaluator are outside):
   agent.py   the loop: system+instance prompt, query model, run actions, observe, until Submitted/limits

@@ -1,6 +1,6 @@
 # code-interpreter:`e2b_code_interpreter` 的 `run_code`
 
-官方 `e2b_code_interpreter` SDK 的 `Sandbox.create()` + `run_code(...)` 可以直接对着 Cairn 用:`E2B_API_URL` 与 `E2B_SANDBOX_URL` 指到控制面的 E2B 口(见 [api/e2b.md](api/e2b.md)),SDK 默认的模板叫 `code-interpreter-v1`,下面是怎么在你的部署里建出这个模板。
+官方 `e2b_code_interpreter` SDK 的 `Sandbox.create()` + `run_code(...)` 可以直接对着 CairnSandbox 用:`E2B_API_URL` 与 `E2B_SANDBOX_URL` 指到控制面的 E2B 口(见 [api/e2b.md](api/e2b.md)),SDK 默认的模板叫 `code-interpreter-v1`,下面是怎么在你的部署里建出这个模板。
 
 ```python
 from e2b_code_interpreter import Sandbox

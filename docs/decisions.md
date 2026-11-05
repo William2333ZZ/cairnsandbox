@@ -29,13 +29,13 @@
 
 | 项 | 决定 |
 |---|---|
-| 运行形态 | 桌面端内置或拉起本地节点代理,agent 与 Cairn 运行在本地容器里 |
+| 运行形态 | 桌面端内置或拉起本地节点代理,agent 与 CairnSandbox 运行在本地容器里 |
 | 文件访问 | 用户选定一个工作文件夹,以只读或写时复制方式挂入容器;agent 的修改先落在叠加层,**以差异形式呈现,用户确认后才应用到真实文件** |
 | 网络 | 默认断网,按任务白名单 |
 | 凭证 | 不挂载用户的密钥与 home 目录,模型调用通过桌面端代理 |
 | 敏感动作 | 删除文件夹外内容、联网安装、执行有外部副作用的命令:需要用户确认 |
 | 日志 | 本地全量记录,联网时同步到审计日志 |
-| **RSI** | **v1 本地不做自我改进**。本地只运行云端已晋升、已签名的 Cairn 版本 |
+| **RSI** | **v1 本地不做自我改进**。本地只运行云端已晋升、已签名的 CairnSandbox 版本 |
 
 **理由**:
 - 复用节点代理,协议、事件、UI 全部不变,本地与云端只是 `site` 不同。
@@ -66,9 +66,9 @@
 
 ---
 
-## D4. 重要修正:Cairn 内核的强制边界必须靠权限隔离,不能靠"代码约定"
+## D4. 重要修正:CairnSandbox 内核的强制边界必须靠权限隔离,不能靠"代码约定"
 
-**发现的问题**:此前把"Cairn 内核(区域 A)"和"Cairn 可变服务(区域 B)"画在同一个沙箱里。如果两者在**同一进程或同一用户**下运行,可变服务的代码可以直接改写内存或文件,内核的"不可变"只是约定,没有强制力。
+**发现的问题**:此前把"CairnSandbox 内核(区域 A)"和"CairnSandbox 可变服务(区域 B)"画在同一个沙箱里。如果两者在**同一进程或同一用户**下运行,可变服务的代码可以直接改写内存或文件,内核的"不可变"只是约定,没有强制力。
 
 **结论**:
 
@@ -82,7 +82,7 @@
 | 审计日志 | daemon 实时流出到沙箱外只追加存储 |
 | 晋升与回滚 | 晋升控制器 |
 
-2. **沙箱内的 Cairn 内核只是一个特权分离的薄层**:
+2. **沙箱内的 CairnSandbox 内核只是一个特权分离的薄层**:
    - 以独立用户运行,代码与配置所在目录对 agent 用户只读;
    - 可变服务以非特权用户运行,启用 `no_new_privs`,禁止 ptrace,不持有额外 capability;
    - 可变服务只能通过 unix socket 的系统调用 ABI 与内核交互;
@@ -96,7 +96,7 @@
 
 ## D5. 先做小实验,再决定要不要建平台
 
-**问题**:整套计划是"平台加 Cairn 加 RSI",总工作量大,而 RSI 在**你的任务上**能否带来超过噪声的提升,目前没有任何证据。文献中的提升来自特定编码基准和较大预算,不保证迁移。
+**问题**:整套计划是"平台加 CairnSandbox 加 RSI",总工作量大,而 RSI 在**你的任务上**能否带来超过噪声的提升,目前没有任何证据。文献中的提升来自特定编码基准和较大预算,不保证迁移。
 
 **小实验(约 1 到 2 周,在本机 Docker 上)**:
 1. 整理 30 到 50 个自己的任务及自动验收脚本,拆成演化集、留出集。
@@ -142,14 +142,14 @@
 ## 对此前图表的影响
 
 - 架构图中的"监督者"应改为"晋升控制器 + 已知良好版本",并标注它们不含 LLM。
-- 架构图中的"Cairn 内核"应标注为"特权分离的薄层",并在图中表示安全上限(成本、网络、资源、审计)来自沙箱之外。
+- 架构图中的"CairnSandbox 内核"应标注为"特权分离的薄层",并在图中表示安全上限(成本、网络、资源、审计)来自沙箱之外。
 - 产品图的四组功能应改为三组(工作台、实验、治理)。
 
 ---
 
 ## D7. 沙箱内系统按层生长,语言按层定(2026-10-30)
 
-**结论**:guest 不再是"一个 Ubuntu 镜像",而是五层配方加内容寻址产物(`architecture.md` 第 3 节):内核层、系统层(Debian essential,无解释器)、agent-runtime(Rust 二进制:sandboxd + Cairn 内核 ABI + 晋升进来的稳定组件)、agent-harness(Python/TS,自带解释器在 `/aios/`,RSI 改的层)、env(任务工具链,随任务集版本)。Cairn 版本 = runtime 层哈希 + harness 层哈希;稳定的 harness 组件逐步重写为 Rust 晋升进 runtime("Python 用来演化,Rust 用来冻结")。harness 语言是 Cairn 版本的属性,不是平台的决定。(2026-10-30 晚修订:最初的七层把语言运行时错放在平台层和工具链层。)
+**结论**:guest 不再是"一个 Ubuntu 镜像",而是五层配方加内容寻址产物(`architecture.md` 第 3 节):内核层、系统层(Debian essential,无解释器)、agent-runtime(Rust 二进制:sandboxd + CairnSandbox 内核 ABI + 晋升进来的稳定组件)、agent-harness(Python/TS,自带解释器在 `/aios/`,RSI 改的层)、env(任务工具链,随任务集版本)。CairnSandbox 版本 = runtime 层哈希 + harness 层哈希;稳定的 harness 组件逐步重写为 Rust 晋升进 runtime("Python 用来演化,Rust 用来冻结")。harness 语言是 CairnSandbox 版本的属性,不是平台的决定。(2026-10-30 晚修订:最初的七层把语言运行时错放在平台层和工具链层。)
 
 **理由**:Landlock 作用域(6.12+)能把"可变层只能经 socket 与内核交互"从约定变成强制;unikernel 没有多用户与 fork,做不了 guest 内隔离;元 agent 写 Rust 的成功率低、编译进循环太贵,所以可变层保持 Python。
 
@@ -185,7 +185,7 @@
 
 **结论**:产品形态是 Codex / DSH Super-agent 一类的 agent 工作台:人把事交出去,agent 在 microVM 里做,人在面板上验收。前端与后端都是我们自己的;DSH 的信息架构(待处理优先、Source / Trigger / Eval / 执行 / 设置的分页、健康状态不占地方)作为参考,不把 DSH 当客户端。
 
-**理由**:用户的判断——这个平台的 agent 在沙箱里持续优化自己,工作台正是它第一个要优化的"用户项目"(D8);挂在 DSH 的插件接口上会让前端的演进受制于别人的接口。我们相对 Codex / DSH 的差异(microVM、fork 探测、会变的 Cairn 版本)要在界面上可见,这需要自己的前端。
+**理由**:用户的判断——这个平台的 agent 在沙箱里持续优化自己,工作台正是它第一个要优化的"用户项目"(D8);挂在 DSH 的插件接口上会让前端的演进受制于别人的接口。我们相对 Codex / DSH 的差异(microVM、fork 探测、会变的 CairnSandbox 版本)要在界面上可见,这需要自己的前端。
 
 **可推翻条件**:两周真实使用后,面板上人要做的动作被证明只有 DSH 已有的那几种,且自研前端的维护成本明显高于插件适配。
 
@@ -332,7 +332,7 @@
 
 **背景**:到 D28 为止,harness 的可变部分全在 `aios/` 包里,改一处就要重建层、走评测;而我们定下的产品方向是"个人的、自建的 harness"——一个人日常要改的是规则、笔记、提示措辞、几条技能,这些不该每次都是一个 harness 版本。另外前一轮架构讨论里悬着两件事:人改和机器改怎么区分;接受门绑定的到底是什么。
 
-**结论**:①Cairn 在代码之外读一个目录(`--home` / `$CAIRN_HOME` / `/aios/home`),格式在 CONTRACT §5a:config.json 覆盖、memory.md、rules/、prompts/、skills/、middleware/;tasks/ 归评测器;proposals/ 是机器的提案。一个人一个目录,建议就是他自己的 git 仓库。②**人改立刻生效,机器改要过门**:机器只能写 `proposals/<id>/`,`aios.home apply` 才搬进来,前提是接受门过了;搬完 `check` 不过就原样放回。"谁能改"从文件权限变成目录位置。③**目录 check 不过就不开跑**(和 D26 中间件加载失败即失败同一条理由)。④**版本 = 内容摘要**,写进每条轨迹;接受绑定三元组(sandboxd、目录摘要、Cairn 版本)。⑤优先级:任务正文 > 宿主放进工单的规则(用户纠正过的事)> 目录里的规则;团队提示工单自带的优先。
+**结论**:①CairnSandbox 在代码之外读一个目录(`--home` / `$CAIRN_HOME` / `/aios/home`),格式在 CONTRACT §5a:config.json 覆盖、memory.md、rules/、prompts/、skills/、middleware/;tasks/ 归评测器;proposals/ 是机器的提案。一个人一个目录,建议就是他自己的 git 仓库。②**人改立刻生效,机器改要过门**:机器只能写 `proposals/<id>/`,`aios.home apply` 才搬进来,前提是接受门过了;搬完 `check` 不过就原样放回。"谁能改"从文件权限变成目录位置。③**目录 check 不过就不开跑**(和 D26 中间件加载失败即失败同一条理由)。④**版本 = 内容摘要**,写进每条轨迹;接受绑定三元组(sandboxd、目录摘要、CairnSandbox 版本)。⑤优先级:任务正文 > 宿主放进工单的规则(用户纠正过的事)> 目录里的规则;团队提示工单自带的优先。
 
 **送进沙箱的方式(同日定)**:不做成层,也不塞进 ticket_set,而是和仓库检出同一条路——宿主把目录里运行时读的文件打成 tar `PUT /files`,解到 `/work/home`,root 持有、agent 只读,`CAIRN_HOME` 指过去(`intake/home.py`)。理由:目录是文本、小、每次派工可能不同,做成层要走构建与 pack,划不来;塞进 ticket 则 skills 与 middleware 这种"文件"没地方放。agent 对它只读,这样"机器只能写 proposals/"在沙箱里也成立。宿主 `<state>/homes/<用户>` 一个用户一个,他的几个 agent 共用(harness 按人,题按仓库)。
 
@@ -344,7 +344,7 @@
 
 **背景**:对照 CubeSandbox 时,我把我们写成"一个人的平台、单机原型",把多副本控制面、节点调度、E2B 兼容、卷归为"它是云产品、我们不用补"。用户当天纠正:我们也是云产品,沙箱是必争之地,这些都要补。随后读了《腾讯云 Agent Runtime 往下挖,是一场 microVM 地基战》:三家云的 VMM 都在 rust-vmm 谱系里收敛,差距在"整车"——调度、快照恢复、资源池化、网络、存储、多租户、计费、规模化安全加固;Firecracker 只是发动机。
 
-**结论**:①**定位**:Cairn 平台 = 一个沙箱云(执行面)+ 一个会自己改的 agent 面(大脑)。执行面要做到和 CubeSandbox / E2B 同一水平,这是入场券;大脑是差异。两层并存:用 E2B 接口进来的外部 agent 得到和别人一样的执行面;用我们 harness 进来的多得到预算、工单、inbox、评测与进化。②**沙箱层的对标清单就是那九样**(research/cubesandbox-vs-ours.md 的表),每项要有现状、缺口、数字;"没有同机 benchmark 就没有必争的资格"。③**要补的顺序**:多副本控制面(共享状态;节点仍是运行态权威)→ 节点调度补齐(TAP 池、资源打分、优先级类、带迁移的排空)→ E2B 兼容层(控制面前的翻译层 + 沙箱内 envd 形状的数据面)→ 原地 rollback → 卷 → audited 出口 → 模板带内存 → 同机性能对比。④**保留的选择**:"VM 就是环境 + 配方层"不改成 VM 里跑容器,但模板来源要能是 OCI 镜像;sandboxd 的 ABI 不被 E2B 层替代,是多给的一层。
+**结论**:①**定位**:CairnSandbox 平台 = 一个沙箱云(执行面)+ 一个会自己改的 agent 面(大脑)。执行面要做到和 CubeSandbox / E2B 同一水平,这是入场券;大脑是差异。两层并存:用 E2B 接口进来的外部 agent 得到和别人一样的执行面;用我们 harness 进来的多得到预算、工单、inbox、评测与进化。②**沙箱层的对标清单就是那九样**(research/cubesandbox-vs-ours.md 的表),每项要有现状、缺口、数字;"没有同机 benchmark 就没有必争的资格"。③**要补的顺序**:多副本控制面(共享状态;节点仍是运行态权威)→ 节点调度补齐(TAP 池、资源打分、优先级类、带迁移的排空)→ E2B 兼容层(控制面前的翻译层 + 沙箱内 envd 形状的数据面)→ 原地 rollback → 卷 → audited 出口 → 模板带内存 → 同机性能对比。④**保留的选择**:"VM 就是环境 + 配方层"不改成 VM 里跑容器,但模板来源要能是 OCI 镜像;sandboxd 的 ABI 不被 E2B 层替代,是多给的一层。
 
 **撤回的判断**:D-系列以前凡是写"单机原型阶段不需要"的地方(003 尚未实现一节的口气、本次对照的第一版),按本条改读。
 
@@ -352,7 +352,7 @@
 
 ## D31. 控制面改 Go、多副本,共享状态进注册表(2026-11-03)
 
-**背景**:D30 把多副本控制面排在补齐清单第一位。先在 Python 版里加了一层注册表抽象,用户问"用 Rust 和 Go 实现是不是更合适",定下:控制面 Go、节点代理 Rust、评测器 / Agent 服务 / Cairn 留 Python;按 CONTRACT 与现有 e2e 套件逐个替换,不大爆炸。
+**背景**:D30 把多副本控制面排在补齐清单第一位。先在 Python 版里加了一层注册表抽象,用户问"用 Rust 和 Go 实现是不是更合适",定下:控制面 Go、节点代理 Rust、评测器 / Agent 服务 / CairnSandbox 留 Python;按 CONTRACT 与现有 e2e 套件逐个替换,不大爆炸。
 
 **结论**:①控制面重写为 Go(`cp/`),零依赖:标准库 HTTP、自带 RESP 客户端,构建不碰网络(开发机出网受限,`docker build` 在构建阶段跑 `go vet` 与 `go test`,不过就没有镜像)。接口照 CONTRACT §1 不变,`node/test-cp.py` 在真节点上 13 项全过,Python 版 `node/controlplane.py` 删除。②**副本共享的只有注册表**:路由(沙箱 → 节点)、用户、经 POST /nodes 登记的节点、租约;单副本是 `cp-state/` 下的文件,多副本是一个 Redis(`CP_REGISTRY=redis://fc-registry:6379`,开发机上 `fc-registry` 容器,appendonly)。每个副本自己轮询节点健康、自己记审计(带 replica 名)、自己记两次轮询之间的反馈;对账与 evacuate 加租约。③**节点仍是运行态权威**:注册表里的每一样都能从节点对账重建;注册表不可达时副本拒绝启动。④同一个注册表的两副本在真节点上验证:一个副本建的沙箱另一个能转发,路由一致,一边删另一边 404;一个副本登记的节点另一个下次轮询就认识。
 
@@ -551,7 +551,7 @@
 
 **背景**:用户问"这个是不是需要独立,对标 CubeSandbox"。CubeSandbox 是一个只做执行面的独立产品(自己的仓库、名字、SDK、部署、路线图)。我们的仓库里沙箱云和 agent 层长在一起,README 一直只讲 agent。
 
-**结论**:①**产品身份独立**:沙箱云有自己的名字(Cairn 沙箱云)、README 的上半部、SDK(`cairnsandbox`)、MCP、E2B 口、compose 部署、CONTRACT §1/§2、威胁模型、数字——一个外部团队不需要知道 agent 层就能用它。②**仓库暂不拆**:接缝只有一道(002),agent 层是沙箱云的第一个也是最重的用户,拆开后每条接口改动都要跨仓库发版;现在团队是一个人,拆仓库只会增加同步成本。目录已经是按产品分的:`cp/ node/ guest/ sdk/ deploy/` 是沙箱云,`aios/ intake/ eval/` 是 agent 层,`web/` 两边共用(插件按页分)。③**拆的条件**:有了外部贡献者或第二个使用沙箱云的产品,或者两边发版节奏不同(沙箱云要稳定版本号与兼容承诺,agent 层周更)——到那时按上面的目录线拆成两个仓库,sdk 随沙箱云走。④对标 CubeSandbox 的话要分开说:执行面逐项对齐(已做到持平的那些)、他们没有的租户与 agent 面(我们的卖点)、他们有我们没有的(envd、密度数字、模板商店、CubeOps)——README 的"能做什么"表就是这个结构。
+**结论**:①**产品身份独立**:沙箱云有自己的名字(CairnSandbox 沙箱云)、README 的上半部、SDK(`cairnsandbox`)、MCP、E2B 口、compose 部署、CONTRACT §1/§2、威胁模型、数字——一个外部团队不需要知道 agent 层就能用它。②**仓库暂不拆**:接缝只有一道(002),agent 层是沙箱云的第一个也是最重的用户,拆开后每条接口改动都要跨仓库发版;现在团队是一个人,拆仓库只会增加同步成本。目录已经是按产品分的:`cp/ node/ guest/ sdk/ deploy/` 是沙箱云,`aios/ intake/ eval/` 是 agent 层,`web/` 两边共用(插件按页分)。③**拆的条件**:有了外部贡献者或第二个使用沙箱云的产品,或者两边发版节奏不同(沙箱云要稳定版本号与兼容承诺,agent 层周更)——到那时按上面的目录线拆成两个仓库,sdk 随沙箱云走。④对标 CubeSandbox 的话要分开说:执行面逐项对齐(已做到持平的那些)、他们没有的租户与 agent 面(我们的卖点)、他们有我们没有的(envd、密度数字、模板商店、CubeOps)——README 的"能做什么"表就是这个结构。
 
 **没做的**:独立的版本号与发布说明(现在只有 git 历史和 decisions);英文 README;沙箱云的独立站点 / 文档站。
 
@@ -913,9 +913,9 @@
 
 **可推翻条件**:若分层检查发现 agent 层深度依赖沙箱云内部,改为先拆库再发布;若名字重名无法共存,先改名。
 
-## D83. 项目名 Cairn、改名范围、公开仓库的做法(2026-11-04)
+## D83. 项目名 CairnSandbox、改名范围、公开仓库的做法(2026-11-04)
 
-**结论**:①名字 **Cairn**(石堆路标:回到标记过的地方,对应检查点与回滚),包名 `cairnsandbox`。选它是因为 PyPI、npm 上无同名包,GitHub 上无同名仓库,商标库检索没有软件类的同名条目;**这是检索结果,不是法律意见,发布前请自己在 USPTO 等处再查**。②改名范围:对外接口全部改(SDK 包、CLI、环境变量、指标、密钥前缀、webhook 头、文档正文);**guest 内部路径与 agent 包目录 `aios/` 不改**,因为改它们要重建所有镜像与层,而且外人几乎看不见。③公开仓库从一个干净的初始提交开始(`docs/research/open-source-release-2026-11.md` §5),私有仓库保留完整历史;改写发生在新目录 `cairn/`,旧目录与线上部署不动。④删掉只对我们那台机器有意义的东西:Gitea CI 配置、读管理员凭据的走查脚本、写死服务器路径的部分;换成 `.github/` 与 `scripts/bootstrap.sh`。⑤区域镜像改成参数,默认上游。
+**结论**:①名字 **CairnSandbox**(石堆路标:回到标记过的地方,对应检查点与回滚),包名 `cairnsandbox`。选它是因为 PyPI、npm 上无同名包,GitHub 上无同名仓库,商标库检索没有软件类的同名条目;**这是检索结果,不是法律意见,发布前请自己在 USPTO 等处再查**。②改名范围:对外接口全部改(SDK 包、CLI、环境变量、指标、密钥前缀、webhook 头、文档正文);**guest 内部路径与 agent 包目录 `aios/` 不改**,因为改它们要重建所有镜像与层,而且外人几乎看不见。③公开仓库从一个干净的初始提交开始(`docs/research/open-source-release-2026-11.md` §5),私有仓库保留完整历史;改写发生在新目录 `cairn/`,旧目录与线上部署不动。④删掉只对我们那台机器有意义的东西:Gitea CI 配置、读管理员凭据的走查脚本、写死服务器路径的部分;换成 `.github/` 与 `scripts/bootstrap.sh`。⑤区域镜像改成参数,默认上游。
 
 **没做**:`node/test-net.py` 等端到端测试仍以 `mirrors.aliyun.com` 为抓取目标(原机器只能到它),需要改成可配置;`agent-langs`、`agent-harness`、`go-toolchain` 配方依赖手工备好的 `files/` 与 `images/dl/`;Valkey 与上游构建链没有在没有区域镜像的机器上跑过;预编译内核与基础镜像的发布产物。
 
@@ -953,7 +953,7 @@
 
 **结论**:①**envd 的协议做在 sandboxd(`guest/sbx-runtime/src/envd.rs`)里**,听在 vsock 的第二个端口 49983(只认宿主 CID),一连接一请求(`Connection: close`),HTTP/1.1 手写、JSON 用 serde_json,没有新依赖。进程与文件的逻辑在它该在的地方;进程活在虚机内存里,所以**暂停、检查点、回滚、fork 之后 `commands.connect(pid)` 仍是同一个进程**(E2B 没有这条)。②**不放在沙箱网络的 TCP 上**:那样沙箱里任何低权限进程都能连 `localhost:49983` 以任意用户跑命令,绕过降权。走 vsock,宿主才连得上。③节点新增 `/sandboxes/<id>/envd/…` 流式中继(HTTP→vsock 的字节管道,复用端口暴露的隧道工具);控制面在 E2B 口按 `E2b-Sandbox-Id` 头路由,用**绑定到单台沙箱的令牌**(`HMAC(密钥, "envd|"+沙箱 id)`)鉴权,并**解析 `Start` 的首帧写审计**(命令行、cwd、用户),文件请求审计路径,因此数据面没有绕过审计。④控制面补齐:v2 创建/列表(`state`/`metadata` 过滤、分页)/connect、`fork`、快照(对应"提交成模板")、`update_network`(只有 owner/admin,因为这个口没有审批队列)、`get_metrics`。⑤沙箱不存在时按 E2B 代理的行为回 **502 + "was not found"**(SDK 的 `is_running` 靠它);`envdVersion` 报 0.5.7(我们完整实现的最高版本)。⑥创建时的 `envVars` 经新的 `set_env` 操作写进沙箱的 `/run/sandboxd/env.json`,envd 起的进程可见。
 
-**验证**:官方 Python SDK 2.63.0 的 31 条与 npm 包 2.63.0 的 20 条一致性用例全部通过(`ops/e2b-conformance.{py,mjs}`,结果在 `docs/research/e2b-conformance/`),在一台机器、1 个节点、jailer 开的环境;Rust 13 个单测、Go 测试通过;原生 SDK 快速开始 13/13 没有回归。**没验证**:别的 SDK 版本与语言(Go 等)、两台物理机、压力测试。**版本矩阵与一次疏忽**:Python 与 npm 各 6 个 2.x 版本(2.52–2.63)全过;1.x 不支持。跑矩阵时 Python 1.11.1 不认 `E2B_API_URL`,**把演练栈的管理令牌作为 `X-API-Key` 发到了 api.e2b.app**(2 个请求,该令牌只保护一个一次性演练栈,控制面只绑盒子的 127.0.0.1)。已换掉该令牌,并让套件在发请求之前先核对 SDK 的 API 地址等于 `E2B_API_URL`,不等就退出(现在 1.x 被这样拒绝)。教训:对第三方 SDK 版本做自动化时,先验证它会连哪里,再给它凭据。**安全收口与小缺口(同日)**:①sandboxd 的发布配置是 `panic = "abort"`,envd 里一处 panic 就让整个 sandboxd 退出,所以给所有解析客户端字节的代码(请求头、chunked、Connect 信封、multipart、gzip)加了变异压力测试(各 2–3 万轮,无 panic),并把 multipart 改成流式(内存只有一个缓冲区,不再整体缓冲、不再有 128 MiB 上限);分隔符只有后面紧跟 CRLF 或 `--` 才算(数据里的 `\\r\\n--Bx` 是数据)。②自写 DEFLATE 解码器(`inflate.rs`,按 puff,带 CRC32 与大小校验和输出上限)支持 `gzip=True`。③`/files/compose`、批量指标 `GET /sandboxes/metrics`。④控制面 `/metrics` 增加 `cairn_envd_requests_total{kind,status}`、`cairn_envd_active_relays`、`cairn_envd_bytes_total{dir}`、`cairn_envd_auth_denied_total`。**code-interpreter(同日)**:官方 `e2b_code_interpreter` 的 `run_code` 通了(14 条用例,2.10.5–2.11.9)。①SDK 对沙箱服务(49999)的请求同样带 `E2b-Sandbox-Port` 头发到 `E2B_SANDBOX_URL`,不需要泛域名;控制面对非 49983 的端口做鉴权后转给节点端口代理,节点的端口代理改成对无 Content-Length 的响应流式转发。②`/contexts` 调用**不带 `X-Access-Token`**,只带 `E2B-Traffic-Access-Token`,所以创建/connect/fork 的响应新增绑定到单台沙箱的 `trafficAccessToken`(与 envd 令牌用不同标签的 HMAC),任一令牌能开这台沙箱的端口。③沙箱里是我们自己写的小服务(`recipes/code-interpreter/server.py`,标准库,常驻 Python 内核子进程、bash、javascript),不是 Jupyter:没有图表、魔法命令,只有标准库;构建成模板时把**正在运行的服务**连内存一起提交,新沙箱出来就在监听。**模板构建(同日)**:官方 SDK 的 `Template.build()` 通了。取证(读 SDK 并用 mock 抓请求)得到的协议:`POST /v3/templates`(响应要带 `aliases`)→ `GET /templates/<id>/files/<hash>`(**201**,返回上传链接)→ `PUT` 链接(无凭据,gzip tar)→ `POST /v2/templates/<id>/builds/<buildID>`(`fromImage`/`fromTemplate`、`steps`、`startCmd`、`readyCmd`)→ 轮询 `…/status?logsOffset=&limit=`,SDK 在 ready 之后会一直轮询到某一页日志为空,所以状态接口必须尊重 `logsOffset`。实现:构建记录用已有的 `builds` 表(新 kind `e2b`,状态与日志行在 `result` 里,任何副本都能答状态);控制面自己跑构建:起构建沙箱 → 按步骤经节点 exec / 文件接口执行 → 启动 start 命令、等 ready 命令 → **提交正在运行的沙箱**;COPY 的上传链接带 HMAC 与过期时间,模拟预签名 URL。**出口**:构建沙箱用 Project 默认出口策略,不放宽,免得成员经构建绕过"放宽要审批"。**顺带发现**:模板刚提交后,调度还按旧的节点健康信息放置,可能把用模板创建的请求放到没有这个模板的节点,得到 400 "no template"(后台轮询与我手动触发的轮询并发,旧响应可能晚到覆盖新的)。改为节点回 "no template" 时排除它换一个节点重试,所有节点都没有就如实报 400 而不是"没有容量"。**没验证**:`apt_install` / `pip_install` / `git_clone` / `from_dockerfile` 等便捷方法(需要放开出口)、多副本下的上传、从外部镜像构建、tags。**发布路径(同日)**:①`scripts/bootstrap.sh` 之前对 Firecracker 与内核源码**不校验**直接用,现在下载后核对同处发布的校验文件(`.sha256.txt`、kernel.org 的 `sha256sums.asc`),也可用 `FC_SHA256` / `KERNEL_SHA256` 钉死摘要;校验逻辑在 `scripts/lib/verify.sh`,有用 `file://` 的离线测试(`tests/unit/test_verify_sh.py`,6 条)。同处发布的校验文件只能防损坏或截断,不能防主机被攻破,要防后者就钉摘要。②新增 `--dry-run`、`--artifacts DIR`(从发布包取内核、基础镜像、空可写层,跳过 10–40 分钟的内核编译和基础镜像构建,先核对包里的 `SHA256SUMS`)、`--skip-images`、`--skip-console`。③`scripts/release-artifacts.sh` 打包并生成 `manifest.json`、`SHA256SUMS`、`SOURCE-OFFER.md`(内核是 GPL-2.0,写明源码与配置在哪);**不上传**。**验证**:盒子上用演练栈的产物打包,在一个干净目录里 `bootstrap.sh --artifacts … --skip-images --skip-console` 装好,起 1 节点栈,官方 Python SDK 套件 36 条全过。**没验证**:干净机器(Firecracker 与 Docker 镜像是预先就有的)、对真实服务器的 Firecracker 与内核下载及校验(盒子没有外网,这两个下载和校验没跑过)、从零编译内核。**没做**:发布一个公开的产物包——把它挂到 release 上是维护者要决定的事(内核的 GPL 义务、基础镜像里有什么)。**改名(同日)**:产品全名定为 CairnSandbox,SDK 包跟着改:Python 模块与 PyPI 包 `cairnbox` → `cairnsandbox`(MCP 入口 `python3 -m cairnsandbox.mcp`,脚本 `cairnsandbox-mcp`),npm 包同名。简称 `cairn` 命令与 `CAIRN_*` 环境变量不变;Prometheus 指标 `cairnboxes*` 不变(换名会弄坏已有的面板和告警)。这条之前的决定记录里写 `cairnbox` 的地方,指的就是现在的 `cairnsandbox`。包还没发布到 PyPI / npm,所以没有迁移问题。**常用包(同日)**:`ci-pylibs` 层(`recipes/ci-pylibs/`)在 agent-langs 的 CPython 3.13 里装 numpy、pandas、matplotlib、seaborn、scipy、scikit-learn、pillow、requests、httpx、beautifulsoup4、lxml、openpyxl、pyyaml、sympy、tqdm。**盒子没有外网**,所以 wheel 在有网的机器上用 `fetch-wheels.sh` 取(只收 Linux x86_64 / CPython 3.13 的二进制 wheel,约 110 MB,gitignore),层里 `pip install --no-index` 离线装。服务端:matplotlib 的图(Agg 后端)在每个 cell 之后作为 PNG 结果返回并关闭;默认 Python 内核在服务启动时预先 import numpy / pandas / matplotlib,所以模板快照里是热的(`silent` 请求不计入执行次数)。用例 17 条,三个 SDK 版本全过。**没有**结构化的 `chart` 对象、IPython 魔法命令。第三方包各有许可证,分发带它们的模板前要看。**同日补**:创建响应的 `domain` 在设了 `PREVIEW_DOMAIN` 时填它,SDK 的 `get_host(port)` 因此得到 D55 预览主机,一致性用例(沙箱里起 perl 小服务)端到端通过。**同日补验证**:2 个节点容器下两套官方 SDK 用例整套重跑(Python 32、npm 20 全过,新增"暂停中直接 `commands.run`"用例);4 台沙箱按负载分到两节点、杀掉持有已暂停沙箱的节点后 evacuate、SDK 照常用;栈本身的延迟(控制面主机上无 SDK 无隧道):`Start` 到结束 p50 8.6 ms,文件 1 KiB 读写约 4 ms,64 MiB 写 290 / 读 670 MB/s,4 台并行 100 条命令无错误。
+**验证**:官方 Python SDK 2.63.0 的 31 条与 npm 包 2.63.0 的 20 条一致性用例全部通过(`ops/e2b-conformance.{py,mjs}`,结果在 `docs/research/e2b-conformance/`),在一台机器、1 个节点、jailer 开的环境;Rust 13 个单测、Go 测试通过;原生 SDK 快速开始 13/13 没有回归。**没验证**:别的 SDK 版本与语言(Go 等)、两台物理机、压力测试。**版本矩阵与一次疏忽**:Python 与 npm 各 6 个 2.x 版本(2.52–2.63)全过;1.x 不支持。跑矩阵时 Python 1.11.1 不认 `E2B_API_URL`,**把演练栈的管理令牌作为 `X-API-Key` 发到了 api.e2b.app**(2 个请求,该令牌只保护一个一次性演练栈,控制面只绑盒子的 127.0.0.1)。已换掉该令牌,并让套件在发请求之前先核对 SDK 的 API 地址等于 `E2B_API_URL`,不等就退出(现在 1.x 被这样拒绝)。教训:对第三方 SDK 版本做自动化时,先验证它会连哪里,再给它凭据。**安全收口与小缺口(同日)**:①sandboxd 的发布配置是 `panic = "abort"`,envd 里一处 panic 就让整个 sandboxd 退出,所以给所有解析客户端字节的代码(请求头、chunked、Connect 信封、multipart、gzip)加了变异压力测试(各 2–3 万轮,无 panic),并把 multipart 改成流式(内存只有一个缓冲区,不再整体缓冲、不再有 128 MiB 上限);分隔符只有后面紧跟 CRLF 或 `--` 才算(数据里的 `\\r\\n--Bx` 是数据)。②自写 DEFLATE 解码器(`inflate.rs`,按 puff,带 CRC32 与大小校验和输出上限)支持 `gzip=True`。③`/files/compose`、批量指标 `GET /sandboxes/metrics`。④控制面 `/metrics` 增加 `cairn_envd_requests_total{kind,status}`、`cairn_envd_active_relays`、`cairn_envd_bytes_total{dir}`、`cairn_envd_auth_denied_total`。**code-interpreter(同日)**:官方 `e2b_code_interpreter` 的 `run_code` 通了(14 条用例,2.10.5–2.11.9)。①SDK 对沙箱服务(49999)的请求同样带 `E2b-Sandbox-Port` 头发到 `E2B_SANDBOX_URL`,不需要泛域名;控制面对非 49983 的端口做鉴权后转给节点端口代理,节点的端口代理改成对无 Content-Length 的响应流式转发。②`/contexts` 调用**不带 `X-Access-Token`**,只带 `E2B-Traffic-Access-Token`,所以创建/connect/fork 的响应新增绑定到单台沙箱的 `trafficAccessToken`(与 envd 令牌用不同标签的 HMAC),任一令牌能开这台沙箱的端口。③沙箱里是我们自己写的小服务(`recipes/code-interpreter/server.py`,标准库,常驻 Python 内核子进程、bash、javascript),不是 Jupyter:没有图表、魔法命令,只有标准库;构建成模板时把**正在运行的服务**连内存一起提交,新沙箱出来就在监听。**模板构建(同日)**:官方 SDK 的 `Template.build()` 通了。取证(读 SDK 并用 mock 抓请求)得到的协议:`POST /v3/templates`(响应要带 `aliases`)→ `GET /templates/<id>/files/<hash>`(**201**,返回上传链接)→ `PUT` 链接(无凭据,gzip tar)→ `POST /v2/templates/<id>/builds/<buildID>`(`fromImage`/`fromTemplate`、`steps`、`startCmd`、`readyCmd`)→ 轮询 `…/status?logsOffset=&limit=`,SDK 在 ready 之后会一直轮询到某一页日志为空,所以状态接口必须尊重 `logsOffset`。实现:构建记录用已有的 `builds` 表(新 kind `e2b`,状态与日志行在 `result` 里,任何副本都能答状态);控制面自己跑构建:起构建沙箱 → 按步骤经节点 exec / 文件接口执行 → 启动 start 命令、等 ready 命令 → **提交正在运行的沙箱**;COPY 的上传链接带 HMAC 与过期时间,模拟预签名 URL。**出口**:构建沙箱用 Project 默认出口策略,不放宽,免得成员经构建绕过"放宽要审批"。**顺带发现**:模板刚提交后,调度还按旧的节点健康信息放置,可能把用模板创建的请求放到没有这个模板的节点,得到 400 "no template"(后台轮询与我手动触发的轮询并发,旧响应可能晚到覆盖新的)。改为节点回 "no template" 时排除它换一个节点重试,所有节点都没有就如实报 400 而不是"没有容量"。**没验证**:`apt_install` / `pip_install` / `git_clone` / `from_dockerfile` 等便捷方法(需要放开出口)、多副本下的上传、从外部镜像构建、tags。**发布路径(同日)**:①`scripts/bootstrap.sh` 之前对 Firecracker 与内核源码**不校验**直接用,现在下载后核对同处发布的校验文件(`.sha256.txt`、kernel.org 的 `sha256sums.asc`),也可用 `FC_SHA256` / `KERNEL_SHA256` 钉死摘要;校验逻辑在 `scripts/lib/verify.sh`,有用 `file://` 的离线测试(`tests/unit/test_verify_sh.py`,6 条)。同处发布的校验文件只能防损坏或截断,不能防主机被攻破,要防后者就钉摘要。②新增 `--dry-run`、`--artifacts DIR`(从发布包取内核、基础镜像、空可写层,跳过 10–40 分钟的内核编译和基础镜像构建,先核对包里的 `SHA256SUMS`)、`--skip-images`、`--skip-console`。③`scripts/release-artifacts.sh` 打包并生成 `manifest.json`、`SHA256SUMS`、`SOURCE-OFFER.md`(内核是 GPL-2.0,写明源码与配置在哪);**不上传**。**验证**:盒子上用演练栈的产物打包,在一个干净目录里 `bootstrap.sh --artifacts … --skip-images --skip-console` 装好,起 1 节点栈,官方 Python SDK 套件 36 条全过。**没验证**:干净机器(Firecracker 与 Docker 镜像是预先就有的)、对真实服务器的 Firecracker 与内核下载及校验(盒子没有外网,这两个下载和校验没跑过)、从零编译内核。**没做**:发布一个公开的产物包——把它挂到 release 上是维护者要决定的事(内核的 GPL 义务、基础镜像里有什么)。**改名(同日)**:项目正式改名为 **CairnSandbox**(文档、横幅、控制台标题、代码注释里的"Cairn"都改了);`cairn` 命令、`CAIRN_*` 环境变量、`X-Cairn-*` 请求头与 `cairn_*` 指标名保持不变,以免弄坏已有的用法与面板。产品全名定为 CairnSandbox,SDK 包跟着改:Python 模块与 PyPI 包 `cairnbox` → `cairnsandbox`(MCP 入口 `python3 -m cairnsandbox.mcp`,脚本 `cairnsandbox-mcp`),npm 包同名。简称 `cairn` 命令与 `CAIRN_*` 环境变量不变;Prometheus 指标 `cairnboxes*` 不变(换名会弄坏已有的面板和告警)。这条之前的决定记录里写 `cairnbox` 的地方,指的就是现在的 `cairnsandbox`。包还没发布到 PyPI / npm,所以没有迁移问题。**常用包(同日)**:`ci-pylibs` 层(`recipes/ci-pylibs/`)在 agent-langs 的 CPython 3.13 里装 numpy、pandas、matplotlib、seaborn、scipy、scikit-learn、pillow、requests、httpx、beautifulsoup4、lxml、openpyxl、pyyaml、sympy、tqdm。**盒子没有外网**,所以 wheel 在有网的机器上用 `fetch-wheels.sh` 取(只收 Linux x86_64 / CPython 3.13 的二进制 wheel,约 110 MB,gitignore),层里 `pip install --no-index` 离线装。服务端:matplotlib 的图(Agg 后端)在每个 cell 之后作为 PNG 结果返回并关闭;默认 Python 内核在服务启动时预先 import numpy / pandas / matplotlib,所以模板快照里是热的(`silent` 请求不计入执行次数)。用例 17 条,三个 SDK 版本全过。**没有**结构化的 `chart` 对象、IPython 魔法命令。第三方包各有许可证,分发带它们的模板前要看。**同日补**:创建响应的 `domain` 在设了 `PREVIEW_DOMAIN` 时填它,SDK 的 `get_host(port)` 因此得到 D55 预览主机,一致性用例(沙箱里起 perl 小服务)端到端通过。**同日补验证**:2 个节点容器下两套官方 SDK 用例整套重跑(Python 32、npm 20 全过,新增"暂停中直接 `commands.run`"用例);4 台沙箱按负载分到两节点、杀掉持有已暂停沙箱的节点后 evacuate、SDK 照常用;栈本身的延迟(控制面主机上无 SDK 无隧道):`Start` 到结束 p50 8.6 ms,文件 1 KiB 读写约 4 ms,64 MiB 写 290 / 读 670 MB/s,4 台并行 100 条命令无错误。
 
 **局限(写进兼容矩阵)**:没有模板构建 API、`gzip` 上传、`StreamInput`、`/files/compose`;端口 URL 只在设了 `PREVIEW_DOMAIN` 时可用(见同日补充);`watch_dir` 靠 250 ms 轮询;默认用户是 `agent` 不是 root;新建沙箱要用带 envd 的基础镜像,已有模板快照要重建;E2B 的 `timeout` 映射成空闲 ttl;`allow_internet_access` 不带时用 Project 默认出口策略(不是 E2B 的"默认放开")。
 

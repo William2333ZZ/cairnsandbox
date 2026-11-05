@@ -1,6 +1,6 @@
 # Architecture
 
-> CairnSandbox (Cairn for short) has two layers: a **sandbox cloud**, which is useful on its own, and an optional **agent layer** that runs on top of it through the public API only. This page describes the sandbox cloud (control plane, node agent, microVMs); the optional agent layer (`aios/`, `intake/`, `eval/`, `web/`) sits on top of its HTTP API.
+> CairnSandbox has two layers: a **sandbox cloud**, which is useful on its own, and an optional **agent layer** that runs on top of it through the public API only. This page describes the sandbox cloud (control plane, node agent, microVMs); the optional agent layer (`aios/`, `intake/`, `eval/`, `web/`) sits on top of its HTTP API.
 
 ```
  client / SDK / CLI / MCP / console ──HTTP (bearer)──▶ control plane (Go, cp/)

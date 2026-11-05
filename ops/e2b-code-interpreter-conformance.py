@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The official `e2b_code_interpreter` SDK against a Cairn stack that has the `code-interpreter-v1` template (recipes/code-interpreter, docs/guide/code-interpreter.md).
+"""The official `e2b_code_interpreter` SDK against a CairnSandbox stack that has the `code-interpreter-v1` template (recipes/code-interpreter, docs/guide/code-interpreter.md).
 
     pip install e2b-code-interpreter
     E2B_API_URL=http://127.0.0.1:18710 E2B_SANDBOX_URL=http://127.0.0.1:18710 E2B_API_KEY=<token> python3 ops/e2b-code-interpreter-conformance.py [--json out.json]

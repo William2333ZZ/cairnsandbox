@@ -261,5 +261,5 @@
   }
  ],
  "date": "2026-11-05",
- "setup": "Cairn drill stack, 2 nodes, final code of the day; SDK on a Mac through an SSH tunnel"
+ "setup": "CairnSandbox drill stack, 2 nodes, final code of the day; SDK on a Mac through an SSH tunnel"
 }

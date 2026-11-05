@@ -228,7 +228,7 @@ func (x *Dispatcher) Ping(project, id string) bool {
 	if err := row.Scan(&h.ID, &h.Project, &h.URL, &ev, &h.Created, &dis, &h.Failures, &h.LastCode, &h.LastAt, &h.By, &secret); err != nil {
 		return false
 	}
-	x.enqueue(h, secret, "ping", map[string]any{"message": "hello from the Cairn sandbox cloud"})
+	x.enqueue(h, secret, "ping", map[string]any{"message": "hello from the CairnSandbox cloud"})
 	return true
 }
 

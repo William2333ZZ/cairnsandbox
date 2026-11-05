@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// E2B conformance, JS flavour: the OFFICIAL `e2b` npm package against a Cairn control plane's E2B surface, case by case (the Python run is ops/e2b-conformance.py).
+// E2B conformance, JS flavour: the OFFICIAL `e2b` npm package against a CairnSandbox control plane's E2B surface, case by case (the Python run is ops/e2b-conformance.py).
 //
 //   npm install e2b
 //   E2B_API_URL=http://127.0.0.1:18710 E2B_SANDBOX_URL=http://127.0.0.1:18710 E2B_API_KEY=<token> node ops/e2b-conformance.mjs [--json out.json]

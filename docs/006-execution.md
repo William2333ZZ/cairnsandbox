@@ -63,7 +63,7 @@ harness 在卡住时以 `QUESTION:` 结束(至多问一次),这是对用户说�
 
 | 步骤 | 做法 |
 | --- | --- |
-| 创建 | `POST /sandboxes`:模板 debian-13;层 = Mandate 所指 Cairn 版本的 langs 与 harness 层 + 项目的 env 层 + Ticket 上一次派工打包的工作区层(如有);class persistent;网络模式与预算来自 Mandate;`PUT /budget` 写本地上限 |
+| 创建 | `POST /sandboxes`:模板 debian-13;层 = Mandate 所指 CairnSandbox 版本的 langs 与 harness 层 + 项目的 env 层 + Ticket 上一次派工打包的工作区层(如有);class persistent;网络模式与预算来自 Mandate;`PUT /budget` 写本地上限 |
 | 准备 | 首次派工时宿主把仓库的浅克隆(深度 1,过滤 1 MiB 以上的 blob;超过 150 MiB 的检出拒绝派工)打成 tar 送进沙箱(`PUT /files`),沙箱内切到 `ticket/<短名>` 分支;再次派工时工作区层已含仓库,只送恢复提示 |
 | 送入个人 harness 目录 | 这个用户的目录(宿主 `<state>/homes/<用户>`,他的所有 agent 共用;004 个人 harness 目录)里运行时读的文件打成 tar 送进 `/work/home`,root 持有、agent 只读(agent 不能改自己的规则;机器的路是宿主上的 proposals/);`tasks/`、`proposals/` 不送;目录为空就不送。摘要写进 ticket.json 的 `home` 与 Assignment 的 `home`,与轨迹里的 `harness_digest` 同一个值;环境变量 `CAIRN_HOME=/work/home`。`INTAKE_HOME_VOLUME=1` 时改走卷:每个摘要一个只读卷 `home-<摘要>`(从 tar 一次生成),创建沙箱时就附在 /work/home,派工结束后没人挂着的旧版本删掉;代价是带卷的沙箱冷启动(D35),默认仍是 tar |
 | 送入 Ticket | `/work/ticket.json`:原始 Trigger、Thread 快照、Mandate 范围、命中规则正文、Input 队列、`memory` 段(005"记忆",标为信息) |

@@ -1,6 +1,6 @@
 # Security policy
 
-Cairn runs untrusted code in microVMs, so we take isolation bugs seriously.
+CairnSandbox runs untrusted code in microVMs, so we take isolation bugs seriously.
 
 ## Reporting a vulnerability
 

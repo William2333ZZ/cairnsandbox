@@ -16,7 +16,7 @@
 | env | 任务或项目需要的工具链:gcc、git、make、pytest、jq、系统 python | 任务集导入时构建,随任务集版本固定 | `/usr`、`/opt` |
 | 可写层 | 工作区 | agent | overlay 上层,大小由 `disk` 决定 |
 
-**Cairn 版本 = agent-runtime 哈希 + agent-langs 层 + agent-harness 层。** 前两者很少变;一个候选只重建几十 KB 的 harness 层。
+**CairnSandbox 版本 = agent-runtime 哈希 + agent-langs 层 + agent-harness 层。** 前两者很少变;一个候选只重建几十 KB 的 harness 层。
 
 ## 规则
 
@@ -78,7 +78,7 @@ exec 可带 `landlock` 选项:`true` 是默认 harness 约束,只读全盘;可�
 
 ## 个人 harness 目录
 
-上表是 harness **代码**里的可变部分,随层一起构建,改一处要重建层、过评测。一个人日常要改的东西(规则、笔记、提示的措辞、几条技能、一两个中间件)不该走这条路:它们属于这个人,不属于某个 harness 版本。所以 Cairn 在代码之外再读一个目录——个人 harness 目录(`aios/home.py`,格式在 CONTRACT §5a):
+上表是 harness **代码**里的可变部分,随层一起构建,改一处要重建层、过评测。一个人日常要改的东西(规则、笔记、提示的措辞、几条技能、一两个中间件)不该走这条路:它们属于这个人,不属于某个 harness 版本。所以 CairnSandbox 在代码之外再读一个目录——个人 harness 目录(`aios/home.py`,格式在 CONTRACT §5a):
 
 ```
 <home>/                 一个人一个;建议是他自己的 git 仓库,换机器带走
@@ -97,7 +97,7 @@ exec 可带 `landlock` 选项:`true` 是默认 harness 约束,只读全盘;可�
 
 1. **人改立刻生效,机器改要过门。** 人在目录里改什么,下一次运行就用什么,没有审批;机器(元 agent、候选 harness)只能往 `proposals/<id>/` 写,`python -m aios.home apply <id>` 才搬进来,而搬进来的前提是评测的接受门过了(007 评测)。这是把"谁能改"从文件权限变成目录位置:同一份格式,两个入口。
 2. **目录坏了不开跑。** `check` 列出问题(instance 模板没有 `{{task}}`、中间件类找不到、config 多了不认识的键……),运行时在调模型之前退出码 1。一个声称有某个行为而实际没加载的 harness,比没有这个行为更糟。
-3. **版本是内容摘要。** 运行时读的文件的 sha256 前 10 位(`h-…`)写进每条轨迹的 `info.config.agent.harness_digest`;一次接受绑定的是三元组(sandboxd 版本、目录摘要、Cairn 版本),换了哪个都得重评。
+3. **版本是内容摘要。** 运行时读的文件的 sha256 前 10 位(`h-…`)写进每条轨迹的 `info.config.agent.harness_digest`;一次接受绑定的是三元组(sandboxd 版本、目录摘要、CairnSandbox 版本),换了哪个都得重评。
 
 优先级:工单里宿主放的规则在前(那是这个用户纠正过的事,见 005 接单层的"纠正"),目录里的规则在后,任务正文始终最高;团队提示段落工单自带的优先。目录与宿主的记忆是两套:宿主的记忆是关于这个用户的事实,由宿主放进工单;目录是这个人对 harness 的设置。宿主怎样把目录送进沙箱(挂载还是 ticket_set 一并下发)是 006 执行层的事,还没定。
 
@@ -119,7 +119,7 @@ exec 可带 `landlock` 选项:`true` 是默认 harness 约束,只读全盘;可�
 
 1. harness 里某个组件在档案库里连续若干版本不再变化、评测稳定,成为冻结候选。
 2. 人把它重写成 Rust,放进 agent-runtime,经 ABI 暴露为一个能力;harness 改为调用该能力。
-3. 新 runtime 层加去掉该组件的 harness 层作为新 Cairn 版本走评测,不退步才晋升。
+3. 新 runtime 层加去掉该组件的 harness 层作为新 CairnSandbox 版本走评测,不退步才晋升。
 4. 长期 runtime 变厚、harness 变薄。
 
 晋升进 runtime 的东西从此只能人改。

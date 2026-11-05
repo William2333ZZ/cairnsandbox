@@ -56,7 +56,7 @@ guest 内可用:Ubuntu 24.04.3,python3.12,bash,socat,以 root 运行。
 
 1. **网络**:guest 目前没有网卡,完全断网。下一步加 tap 设备、每 VM 独立子网、默认断网加白名单(nftables 在节点容器内即可做)。
 3. **jailer**:尚未启用。生产前要用 jailer 做 chroot、cgroup、seccomp 和独立用户,这需要节点容器多一些权限。
-4. **daemon 以 root 运行**:后续按 `archive/aios-rsi-2026-11-01.md` 的特权分离,daemon 与 Cairn 内核保留 root,可变服务和任务进程降到非特权用户。
+4. **daemon 以 root 运行**:后续按 `archive/aios-rsi-2026-11-01.md` 的特权分离,daemon 与 CairnSandbox 内核保留 root,可变服务和任务进程降到非特权用户。
 5. **rootfs 复制**:1 GiB 的整盘复制在非反射链接文件系统上会慢;量大时改用 Firecracker 的快照加 overlay 或 OverlayBD 类方案。
 6. **流式输出与 PTY**:长命令需要边跑边出,终端需要 PTY;协议要加 `exec_stream` 与 `pty_*`。
 7. **启动时间**:冷启动 0.8 s 里大部分是内核与 python 启动;从快照恢复只要约 30 ms(见第 6 节)。
@@ -503,7 +503,7 @@ run 7 显示全绿,但 `test-cp` 根本没跑:那一步先 `cd` 到节点目录�
 
 | 组件 | 位置 | 作用 |
 |---|---|---|
-| 种子 agent(Cairn stage 0) | `aios/`(装进开发层的 `/opt/aios`) | mini-swe-agent 2.4.6 的裁剪移植:一个 bash 工具、一个循环、提示词原样保留;去掉 litellm/pydantic/rich,模型客户端用标准库,依赖只剩 jinja2;配置是 JSON;成本从代理响应头取,不自报。约 330 行 |
+| 种子 agent(CairnSandbox stage 0) | `aios/`(装进开发层的 `/opt/aios`) | mini-swe-agent 2.4.6 的裁剪移植:一个 bash 工具、一个循环、提示词原样保留;去掉 litellm/pydantic/rich,模型客户端用标准库,依赖只剩 jinja2;配置是 JSON;成本从代理响应头取,不自报。约 330 行 |
 | 模型 API 代理 | `node/modelproxy.py`,容器 fc-model(:18500) | OpenAI 兼容;每个沙箱一个令牌、预算,按价格表计量,超预算 402;后端 `upstream`(DeepSeek 等 OpenAI 兼容端点)或 `mock`(确定性脚本,CI 用) |
 | 评测器 | `eval/evaluator.py`,容器 fc-eval(:18600) | 任务集、版本、批次(baseline/compare/check)、运行;SQLite;每次运行 = agent 沙箱 → 导出工作区 → 销毁 → 独立无网络验证沙箱跑验收;基础设施失败重试 3 次并单独计数;统计:avg@k、pass@1、pass^k、半分法噪声带 δ、配对差 + bootstrap CI + McNemar、接受判定;级联(烟测 → 全量);作弊信号;导入检查(参考解过、空解不过、重复一致、时长) |
 | 任务集 | `eval/tasksets/basic/` | 10 个小任务(编码 4、运维 3、数据 2、文本 1),7 演化 / 2 验证 / 1 测试,3 个烟测,2 个带变体输入 |
@@ -637,7 +637,7 @@ CI 镜像补了 gcc、libc6-dev、make(c-make-fix 任务的本地检查需要),�
 - 配方 `recipes/agent-harness/`:可重定位 CPython 3.13(python-build-standalone,Mac 下载后 scp,服务器连不上 GitHub)解到 `/aios/runtime/python`,离线装 jinja2;harness 代码到 `/aios/harness/aios`;启动器 `/aios/bin/aios`(设 PYTHONPATH、禁写字节码、用自带解释器跑 `aios.<sub>`)。全部 root 属主、a+rX,agent 用户只读。
 - 层 510 MiB(runtime 255 MB、harness 56 KB),分块仓库按内容去重;python-build-standalone 的 install_only 包偏大,以后可换 stripped 变体。
 - `dev-tools` 回归环境域:只装 git、gcc、libc6-dev、make、jq、python3、pytest,不再带 harness。
-- 评测器:默认 agent 命令改为 `/aios/bin/aios run ...`;版本不显式给命令时不落库、运行时取当前默认(旧记录迁移);版本新增 `runtime`(底座里 sbx-runtime 的哈希)与 `harness_layer` 字段,Cairn 版本 = 两个哈希;`EVAL_LAYERS` 默认 = harness 层 + dev-tools 层。
+- 评测器:默认 agent 命令改为 `/aios/bin/aios run ...`;版本不显式给命令时不落库、运行时取当前默认(旧记录迁移);版本新增 `runtime`(底座里 sbx-runtime 的哈希)与 `harness_layer` 字段,CairnSandbox 版本 = 两个哈希;`EVAL_LAYERS` 默认 = harness 层 + dev-tools 层。
 
 ### 20.2 内核 ABI v1(`guest/sbx-runtime/src/abi.rs`)
 

@@ -1,4 +1,4 @@
-//! Cairn kernel ABI v1 (docs/003-guest.md): a unix socket the harness talks to. The runtime is the only
+//! CairnSandbox kernel ABI v1 (docs/003-guest.md): a unix socket the harness talks to. The runtime is the only
 //! side with authority; the harness can report, ask and be refused.
 //!   socket  /run/aios/abi.sock (0666; peer uid checked with SO_PEERCRED: root, aios, agent)
 //!   wire    NDJSON  {"id","op",...} -> {"id","ok",...}

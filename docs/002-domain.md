@@ -2,7 +2,7 @@
 
 本文定义其余文档使用的概念。它建立在 [000 原则](000-principles.md) 与 [001 用户使用过程](001-journey.md) 之上:001 用用户的词写一个人怎样用这个平台,这里把那些词落成概念,后面的文档只用概念。
 
-一个 **User** 有一个 **Agent**。用户和它之间是一段 **Conversation**;用户在任何 **Connector**(代码托管、聊天工具、工作台)上说的话都进这段对话,agent 对用户说的每句话也从这里出去、送回它来的地方。对话里的一句话经 **Router** 判定:是插话,就作为 **Input** 送进正在做的 **Ticket**;是新的事,就由 Eval 开出带 **Mandate** 的 Ticket。**Assignment** 把 Ticket 交给一台 **Sandbox**,沙箱里跑的是这个 Agent 当前的 **Cairn 版本**;它经 **Report** 自报进展,其中只有做完、卡住、要决定三种会变成对用户说的话;不可逆的动作只能提成 **Approval**,用户同意后由 **Relay** 执行。做完的事进 **Memory**,下一件事从记忆开始。**Routine** 让事情不经用户开口就发生。合并进仓库且有验收的改动成为 **Task** 候选;**Evaluator** 用任务集给 Cairn 的候选版本打分,**晋升控制器** 决定稳定版,每次晋升对用户是一条 **Update**。
+一个 **User** 有一个 **Agent**。用户和它之间是一段 **Conversation**;用户在任何 **Connector**(代码托管、聊天工具、工作台)上说的话都进这段对话,agent 对用户说的每句话也从这里出去、送回它来的地方。对话里的一句话经 **Router** 判定:是插话,就作为 **Input** 送进正在做的 **Ticket**;是新的事,就由 Eval 开出带 **Mandate** 的 Ticket。**Assignment** 把 Ticket 交给一台 **Sandbox**,沙箱里跑的是这个 Agent 当前的 **CairnSandbox 版本**;它经 **Report** 自报进展,其中只有做完、卡住、要决定三种会变成对用户说的话;不可逆的动作只能提成 **Approval**,用户同意后由 **Relay** 执行。做完的事进 **Memory**,下一件事从记忆开始。**Routine** 让事情不经用户开口就发生。合并进仓库且有验收的改动成为 **Task** 候选;**Evaluator** 用任务集给 CairnSandbox 的候选版本打分,**晋升控制器** 决定稳定版,每次晋升对用户是一条 **Update**。
 
 ```mermaid
 flowchart LR
@@ -22,7 +22,7 @@ flowchart LR
   T[Routine] -->|到期 / 事件| K
   X -->|合并的 PR| Q[Task 候选]
   Q --> EV[Evaluator]
-  V[Cairn 版本] --> EV
+  V[CairnSandbox 版本] --> EV
   EV --> PC[晋升控制器]
   PC -->|Update| C
   PC -->|稳定版| A
@@ -37,7 +37,7 @@ flowchart LR
 | 概念 | 定义 | 它守的规则 | 为什么存在 |
 | --- | --- | --- | --- |
 | User(用户) | 一个登录的人 | 拥有一个 Agent、一个 Project、一份 Policy、一份预算、若干 Connector;多用户时彼此的数据域、策略、预算、沙箱、记忆互不可见;第一期一个部署一个用户 | 001 第 1 阶段:一切归属于他 |
-| Agent(用户的 agent) | 用户的一个 agent:Project + Policy + Memory + 它跟随的 Cairn 版本;每个用户有 main,可按岗位再开几个(名字 + 岗位文本) | 没有自己的常驻进程;每件事在一台新沙箱里跑;身份是各 Connector 里的 bot 账号;版本默认跟随稳定版,可钉在某一版(回退);"@名字"把一句话交给某个 agent | 001"一个 agent 是什么样"与第 10 节 |
+| Agent(用户的 agent) | 用户的一个 agent:Project + Policy + Memory + 它跟随的 CairnSandbox 版本;每个用户有 main,可按岗位再开几个(名字 + 岗位文本) | 没有自己的常驻进程;每件事在一台新沙箱里跑;身份是各 Connector 里的 bot 账号;版本默认跟随稳定版,可钉在某一版(回退);"@名字"把一句话交给某个 agent | 001"一个 agent 是什么样"与第 10 节 |
 | Conversation(对话) | 用户与 Agent 之间按时间排的一条流,每个 Agent 一条 | 条目只有四种:用户的 message(带来处)、agent 的 say(带去处)、一件事的 work 标记、系统的 note;say 只由 Report 的三种终态、Approval、Update 和接单确认产生;同一条消息不管从哪个 Connector 来都只出现一次 | 001 第 3–5 阶段:在哪说都是同一段对话 |
 | Connector(接入) | 用户把 Agent 接进的一个外部地方:代码托管、聊天工具、工作台 | 持有 bot 身份与凭证(宿主侧);读的一端是 Source,写的一端是 Channel;回话送回消息来的那个 Thread;用户可列出、断开 | 001 第 2 阶段 |
 | Approval(批准) | 一个待用户同意的不可逆动作及其草稿,带宿主做的**审查结论** | 四类:合并、向用户之外发消息、超出预算、新建或改例行;由 Report 的 attention 或宿主创建;创建时宿主按 agent 改不到的规则看一遍(密钥、CI 路径、删测试、测量代码、不可信来源、违反你教过的规则),结论 ok / warn / block,block 要用户二次确认才能同意;否决可带理由(是一次纠正);pending → approved / denied,没有回答就不发生,Ticket 结束或被交接即失效;执行只由 Relay 做 | 001 第 5、7 阶段:要你做决定 |
@@ -58,7 +58,7 @@ flowchart LR
 | Router(路由) | 一条消息进来时的三步:去重、归属、合并 | 去重按 Trigger id;归属:发送者在某个在途 Ticket 的 Thread 上说话,或工作台里对着某件事说,就是那件事的 Input;否则进 Eval;合并:同一人 10 秒内连发的几条合成一个 Trigger;"停"不合并、立即生效 | 001 第 6 阶段:插话优先、连句合并 |
 | Policy(策略) | 用户的接单规则加每个 Source 的部分:白名单、准入表、bot 名单、默认预算与边界 | 版本 = 内容哈希;变化丢弃运行中的 Eval,通知在途 Ticket,不吊销 Mandate;身份不跨 Source 映射 | 规则变了,正在做的判断作废 |
 | Eval(评估) | 对一批 Trigger 的判定,两层:Gate 与 Assessment | 输入 Trigger 批、Thread 快照、Thread 上全部 Ticket、当前 Policy;输出 Decision;无状态;不读 Memory | 决定新工作开始、继续或停止 |
-| Mandate(授权) | 一次 accept 授予了什么:Policy 版本、范围、强度、命中规则、发送者身份、预算、网络模式、Cairn 版本 | 不可变;更大范围要开新 Ticket;只有 accept 创建、人的 stop 收回、重验证失败吊销;恢复前对当前 Policy 重验证;不含批准表里的动作 | 说明为什么可以做、能做到哪 |
+| Mandate(授权) | 一次 accept 授予了什么:Policy 版本、范围、强度、命中规则、发送者身份、预算、网络模式、CairnSandbox 版本 | 不可变;更大范围要开新 Ticket;只有 accept 创建、人的 stop 收回、重验证失败吊销;恢复前对当前 Policy 重验证;不含批准表里的动作 | 说明为什么可以做、能做到哪 |
 | Ticket(工单) | 一件事:一个被授权的工作单元 | 只有 Eval 能创建;引用 Mandate,持有 Channel、Input、最近的工作区层与 notes;open → ended,人在它的 Thread 上说话就回到 open,除非是人停的;自己定义状态,不镜像沙箱状态;在 Conversation 里是一个 work 标记 | 拥有执行与它的报告 |
 | Subscription(订阅) | Ticket 与 Thread 的多对多关系,由 Thread 持有,有两种:`own`(这个 Thread 上人的话归这个 Ticket 答或交回,可以唤醒它)和 `context`(只读) | 匹配的 Trigger 扇出到每个在途 Ticket,不查发送者;人的消息到了 Ticket 就不再进 Eval;`context` 的 Thread 不授予权力、不唤醒、不算被接走,送进去的输入标为上下文;人停的 Ticket 什么都收不到;Ticket 开了 PR,那个 PR 的 Thread 就以 `own` 订阅给它,之后人在 PR 上的评论接着这件事做 | 后续讨论不必再点名 |
 | Correlation(关联) | 共享同一个 Trigger 的 Thread 之间的关系 | 只给 Eval 加上下文(关联 Thread 里人最近说的话),从不路由;订阅一个 Thread 时它与 Ticket 自己的 Thread 互相关联 | 同一件事散在几个地方时判断得一致 |
@@ -68,11 +68,11 @@ flowchart LR
 
 | 概念 | 定义 | 它守的规则 | 为什么存在 |
 | --- | --- | --- | --- |
-| Sandbox(沙箱) | 一台 Firecracker microVM,由基础镜像加若干只读层加一个可写层组成,运行一个 Cairn 版本 | 属于一个 Project;有类别(持久型 / 临时型)、网络模式、预算、规格;状态由节点决定,控制面只记路由;暂停保留可写层并发布 bundle,销毁删除可写层 | 执行与隔离的单位 |
+| Sandbox(沙箱) | 一台 Firecracker microVM,由基础镜像加若干只读层加一个可写层组成,运行一个 CairnSandbox 版本 | 属于一个 Project;有类别(持久型 / 临时型)、网络模式、预算、规格;状态由节点决定,控制面只记路由;暂停保留可写层并发布 bundle,销毁删除可写层 | 执行与隔离的单位 |
 | Layer(层) | 一个内容寻址的只读文件系统产物,由配方构建 | id 是内容哈希;有父层;构建时的沙箱与配方哈希留档;打包(pack)把某个沙箱的可写层变成新的 Layer | 每一层都能回滚、复用、共享 |
 | Template(模板) | 一组登记在册的内核与基础镜像加规格,可做快照直启和预留池 | 模板键含 jail 标志;模板快照不可读时回退冷启动 | 启动时间从秒到毫秒 |
 | Project(项目) | 一个用户的数据域:沙箱间共享的存储、改进库、任务集、记忆 | 沙箱间共享数据只经项目级存储;每用户一个 | 既要跨沙箱共享,又要与别的用户隔离 |
-| Cairn 版本 | agent-runtime 哈希 + agent-langs 层 + agent-harness 层的组合,加 agent 命令 | 有父版本;状态候选 / 稳定 / 淘汰 / 被取代;来源是改进库、元 agent 或人;harness 层声明所需 ABI 版本 | 被评测、被晋升、被回滚的对象 |
+| CairnSandbox 版本 | agent-runtime 哈希 + agent-langs 层 + agent-harness 层的组合,加 agent 命令 | 有父版本;状态候选 / 稳定 / 淘汰 / 被取代;来源是改进库、元 agent 或人;harness 层声明所需 ABI 版本 | 被评测、被晋升、被回滚的对象 |
 | Assignment(派工) | Ticket 与一台沙箱的绑定 | 一个 Ticket 先后可有多个;pending → running → ended,独立于 Ticket;重试在同一分支、同一工作区层上继续;结束时打包工作区、做记忆更新 | 沙箱在领域之外,但谁在执行必须在领域之内 |
 | Report(报告) | 一次 Assignment 向 Ticket 自报的状态,经内核 ABI 写入事件流 | 六态之一;attention 是结构化字段(问题或批准草稿),不从自由文本推断;只有 ready、blocked、failed、带 attention 的 waiting 变成 say;沙箱退出而无终态 Report,按退出码补 failed 或 ready | 工作台、Watchdog 与 Conversation 的共同输入 |
 | Relay(中继) | 宿主侧持有凭证、代沙箱对外写的部件 | 回帖、推分支、开 PR 不需批准;批准表里的动作只在 Approval 为 approved 后执行;每个动作幂等(同一 Approval 执行两次只发生一次) | 凭证不进沙箱;不可逆只在同意之后 |
@@ -80,7 +80,7 @@ flowchart LR
 | TaskSet / Task(任务集 / 任务) | 带版本的任务集合;任务 = 提示、初始工作区、时限、允许写路径、验收脚本与隐藏测试 | 验收与隐藏测试只在评测器存储;任务有领域、分组(演化 / 验证 / 留出)、来源标签(用户的事 / 公开集)、历史通过率、区分力状态;导入检查不过的任务不参与评测 | 真值从这里来 |
 | Run(运行) | 任务 × 版本 × 第 k 次 | agent 沙箱与验证沙箱分离;基础设施失败单独计数并重试;记成本、时长、作弊信号、事件、轨迹、说话次数 | 评测的最小事实 |
 | Batch(批次) | 一组 Run 及其统计 | 类型基线 / 比较 / 检查;记任务集版本、版本、k、级联阶段、接受判定与理由 | 一次评测的记录 |
-| 档案库(Archive) | 评过的 Cairn 版本构成的树 | 每节点保留结果矩阵与 Beta 后验;父代按子树成功率抽取;新颖性过滤;稳定版终选用后验保守分位 | 父代选择不看自身分数 |
+| 档案库(Archive) | 评过的 CairnSandbox 版本构成的树 | 每节点保留结果矩阵与 Beta 后验;父代按子树成功率抽取;新颖性过滤;稳定版终选用后验保守分位 | 父代选择不看自身分数 |
 | 改进库条目 | 项目级、有执行对照支撑的一条经验:可执行 harness 引用 + EXPERIENCE 文本 | 来自任务内循环的反思;采纳不等于晋升 | 任务内循环与版本循环的接口 |
 | 晋升控制器 | 沙箱之外、不含 LLM 的确定性服务 | 只接受评测器签名的结果;检查门槛;执行晋升与回滚;生成 Update;可强制终止实验 | 被优化的东西不能进评判链路 |
 
@@ -112,7 +112,7 @@ flowchart LR
 
 | 否决 | 理由 |
 | --- | --- |
-| 把 Cairn 内核与可变 harness 放在同一进程或同一用户下 | 可变代码能直接改内存和文件,"不可变"只是约定 |
+| 把 CairnSandbox 内核与可变 harness 放在同一进程或同一用户下 | 可变代码能直接改内存和文件,"不可变"只是约定 |
 | 用 Docker 作为首发隔离后端 | microVM 已经验证,且 R2(开放代码修改)依赖 microVM 级隔离 |
 | unikernel 作为 guest | 没有多用户与完整 fork,做不了 guest 内特权分离 |
 | 让 LLM 参与晋升决定 | 把被优化的东西放进了评判链路 |
@@ -138,7 +138,7 @@ flowchart LR
 | --- | --- |
 | Connector | `gitea` 或 `github`(二选一,CODE_HOST 定;读:issue、PR 评论、新 issue;写:评论、PR、合并)、`chat`(飞书 / Slack / 通用 webhook;读:私聊与 @;写:回到那个会话)、`workbench`(工作台直接请求;写:对话) |
 | 模板与层 | `debian-13` 模板;层 kernel-6.18、base-debian-13、agent-langs、agent-harness、dev-tools |
-| Cairn 版本 | Python 种子 harness(mini-swe-agent 裁剪)为第一个版本 |
+| CairnSandbox 版本 | Python 种子 harness(mini-swe-agent 裁剪)为第一个版本 |
 | 任务集 | 从本平台的仓库挖出的任务;`polyglot-py`、`workbuddy-code` 作验证坐标;`basic` 只作管线自检 |
 
 ## 术语表
@@ -155,7 +155,7 @@ flowchart LR
 | Control plane | 控制面 | 放置、路由、转发、对账、鉴权的服务 |
 | Store | 分块仓库 | 内容寻址的块存储,放层与 bundle |
 | Bundle | 包 | 一个暂停态沙箱或模板快照的可搬运形式 |
-| Cairn | — | 沙箱内 agent 的运行系统:runtime、langs、harness 三层 |
+| CairnSandbox | — | 沙箱内 agent 的运行系统:runtime、langs、harness 三层 |
 | agent-runtime | 运行时 | Rust 静态二进制,sandboxd 加内核 ABI 加 Landlock |
 | agent-langs | 解释器层 | harness 可用的 Python 与 TypeScript 解释器 |
 | agent-harness | harness 层 | agent 循环与 7 个可变部分,RSI 改的层 |

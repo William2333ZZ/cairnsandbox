@@ -13,7 +13,7 @@
 #
 # Environment (all optional):
 #   MULTINODE_PROJECT   compose project name, default cairn-multi (keeps it apart from a normal `docker compose up` in this directory)
-#   PORT_OFFSET         added to every published host port, default 0; use e.g. 100 when another Cairn stack already owns 18700/18800/...
+#   PORT_OFFSET         added to every published host port, default 0; use e.g. 100 when another CairnSandbox stack already owns 18700/18800/...
 #   MEM_BUDGET_MIB      memory budget PER NODE; default: half of the host's RAM split across the nodes, at most 8192 each
 #   MAX_VMS             VM cap per node (default from .env / 32)
 #   STORE_BW_MBPS       throttle the shared chunk store (simulates the link between machines; affects bundle migration and lazy image reads)

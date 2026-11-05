@@ -318,13 +318,13 @@ func (s *Server) runTemplateBuild(buildID, project string, in map[string]any) {
 		img, _ := in["fromImage"].(string)
 		base := baseFor(img)
 		if base == "" {
-			fail("image " + img + " is not available: Cairn builds from its own bases (e2bdev/base, ubuntu:*, debian:*) or from a template (from_template); pulling other images needs a layer built with POST /builds {kind:\"oci\"}")
+			fail("image " + img + " is not available: CairnSandbox builds from its own bases (e2bdev/base, ubuntu:*, debian:*) or from a template (from_template); pulling other images needs a layer built with POST /builds {kind:\"oci\"}")
 			return
 		}
 		if base != "default" {
 			spec["template"] = base
 		}
-		t.log("info", fmt.Sprintf("image %s -> Cairn base %s (the image is not pulled)", img, base))
+		t.log("info", fmt.Sprintf("image %s -> CairnSandbox base %s (the image is not pulled)", img, base))
 	}
 	res := s.Life.Create(spec, project)
 	if res.Code != 201 {

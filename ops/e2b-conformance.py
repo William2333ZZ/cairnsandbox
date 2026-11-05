@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E2B conformance: the OFFICIAL e2b Python SDK against a Cairn control plane's E2B surface, case by case.
+"""E2B conformance: the OFFICIAL e2b Python SDK against a CairnSandbox control plane's E2B surface, case by case.
 
     pip install e2b
     E2B_API_URL=http://127.0.0.1:18710 E2B_SANDBOX_URL=http://127.0.0.1:18710 E2B_API_KEY=<member or admin token> \\

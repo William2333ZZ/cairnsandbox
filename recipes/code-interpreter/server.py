@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A small code-interpreter server for Cairn sandboxes: speaks the protocol the `e2b_code_interpreter` SDKs use against `code-interpreter-v1`'s Jupyter-based
+"""A small code-interpreter server for CairnSandbox sandboxes: speaks the protocol the `e2b_code_interpreter` SDKs use against `code-interpreter-v1`'s Jupyter-based
 server (port 49999), with stateful Python contexts, plus bash and JavaScript. Python standard library only; started inside the template's sandbox and committed as
 the template (docs/guide/code-interpreter.md), so a sandbox started from that template already has it listening.
 

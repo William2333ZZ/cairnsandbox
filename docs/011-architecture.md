@@ -41,7 +41,7 @@ web/ ──HTTP──▶ cp/ (fc-cp, Go) ──bearer──▶ nodeagent.py ─�
 | 内核 ABI | `guest/sbx-runtime/src/abi.rs` | `/run/aios/abi.sock`;SO_PEERCRED;hello / event / budget_get / budget_charge / checkpoint / report / ticket_get / inbox;事件日志;宿主侧 ticket_set / abi_input |
 | Landlock | `guest/sbx-runtime/src/landlock.rs` | 规则集构造、ABI 探测、默认 harness 约束、显式策略 |
 | guest init | `node/guest/fc-init` | 挂只读层与可写层、组 overlay、switch_root、起 runtime;`node/guest/sandboxd.py` 是 Python 版回落 |
-| Cairn(agent runtime) | `aios/__init__.py`、`agent.py`、`middleware.py`、`model.py`、`env.py`、`run.py`、`abi.py`、`config.json`、`memory.md` | mini-swe-agent 裁剪:一个 bash 工具、一个循环;stdlib 模型客户端;ABI 客户端(socket 不存在即空操作) |
+| CairnSandbox(agent runtime) | `aios/__init__.py`、`agent.py`、`middleware.py`、`model.py`、`env.py`、`run.py`、`abi.py`、`config.json`、`memory.md` | mini-swe-agent 裁剪:一个 bash 工具、一个循环;stdlib 模型客户端;ABI 客户端(socket 不存在即空操作) |
 | 个人 harness 目录 | `aios/home.py` | 一个人带进每件事的目录(`--home` / `$CAIRN_HOME` / `/aios/home`):config.json 覆盖、memory.md、rules/、prompts/、skills/、middleware/;tasks/ 归评测器、proposals/ 是机器的提案,运行时都不读;`check` 不过就不开跑;`apply` 是机器提案进门的唯一路;摘要进轨迹([004](004-guest.md) 个人 harness 目录,D29) |
 | 配方 | `recipes/kernel-6.18/`、`base-debian-13/`、`sbx-runtime/`、`agent-langs/`、`agent-harness/`、`dev-tools/` | 每层的构建脚本或 `recipe.sh`;模板 JSON 在 `recipes/templates/` |
 | 层构建 | `node/build-layer.sh`、`node/build-dev-layer.sh`、`node/build-rootfs.sh`、`node/smoke-boot.sh` | 在构建沙箱里跑配方并 pack;旧的整盘构建;单机启动烟测 |

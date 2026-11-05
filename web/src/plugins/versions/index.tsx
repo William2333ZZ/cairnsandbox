@@ -1,4 +1,4 @@
-// 版本树: Cairn versions as a tree (parent edges), with each node's latest batch mean and the archive verdict; plus the
+// 版本树: CairnSandbox versions as a tree (parent edges), with each node's latest batch mean and the archive verdict; plus the
 // evolve loop's iteration log. Registered as its own plugin so the eval page stays a list and this stays a tree.
 import { useEffect, useState } from 'react'
 import type { Plugin } from '../../kernel'
@@ -62,7 +62,7 @@ function VersionsPage() {
       <h1 className="text-ui-xl font-semibold">版本</h1>
       <AgentVersion />
       {err && <ErrorLine>{err}</ErrorLine>}
-      <Panel title="Cairn 版本(父 → 子;stable = 当前种子或被接受;retired = 比较后未接受;superseded = 被新种子取代的旧种子)">
+      <Panel title="CairnSandbox 版本(父 → 子;stable = 当前种子或被接受;retired = 比较后未接受;superseded = 被新种子取代的旧种子)">
         {tree == null ? <p className="text-ui-base text-fg-subtlest">加载中</p> : tree.length ? <div>{render(null, 0)}</div> : <p className="text-ui-base text-fg-subtle">还没有版本。</p>}
       </Panel>
       <Panel title={<>自动迭代 {ev ? <span className="font-normal text-fg-subtle">· 已花 {usd(ev.spent_usd)}</span> : null}</>}>

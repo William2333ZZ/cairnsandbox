@@ -1,6 +1,6 @@
 # HTTP API 参考
 
-本目录是 Cairn 沙箱云控制面(fc-cp)的 HTTP 接口参考,按 [docs/002](../../002-domain.md) 的八个上下文分文件,每个端点一节:谁能调、请求、响应、错误、一个 `curl`。字段与状态码以 [CONTRACT.md](../../../CONTRACT.md) §1 / §1a 和 `cp/internal/httpapi/server.go` 为准;合同没写清的细节本文写"见 CONTRACT §1",不猜。节点层接口(CONTRACT §2)是内部接口,控制面与节点同版本部署,这里不展开。
+本目录是 CairnSandbox 沙箱云控制面(fc-cp)的 HTTP 接口参考,按 [docs/002](../../002-domain.md) 的八个上下文分文件,每个端点一节:谁能调、请求、响应、错误、一个 `curl`。字段与状态码以 [CONTRACT.md](../../../CONTRACT.md) §1 / §1a 和 `cp/internal/httpapi/server.go` 为准;合同没写清的细节本文写"见 CONTRACT §1",不猜。节点层接口(CONTRACT §2)是内部接口,控制面与节点同版本部署,这里不展开。
 
 ## 怎么调
 

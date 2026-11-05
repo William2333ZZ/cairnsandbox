@@ -2,7 +2,7 @@
   "name": "cairn-console",
   "version": "0.1.0",
   "private": true,
-  "description": "Cairn 沙箱云控制台(Next.js,静态导出,由控制面在 /console/ 托管)",
+  "description": "CairnSandbox 沙箱云控制台(Next.js,静态导出,由控制面在 /console/ 托管)",
   "scripts": {
     "dev": "next dev -p 3100",
     "build": "next build",

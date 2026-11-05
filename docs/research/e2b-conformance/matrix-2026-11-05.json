@@ -1,6 +1,6 @@
 {
  "date": "2026-11-05",
- "setup": "Cairn drill stack on one Linux host, 2 node containers (4096 MiB budget each), PREVIEW_DOMAIN=preview.test; each SDK version in its own throwaway environment; ops/e2b-matrix.sh; final code of the day",
+ "setup": "CairnSandbox drill stack on one Linux host, 2 node containers (4096 MiB budget each), PREVIEW_DOMAIN=preview.test; each SDK version in its own throwaway environment; ops/e2b-matrix.sh; final code of the day",
  "results": [
   {
    "sdk": "npm 2.52.1",

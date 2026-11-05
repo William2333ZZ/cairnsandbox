@@ -10,7 +10,7 @@
 
 </div>
 
-**CairnSandbox(简称 Cairn)是一个沙箱云,上面跑着一个 agent。** cairn 是山路上堆起来指路的一小摞石头,让人找得到回头的路;在这里,每个检查点就是一块石头。两层,可以只要其中一层:
+**CairnSandbox(简称 CairnSandbox)是一个沙箱云,上面跑着一个 agent。** cairn 是山路上堆起来指路的一小摞石头,让人找得到回头的路;在这里,每个检查点就是一块石头。两层,可以只要其中一层:
 
 | | |
 | :-- | :-- |
@@ -63,7 +63,7 @@ with c.sandboxes.create(mem=512, network={"allow_hosts": ["pypi.org"]}) as sb:
 </div>
 
 底下是 Firecracker microVM(由 jailer 启动),上面是控制面、Python 与 JS SDK、CLI、MCP 和控制台。**agent 层是可选的**:一个托管的个人编码 agent,
-沙箱认识它的预算、工单和事件;它只通过 HTTP 或 SDK 要沙箱,不用它,沙箱云照样跑(`tests/unit/test_layers.py` 强制这条边界)。只想要沙箱云的话,起控制面和节点,把 E2B 或 Cairn 的 SDK 指过去就行,不需要 agent 层。
+沙箱认识它的预算、工单和事件;它只通过 HTTP 或 SDK 要沙箱,不用它,沙箱云照样跑(`tests/unit/test_layers.py` 强制这条边界)。只想要沙箱云的话,起控制面和节点,把 E2B 或 CairnSandbox 的 SDK 指过去就行,不需要 agent 层。
 
 <div align="center">
 <img src="docs/assets/shot-sandbox.png" alt="沙箱详情" width="92%"><br><sub>一台沙箱的检查点:原地回滚,或从任一检查点 fork 出新沙箱(控制台界面默认英文,可切换中文)</sub>

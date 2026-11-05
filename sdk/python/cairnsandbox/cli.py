@@ -32,7 +32,7 @@ def _split_remote(s):
 
 def run(argv, out=None):
     out = out or sys.stdout
-    p = argparse.ArgumentParser(prog="cairn", description="Cairn sandbox cloud CLI")
+    p = argparse.ArgumentParser(prog="cairn", description="CairnSandbox cloud CLI")
     p.add_argument("--url"); p.add_argument("--token"); p.add_argument("--project"); p.add_argument("--json", action="store_true", help="print raw JSON")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("whoami"); sub.add_parser("status"); sub.add_parser("ls"); sub.add_parser("usage")

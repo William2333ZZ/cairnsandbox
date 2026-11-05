@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the `code-interpreter-v1` template on a running Cairn stack (docs/guide/code-interpreter.md). Standard library only.
+"""Build the `code-interpreter-v1` template on a running CairnSandbox stack (docs/guide/code-interpreter.md). Standard library only.
 
   python3 recipes/code-interpreter/build-template.py --cp http://127.0.0.1:18700 --token $(cat deploy/secrets/cp.token) --layer <agent-langs layer id> [--layer <ci-pylibs layer id>] [--name code-interpreter-v1]
 

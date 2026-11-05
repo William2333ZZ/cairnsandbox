@@ -1,6 +1,6 @@
 # cairnsandbox (Python SDK)
 
-The client for the Cairn sandbox cloud's control plane (CONTRACT §1). Standard library only.
+The client for the CairnSandbox cloud's control plane (CONTRACT §1). Standard library only.
 
 ```python
 from cairnsandbox import Client

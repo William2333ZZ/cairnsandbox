@@ -75,7 +75,7 @@ Apache 2.0,基于自研 RustVMM + KVM,兼容 E2B SDK;组件有 API、调度、�
 
 ## 9. 需要用户定的事
 
-1. **项目名。** 仓库现在叫 Cairn。我印象里已有同名的、关注度不低的 LLM agent 操作系统项目(agiresearch/Cairn),**我没有核对,请你自己搜一下**。重名会影响被找到和商标,建议发布前改名。
+1. **项目名。** 仓库现在叫 CairnSandbox。我印象里已有同名的、关注度不低的 LLM agent 操作系统项目(agiresearch/CairnSandbox),**我没有核对,请你自己搜一下**。重名会影响被找到和商标,建议发布前改名。
 2. **托管位置与账号:** GitHub 个人账号还是新建组织。
 3. **贡献协议:** DCO(轻)还是 CLA。若以后想做"开源核心 + 闭源增值",CLA 或从一开始就保留重新授权的权利更省事;纯 Apache 加托管服务则 DCO 够用。**这个要在收到第一个外部贡献之前定。**
 4. **商业模式的大方向:** 全部开源、靠托管与支持,还是开源核心加闭源的多租户/计费。影响哪些代码现在可以发。
@@ -103,9 +103,9 @@ Apache 2.0,基于自研 RustVMM + KVM,兼容 E2B SDK;组件有 API、调度、�
 
 ## 12. 发布前只有你能做的事
 
-1. 在 USPTO 等处自己查一遍 Cairn / cairnsandbox 的商标(我的检索不是法律意见)。
+1. 在 USPTO 等处自己查一遍 CairnSandbox / cairnsandbox 的商标(我的检索不是法律意见)。
 2. (已定:William2333ZZ/cairn,先私有)托管账号与仓库名,文档里的 `OWNER` 已换掉(`README`、`docs/en/quickstart.md`、`run-node.sh` 注释、各处 `William2333ZZ/cairn`)。
-3. 填联系方式:`SECURITY.md` 与 `CODE_OF_CONDUCT.md` 现在指向 GitHub 私有漏洞报告;要不要给一个邮箱,由你定。仓库初始提交用的是占位作者 `Cairn <noreply@cairn.invalid>`,发布前决定用谁的名字。
+3. 填联系方式:`SECURITY.md` 与 `CODE_OF_CONDUCT.md` 现在指向 GitHub 私有漏洞报告;要不要给一个邮箱,由你定。仓库初始提交用的是占位作者 `CairnSandbox <noreply@cairn.invalid>`,发布前决定用谁的名字。
 4. 决定 DCO 还是 CLA,以及商业模式(§9)。
 5. 轮换盒子上用过的所有令牌(`cp.token`、Gitea、模型上游密钥)。
 6. 逐个确认 `polyglot-py` 题目的再分发许可,不行就换成下载脚本。

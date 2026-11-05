@@ -1,5 +1,5 @@
 name: e2b-conformance
-# The official E2B SDKs against a real Cairn stack (Firecracker, so KVM): manual only, on a self-hosted runner labelled `kvm` that has the images built
+# The official E2B SDKs against a real CairnSandbox stack (Firecracker, so KVM): manual only, on a self-hosted runner labelled `kvm` that has the images built
 # (scripts/bootstrap.sh) and Docker. Not part of `ci`, which runs on GitHub-hosted machines without KVM. No such runner exists yet, so this workflow has
 # never run: treat it as the recipe, and fix it the first time it does.
 on:

@@ -1,4 +1,4 @@
-# Using the official E2B SDKs with Cairn
+# Using the official E2B SDKs with CairnSandbox
 
 > This is the sandbox cloud acting as an E2B-compatible backend. You do not need the agent layer for any of it: the official SDKs talk to the control plane's E2B port, and you also get what E2B does not have (rewind, audit, approved-only egress).
 
@@ -26,7 +26,7 @@ Not verified: other SDK versions or languages (Go, Java, ...), two physical mach
 
 ## What differs from E2B
 
-- `Template.build()` works from Cairn's own bases or from a template, with `run_cmd`, `copy`, env, workdir, user and a start/ready command; the control plane runs the steps in a build sandbox with the project's default egress policy (so `pip install` or `apt-get` fail unless the project allows them) and commits the running sandbox as the template. No tags, no images pulled from registries, uploads for COPY are kept on one replica. No sandbox logs endpoint; `gzip` uploads are decoded in memory (at most 32 MiB compressed, 64 MiB decompressed), everything else streams; no `StreamInput` (client streaming needs HTTP/2; `send_stdin` is unaffected).
+- `Template.build()` works from CairnSandbox's own bases or from a template, with `run_cmd`, `copy`, env, workdir, user and a start/ready command; the control plane runs the steps in a build sandbox with the project's default egress policy (so `pip install` or `apt-get` fail unless the project allows them) and commits the running sandbox as the template. No tags, no images pulled from registries, uploads for COPY are kept on one replica. No sandbox logs endpoint; `gzip` uploads are decoded in memory (at most 32 MiB compressed, 64 MiB decompressed), everything else streams; no `StreamInput` (client streaming needs HTTP/2; `send_stdin` is unaffected).
 - `timeout` is an *idle* timeout, not an absolute end time. The default command user is `agent`, not root (`user="root"` works). Without `allow_internet_access` the project's default egress policy applies; E2B opens the internet by default.
 - Changing a sandbox's network through this port needs an owner or admin: a member loosening egress needs approval, which only the native API queues.
 - `get_host(port)` works when the control plane has `PREVIEW_DOMAIN` set (it is reported as the sandbox's `domain`, and a wildcard DNS name plus TLS in front are yours to provide); unlike E2B it is not public, it needs a token. `watch_dir` polls (every 250 ms), it has no inotify.

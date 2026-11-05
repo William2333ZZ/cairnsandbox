@@ -1,4 +1,4 @@
-"""cairnsandbox: the Python SDK for the Cairn sandbox cloud (CONTRACT §1 over HTTP, no dependencies beyond the standard library).
+"""cairnsandbox: the Python SDK for the CairnSandbox cloud (CONTRACT §1 over HTTP, no dependencies beyond the standard library).
 
     from cairnsandbox import Client
     c = Client("http://127.0.0.1:18700", token="...")          # or CAIRN_URL / CAIRN_TOKEN / CAIRN_PROJECT in the environment

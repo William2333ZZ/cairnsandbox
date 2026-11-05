@@ -1,5 +1,5 @@
 #!/bin/bash
-# agent-langs layer: the interpreters every Cairn harness may use, under /aios/runtime (never /usr).
+# agent-langs layer: the interpreters every CairnSandbox harness may use, under /aios/runtime (never /usr).
 #   /aios/runtime/python   relocatable CPython 3.13 (python-build-standalone) + jinja2 (harness dep)
 #   /aios/runtime/bun      bun single binary (TypeScript/JavaScript)
 # Shared by all harness layers; the harness layer holds code only. Runs as root in a build sandbox.

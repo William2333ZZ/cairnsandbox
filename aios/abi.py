@@ -1,4 +1,4 @@
-"""Client for the Cairn kernel ABI served by agent-runtime on /run/aios/abi.sock (NDJSON over a unix socket).
+"""Client for the CairnSandbox kernel ABI served by agent-runtime on /run/aios/abi.sock (NDJSON over a unix socket).
 Optional: when the socket is missing (old base, local runs) every call is a no-op, so the harness runs anywhere."""
 import json, os, socket, threading
 

@@ -1,4 +1,4 @@
-"""Cairn stage-0 seed: loop, tool-call parsing, submit convention, limits (no network: fake model)."""
+"""CairnSandbox stage-0 seed: loop, tool-call parsing, submit convention, limits (no network: fake model)."""
 import json, os, sys, threading, time, urllib.request
 from http.server import ThreadingHTTPServer
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))

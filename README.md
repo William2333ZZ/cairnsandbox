@@ -10,7 +10,7 @@
 
 </div>
 
-**CairnSandbox (Cairn for short) is a sandbox cloud, with an agent that runs on it.** A cairn is a small stack of stones that marks a trail so you can find your way back; here every checkpoint is a stone. Two layers, and you can take either one:
+**CairnSandbox is a sandbox cloud, with an agent that runs on it.** A cairn is a small stack of stones that marks a trail so you can find your way back; here every checkpoint is a stone. Two layers, and you can take either one:
 
 | | |
 | :-- | :-- |
@@ -71,7 +71,7 @@ await sb.kill();
 </div>
 
 Underneath are Firecracker microVMs under the jailer; on top are a control plane, Python and JS SDKs, a CLI, an MCP server and a web console. The **agent layer is optional**: a hosted personal coding agent
-that the sandbox knows by its budget, tickets and events. It reaches the sandbox cloud only through the HTTP API or the SDK, and the sandbox cloud runs without it (`tests/unit/test_layers.py` enforces the boundary). If you only want a sandbox cloud, run the control plane and nodes and point your E2B or Cairn SDK at it; the agent layer is not needed.
+that the sandbox knows by its budget, tickets and events. It reaches the sandbox cloud only through the HTTP API or the SDK, and the sandbox cloud runs without it (`tests/unit/test_layers.py` enforces the boundary). If you only want a sandbox cloud, run the control plane and nodes and point your E2B or CairnSandbox SDK at it; the agent layer is not needed.
 
 <div align="center">
 <img src="docs/assets/shot-sandbox.png" alt="A sandbox" width="92%"><br><sub>One sandbox's checkpoints: roll back in place, or fork a new sandbox from any of them</sub>

@@ -45,7 +45,7 @@
 
 ## 4. 和我们在做的东西的关系
 
-它和我们**不是同一层**。Super-agent 是宿主侧的"接单与派工"层;我们在做的是 agent 跑在里面的那台"机器"(microVM 里的五层 Cairn)以及评这台机器的评测器。两边可以直接拼接:
+它和我们**不是同一层**。Super-agent 是宿主侧的"接单与派工"层;我们在做的是 agent 跑在里面的那台"机器"(microVM 里的五层 CairnSandbox)以及评这台机器的评测器。两边可以直接拼接:
 
 | Super-agent | 我们(architecture v0.2) | 说明 |
 |---|---|---|
@@ -56,7 +56,7 @@
 | Watchdog | 评测器 + ABI 事件流 | 我们的事件日志(model_call、budget、exit)就是 Watchdog 的输入;我们还没写判定无效循环的那个监督者 |
 | 投机执行 | Harness² 的 fork Probe | 同一思想:先做,结果有价值才呈现。我们在 sandbox 里 fork 快照来探,比它便宜且可回滚 |
 | Report 六态 | 评测器的 score / infra_fail | 我们缺一个 agent 自报状态的词表 |
-| 提示词的不可变版本 + 默认更新对比 | Cairn 版本 = runtime hash + langs 层 + harness 层 | 它只版本化提示词,我们版本化整个 harness 层;思路一致,我们更彻底 |
+| 提示词的不可变版本 + 默认更新对比 | CairnSandbox 版本 = runtime hash + langs 层 + harness 层 | 它只版本化提示词,我们版本化整个 harness 层;思路一致,我们更彻底 |
 | observe → auto 模式 | 候选版本 → 提升(promotion) | 都是"先只记录,看对了再放开" |
 | 内部实例在迭代 DSH 自身 | D8:任务来自我们自己的工程 | 完全相同的立场 |
 

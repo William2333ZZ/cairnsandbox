@@ -1,16 +1,16 @@
-# 云端沙箱管理系统 + 自改进 Cairn:架构 v0.2
+# 云端沙箱管理系统 + 自改进 CairnSandbox:架构 v0.2
 
 版本:v0.2(2026-10-30,取代 v0.1;v0.1 存档在 `archive/architecture-v0.1-2026-10-29.md`)
-范围:平台(沙箱管理、控制面、节点)、沙箱内的分层系统、Cairn 及其两个改进循环、评测器、客户端。功能细节见 `feature-design.md`,数据与存储见 `data-and-storage.md`,算法依据见 `rsi-algorithms-survey.md`,与 DSec 的对照见 `dsec-vs-ours.md`,原型实测见 `prototype-firecracker.md`。
+范围:平台(沙箱管理、控制面、节点)、沙箱内的分层系统、CairnSandbox 及其两个改进循环、评测器、客户端。功能细节见 `feature-design.md`,数据与存储见 `data-and-storage.md`,算法依据见 `rsi-algorithms-survey.md`,与 DSec 的对照见 `dsec-vs-ours.md`,原型实测见 `prototype-firecracker.md`。
 
 ---
 
 ## 0. 一页摘要
 
-- 产品:一个用户有多个沙箱;每个沙箱是一台 Firecracker microVM,里面跑一个分层的最小 Linux 系统,系统的上层就是 Cairn(agent 的 harness);Cairn 在沙箱外的评测器裁判下自我改进;Web 工作台和桌面端是入口,桌面端可以在本地跑同一套沙箱。
+- 产品:一个用户有多个沙箱;每个沙箱是一台 Firecracker microVM,里面跑一个分层的最小 Linux 系统,系统的上层就是 CairnSandbox(agent 的 harness);CairnSandbox 在沙箱外的评测器裁判下自我改进;Web 工作台和桌面端是入口,桌面端可以在本地跑同一套沙箱。
 - v0.1 到 v0.2 的变化,来自一天的文献梳理和原型:
-  1. **沙箱内的系统分五层**(第 3 节):内核层、系统层、agent-runtime(Rust 二进制:sandboxd + Cairn 内核 ABI + Landlock)、agent-langs(Python 与 TS 解释器同在)+ agent-harness(只有代码,默认 Python,RSI 改的层)、env;每层是配方加内容寻址产物;Cairn 版本 = runtime、langs、harness 三个哈希;稳定的 harness 组件逐步晋升为 runtime 里的 Rust 代码。
-  2. **Cairn 的可变层有了确定的形状**(第 4 节):借 Harness² 的 8 个文件组件;运行时(执行循环、REPL、子 agent)和可变状态分开,运行时可以是我们的种子(mini-swe-agent 裁剪版)或 Prime Agent,由评测数据决定。
+  1. **沙箱内的系统分五层**(第 3 节):内核层、系统层、agent-runtime(Rust 二进制:sandboxd + CairnSandbox 内核 ABI + Landlock)、agent-langs(Python 与 TS 解释器同在)+ agent-harness(只有代码,默认 Python,RSI 改的层)、env;每层是配方加内容寻址产物;CairnSandbox 版本 = runtime、langs、harness 三个哈希;稳定的 harness 组件逐步晋升为 runtime 里的 Rust 代码。
+  2. **CairnSandbox 的可变层有了确定的形状**(第 4 节):借 Harness² 的 8 个文件组件;运行时(执行循环、REPL、子 agent)和可变状态分开,运行时可以是我们的种子(mini-swe-agent 裁剪版)或 Prime Agent,由评测数据决定。
   3. **改进有两个循环**(第 5 节):任务内循环在工作台里,没有真值,靠对照执行(Harness² 的 Propose/Probe/Compose),用 fork 做探测;版本循环在评测器里,有真值,靠噪声带和配对统计决定晋升。前者产出候选,后者裁决。
   4. **评测器的任务来自用户自己的工作**(第 6 节):从用户项目里挖带验收的任务,公开基准只做回归;第一个用户项目就是这个平台本身。
   5. **语言按层定**(第 12 节):冻结的、安全关键的用 Rust;被循环改的用 Python;"Python 用来演化,Rust 用来冻结"。
@@ -19,7 +19,7 @@
 核心原则(修订):
 
 1. **三区分离靠权限,不靠约定**:不可变内核与基础设施(agent 不可写)、可变 harness(agent 可写)、评测器(agent 不可见);边界由用户、只读挂载、Landlock、宿主机侧网络与成本上限强制。
-2. **每一层都是配方加产物**:内核、底座、平台、Cairn 内核、Cairn 可变层、工具链、任务环境,全部内容寻址、可回滚;没有"在机器上手动装"的状态。
+2. **每一层都是配方加产物**:内核、底座、平台、CairnSandbox 内核、CairnSandbox 可变层、工具链、任务环境,全部内容寻址、可回滚;没有"在机器上手动装"的状态。
 3. **评测必须回答产品问题**:只测"这个用户的事做得更好了吗";通过率在天花板或地板上的任务不进入比较;提升小于噪声带不算提升。
 4. **不信 agent 自报**:成本、网络、审计、分数都在沙箱外记。
 5. **能不自研就不自研**:不写 VMM、不写 OS 内核、不写分布式存储、不写 agent 运行时(先用现成种子)。
@@ -50,8 +50,8 @@
 │   分层镜像缓存(分块仓库按需加载、页缓存共享)│ 模板快照与预留池       │
 │   ┌──────────────────────────────────────────────────────┐    │
 │   │ 沙箱 = Firecracker microVM,分层系统(第 3 节)            │    │
-│   │  L0 内核+init+libc │ L1 平台 daemon+用户边界 │ L2 Cairn 内核 │    │
-│   │  L3 运行时 │ L4 Cairn 可变层(8 组件)│ L5 工具链 │ L6 任务环境  │    │
+│   │  L0 内核+init+libc │ L1 平台 daemon+用户边界 │ L2 CairnSandbox 内核 │    │
+│   │  L3 运行时 │ L4 CairnSandbox 可变层(8 组件)│ L5 工具链 │ L6 任务环境  │    │
 │   └──────────────────────────────────────────────────────┘    │
 └───────────────────────────────────────────────────────────────┘
 ┌───────────────────────────────────────────────────────────────┐
@@ -93,13 +93,13 @@
 
 ## 3. 沙箱内的分层系统:五层
 
-按"谁拥有、谁版本化"分层;每层是配方加内容寻址产物加父哈希。叠放顺序:内核 → 系统 → agent-runtime → agent-langs → agent-harness → env → 可写层。**Cairn 版本 = agent-runtime 哈希 + agent-langs 层哈希 + agent-harness 层哈希**(前两者很少变,日常只有 harness 层在变)。
+按"谁拥有、谁版本化"分层;每层是配方加内容寻址产物加父哈希。叠放顺序:内核 → 系统 → agent-runtime → agent-langs → agent-harness → env → 可写层。**CairnSandbox 版本 = agent-runtime 哈希 + agent-langs 层哈希 + agent-harness 层哈希**(前两者很少变,日常只有 harness 层在变)。
 
 | 层 | 内容 | 属主 / 可变性 | 位置 |
 |---|---|---|---|
 | **内核层** | 裁剪的 Linux 6.18(官方 microvm 配置做减法,补 EROFS;Landlock ABI ≥ 6;关 io_uring、user namespace、模块) | 平台,冻结 | vmlinux |
 | **系统层** | Debian essential 底座:libc、coreutils、bash、util-linux、iproute2、curl;三个用户 root / aios / agent;无解释器、无 systemd | 平台,冻结 | `/`、`/usr` |
-| **agent-runtime** | 一个 Rust 静态二进制 `sbx-runtime`:sandboxd(vsock 协议)+ Cairn 内核 ABI(unix socket、SCM_CREDENTIALS 认 uid、能力表、本地预算计数、只追加事件日志、检查点钩子、给 harness 进程下放 Landlock/seccomp)+ 从 harness 晋升进来的稳定组件 | 平台与晋升组件,人工评审(R3),冻结 | `/usr/local/lib/sandboxd`,以 `aios` 用户运行 |
+| **agent-runtime** | 一个 Rust 静态二进制 `sbx-runtime`:sandboxd(vsock 协议)+ CairnSandbox 内核 ABI(unix socket、SCM_CREDENTIALS 认 uid、能力表、本地预算计数、只追加事件日志、检查点钩子、给 harness 进程下放 Landlock/seccomp)+ 从 harness 晋升进来的稳定组件 | 平台与晋升组件,人工评审(R3),冻结 | `/usr/local/lib/sandboxd`,以 `aios` 用户运行 |
 | **agent-langs** | harness 可用的解释器,同时装 Python(可重定位 CPython 3.13 + jinja2)和 TypeScript(bun 单文件),在 `/aios/runtime/{python,bun}`,不碰 `/usr`;所有 harness 版本共享 | 平台构建,换解释器版本是 R3 | `/aios/runtime`、`/aios/bin/{python3,bun}` |
 | **agent-harness** | harness 代码与 8 个组件(第 4 节),只有代码;**默认 harness 是 Python**(`/aios/bin/aios`),TypeScript harness 走 `/aios/bin/aios-ts`,两者可并存 | **RSI 改的就是这层**:R1 文本、R2 代码 | `/aios/harness/`,以 `agent` 用户运行,只能经 ABI socket 产生副作用 |
 | **env** | 任务或项目需要的工具链与依赖(gcc、git、make、pytest、node、系统 python……) | 任务集导入时在构建沙箱里构建,随任务集版本固定 | `/usr`、`/opt` |
@@ -109,8 +109,8 @@
 
 1. harness 里的某个组件在档案库里连续若干版本不再变化、评测稳定,成为冻结候选。
 2. 人把它重写成 Rust,放进 agent-runtime,经 ABI 暴露为一个能力;harness 改为调用该能力。
-3. 新 runtime 层 + 去掉该组件的 harness 层作为新 Cairn 版本走评测,不退步才晋升。
-4. 长期 agent-runtime 变厚、agent-harness 变薄,最终 Cairn 接近"一个 Rust 二进制 + 一组文本组件"。
+3. 新 runtime 层 + 去掉该组件的 harness 层作为新 CairnSandbox 版本走评测,不退步才晋升。
+4. 长期 agent-runtime 变厚、agent-harness 变薄,最终 CairnSandbox 接近"一个 Rust 二进制 + 一组文本组件"。
 
 硬规则:晋升进 runtime 的东西从此只能人改;ABI 版本化,harness 层声明所需 ABI 版本,不兼容的 runtime 层不能叠。
 
@@ -125,7 +125,7 @@
 
 ---
 
-## 4. Cairn:运行时与可变层
+## 4. CairnSandbox:运行时与可变层
 
 ### 4.1 可变层的 8 个组件(借 Harness²)
 
@@ -144,9 +144,9 @@
 
 **语言无关约束**:文本型组件与运行时语言无关;脚本经 bash 调用,任何语言都行;只有中间件插件绑定运行时的语言。这样 L3 从一个运行时换到另一个(Python 种子、TS 的 pi、Prime Agent),可变层大部分不动。
 
-### 4.2 运行时:Rust 基础运行时在平台域,harness 的语言由 Cairn 版本自己定
+### 4.2 运行时:Rust 基础运行时在平台域,harness 的语言由 CairnSandbox 版本自己定
 
-边界就是 D4 要求的权限边界;harness 用 Python 还是 TS 不再是平台决定,而是每个 Cairn 版本的 runtime 层决定(第 3 节):
+边界就是 D4 要求的权限边界;harness 用 Python 还是 TS 不再是平台决定,而是每个 CairnSandbox 版本的 runtime 层决定(第 3 节):
 
 | | agent-runtime(`sbx-runtime`,Rust) | agent-harness(Python 或 TS,自带解释器) |
 |---|---|---|
@@ -157,7 +157,7 @@
 
 一句话:Rust 提供"能做什么"(带超时、配额、审计的执行原语),harness 决定"怎么做"(策略)。Landlock 作用域把"harness 进程只能和内核 socket 说话"强制住;元 agent 改 TS 时碰不到任何执行原语。这是 Prime Agent 验证过的形状(Rust 守护进程 + 脚本语言层),边界画在我们的位置上。
 
-第一个 Cairn 版本就是现在的 Python 种子:runtime 层 = 可重定位的 Python(python-build-standalone,约 30 MB),harness 层 = `aios/`。TS 种子(以 pi 的 agent-core 为参照)是另一个版本:runtime 层 = bun 单文件(约 90 MB)。两者在同一任务集上配对比,评测器不用变。
+第一个 CairnSandbox 版本就是现在的 Python 种子:runtime 层 = 可重定位的 Python(python-build-standalone,约 30 MB),harness 层 = `aios/`。TS 种子(以 pi 的 agent-core 为参照)是另一个版本:runtime 层 = bun 单文件(约 90 MB)。两者在同一任务集上配对比,评测器不用变。
 
 已落地:sandboxd 用 Rust 重写并替换 Python 版,底座去 python3(冷启动 1.0 → 0.4 s)。下一步:同一二进制加 ABI 层;拆出 `aios-runtime` 与 `aios` 两层;TS 种子。
 
@@ -211,7 +211,7 @@
 | 工作台任务流(接单层的工单,见 `intake-layer.md`) | 无(用户接受、拒绝、修改量) | 任务内循环与改进库;合并且带测试的 PR 产出评测任务候选 |
 | 公开基准(Polyglot、Terminal-Bench 子集) | 有 | 只做回归与外部坐标 |
 
-第一个用户项目是这个平台本身:Cairn 改进的是"把这个平台开发得更好"的能力。自建玩具任务已证明无信息(全满分),停用。
+第一个用户项目是这个平台本身:CairnSandbox 改进的是"把这个平台开发得更好"的能力。自建玩具任务已证明无信息(全满分),停用。
 
 ### 6.3 噪声的位置
 
@@ -224,7 +224,7 @@
 | 实体 | 关键字段 |
 |---|---|
 | Layer | id(内容哈希)、名称、配方、父层、大小、构建沙箱审计 |
-| Version(Cairn 版本) | id、parent_id、层哈希列表、L4 组件哈希、运行时标识、agent 命令、状态(候选/稳定/淘汰)、Beta 后验、来源(改进库 / 元 agent / 人工) |
+| Version(CairnSandbox 版本) | id、parent_id、层哈希列表、L4 组件哈希、运行时标识、agent 命令、状态(候选/稳定/淘汰)、Beta 后验、来源(改进库 / 元 agent / 人工) |
 | TaskSet / Task | 版本号;任务:id、领域、来源标签、分组、时限、允许写路径、烟测标记、历史通过率、区分力状态;验收脚本与隐藏测试在评测器存储 |
 | Batch | 类型(基线 / 比较 / 检查)、任务集版本、版本、k、级联、进度、统计、接受决定与理由 |
 | Run | 任务 × 版本 × 第 k 次;分数、基础设施失败、重试次数、token 与费用、时长、作弊信号、轨迹、沙箱与节点 |
@@ -273,7 +273,7 @@
 | 隔离 | Firecracker,guest 内核 6.18 裁剪 | 已验证;Landlock 作用域需要 ≥ 6.12 |
 | guest 底座 | Debian essential(glibc),去 systemd/文档/locale | Python wheel 需要 glibc;上层要 apt |
 | agent-runtime | 一个 Rust 静态二进制 | 冻结、小、内存安全;系统层不需要任何解释器 |
-| agent-harness | 每个版本自带解释器:Python(现在的种子)或 TS/bun(pi 式种子) | 语言是 Cairn 版本的属性,不是平台的;稳定组件晋升为 Rust |
+| agent-harness | 每个版本自带解释器:Python(现在的种子)或 TS/bun(pi 式种子) | 语言是 CairnSandbox 版本的属性,不是平台的;稳定组件晋升为 Rust |
 | 控制面、节点代理、评测器、代理 | Python 原型,单进程 | 已验证;到多实例与规模前不换语言 |
 | 工作台 | 原生 JS,无构建 | 服务器无外网,无依赖 |
 | 存储 | 分块仓库;后续 S3、元数据库、记忆索引 | `data-and-storage.md` |
@@ -295,7 +295,7 @@
 |---|---|---|
 | 隔离后端 | 首发 Docker,microVM 后置 | Firecracker,已达 DSec 大部分能力 |
 | 沙箱内系统 | 一个镜像 + 三区 | 七层配方,语言按层,内核裁剪 |
-| Cairn 可变层 | 五个模糊的"服务" | 8 个文件组件(Harness²) |
+| CairnSandbox 可变层 | 五个模糊的"服务" | 8 个文件组件(Harness²) |
 | 运行时 | "参考 DGM/SICA 种子" | 种子已落地;Prime Agent 为候选,评测定 |
 | 改进循环 | 一个循环 | 任务内(无真值,fork 探测)+ 版本间(评测器) |
 | 父代选择 | 得分 + 新颖度 | 子树成功率的 Thompson 采样,保守终选 |

@@ -1,6 +1,6 @@
 # Quickstart
 
-> This gets the **sandbox cloud** running, which is useful on its own: the Cairn SDKs, the CLI and the official E2B SDKs all connect to it. The optional agent layer is not needed for anything on this page.
+> This gets the **sandbox cloud** running, which is useful on its own: the CairnSandbox SDKs, the CLI and the official E2B SDKs all connect to it. The optional agent layer is not needed for anything on this page.
 
 ## What you need
 
