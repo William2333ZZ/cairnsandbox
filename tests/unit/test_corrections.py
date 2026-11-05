@@ -13,8 +13,19 @@ def settle(e):
     assert wait(e, lambda: e.store.all("assignments") and all(a["state"] == "ended" for a in e.store.all("assignments")) and not e.running)
 
 
+def quiet(e, for_s=0.3, at_most=5.0):
+    """`settle` sees the assignments end, but the job thread writes the ticket (attention, outcome, ...) a moment later: wait until the tickets stop changing."""
+    import json as _j
+    last, since, end = None, time.time(), time.time() + at_most
+    while time.time() < end:
+        cur = _j.dumps(e.store.all("tickets"), sort_keys=True, default=str)
+        if cur != last: last, since = cur, time.time()
+        elif time.time() - since >= for_s: return
+        time.sleep(0.05)
+
+
 def finished(e, text="fix the build"):
-    e.converse_in({"text": text}); e.pass_once(); settle(e)
+    e.converse_in({"text": text}); e.pass_once(); settle(e); quiet(e)
     return e.store.all("tickets")[-1]
 
 
