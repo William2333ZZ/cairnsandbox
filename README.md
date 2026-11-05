@@ -4,29 +4,29 @@
 
 <br>
 
-[![ci](https://github.com/William2333ZZ/cairn/actions/workflows/ci.yml/badge.svg)](https://github.com/William2333ZZ/cairn/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-Apache--2.0-14B8A6)](LICENSE) [![status](https://img.shields.io/badge/status-early_(0.x)-F59E0B)](#状态) [![platform](https://img.shields.io/badge/runs_on-Linux_x86__64_+_KVM-64748B)](docs/en/quickstart.md) [![stack](https://img.shields.io/badge/built_with-Go_·_Python_·_Rust_·_Firecracker-64748B)](docs/en/architecture.md)
+[![ci](https://github.com/William2333ZZ/cairn/actions/workflows/ci.yml/badge.svg)](https://github.com/William2333ZZ/cairn/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-Apache--2.0-14B8A6)](LICENSE) [![status](https://img.shields.io/badge/status-early_(0.x)-F59E0B)](#status) [![platform](https://img.shields.io/badge/runs_on-Linux_x86__64_+_KVM-64748B)](docs/en/quickstart.md) [![stack](https://img.shields.io/badge/built_with-Go_·_Python_·_Rust_·_Firecracker-64748B)](docs/en/architecture.md)
 
-**[中文](README.md) · [English](README.en.md) · [快速开始](docs/en/quickstart.md) · [功能清单](docs/guide/features.md) · [路线图](ROADMAP.md) · [设计决定](docs/decisions-index.md)**
+**[English](README.md) · [中文](README.zh.md) · [Quickstart](docs/en/quickstart.md) · [Features](docs/guide/features.md) · [Roadmap](ROADMAP.md) · [Design decisions](docs/decisions-index.md)**
 
 </div>
 
-agent 写代码、跑命令、装依赖,总会出错,也总有一天会做不该做的事。Cairn 把它放进一台**随时可以倒回去**的虚拟机里:每台沙箱是独立的 microVM,有自己的内核,不和宿主或别的沙箱共用。
+Agents write code, run commands and install packages. They get things wrong, and one day they will do something they should not. Cairn puts them in a microVM you can **rewind**: each sandbox is its own microVM with its own kernel, shared with neither the host nor other sandboxes.
 
 | | |
 | :-- | :-- |
-| ⏪ **倒得回去** | 运行中打检查点(我们的实测里只暂停约 0.1 秒),原地回滚(id 与网络不变),或从任一检查点 fork 出 n 份各试各的。 |
-| 🔒 **出不去,除非你批** | 沙箱默认没有直连网络,出站请求经代理、只放行白名单。成员想放宽要所有者批准;密钥在代理处注入,不进沙箱。 |
-| 🧾 **查得到** | 控制面做过的每件事(包括每次 `exec` 和文件读写)记进哈希链,可以核对没被改过。 |
-| 👥 **知道在为谁干活** | 账户、项目、成员、配额、预付额度与用量账单,都在沙箱这一层。 |
+| ⏪ **Rewind** | Checkpoint a running sandbox (a pause of about 0.1 s in our runs), roll it back in place (same id, same address), or fork n copies from any checkpoint to try different things. |
+| 🔒 **No way out unless approved** | A sandbox has no direct network by default. Outbound requests go through a proxy that allows only listed hosts; a member who wants to loosen the list needs an owner's approval; credentials are injected at the proxy and never enter the sandbox. |
+| 🧾 **On record** | Everything the control plane does, including each `exec` and file operation, goes into a hash chain you can verify. |
+| 👥 **Knows who it works for** | Accounts, projects, members, quotas, prepaid credit and usage billing live in the sandbox layer. |
 
 <div align="center">
-<img src="docs/assets/timeline.svg" alt="打检查点、回滚、fork" width="92%">
+<img src="docs/assets/timeline.svg" alt="Checkpoint, rollback and fork" width="92%">
 </div>
 
-## 快速开始
+## Quick start
 
 ```bash
-scripts/bootstrap.sh && cd deploy && docker compose up -d        # 第一次要编译内核,见下面的说明
+scripts/bootstrap.sh && cd deploy && docker compose up -d        # the first run compiles a kernel; see the note below
 pip install -e sdk/python
 export CAIRN_URL=http://127.0.0.1:18700 CAIRN_TOKEN=$(cat deploy/secrets/cp.token)
 python3 sdk/python/examples/quickstart.py
@@ -35,61 +35,57 @@ python3 sdk/python/examples/quickstart.py
 ```python
 from cairnbox import Client
 
-c = Client("http://127.0.0.1:18700", token="…", project="acme")
+c = Client("http://127.0.0.1:18700", token="...", project="acme")
 with c.sandboxes.create(mem=512, network={"allow_hosts": ["pypi.org"]}) as sb:
     print(sb.commands.run("python3 -V").check().stdout)
     sb.checkpoints.create("clean")
     sb.commands.run("rm -rf /home/agent/*")
-    sb.checkpoints.rollback("clean")                  # 文件回来了
-    clone = sb.fork(checkpoint="clean")[0]            # 从同一点分出一份独立的
+    sb.checkpoints.rollback("clean")                  # the files are back
+    clone = sb.fork(checkpoint="clean")[0]            # an independent copy from the same point
+```
+
+```ts
+import { Client } from "cairnbox";
+
+const c = new Client({ url: "http://127.0.0.1:18700", token: "..." });
+const sb = await c.sandboxes.create({ mem: 512 });
+console.log((await sb.commands.run("uname -a")).stdout);
+await sb.kill();
 ```
 
 > [!NOTE]
-> 需要 Linux x86_64、`/dev/kvm`、Docker 24+(compose v2)、约 15 GB 磁盘。第一次装要编译 guest 内核,30–60 分钟。
-> JS / TS:`sdk/js`(`cairnbox`,零依赖)。给 agent 当工具:`claude mcp add cairn -- python3 -m cairnbox.mcp`。
-> 另有一个 E2B 形状的 REST 口(18710 端口):`Sandbox.create` / list / pause / resume / kill 等常用调用能用,**不是完整兼容**,差异见 [docs/guide/sdk.md](docs/guide/sdk.md)。
+> Needs Linux x86_64 with `/dev/kvm`, Docker 24+ with compose v2 and about 15 GB of disk. The first install compiles a guest kernel (30-60 minutes).
+> For agents: `claude mcp add cairn -- python3 -m cairnbox.mcp`. An E2B-shaped REST surface listens on port 18710: `Sandbox.create` / list / pause / resume / kill and similar common calls work, but it is **not full compatibility** (differences in [docs/guide/sdk.md](docs/guide/sdk.md), in Chinese).
 
-## 它是怎么搭的
+## How it fits together
 
 <div align="center">
-<img src="docs/assets/architecture.svg" alt="架构" width="92%">
+<img src="docs/assets/architecture.svg" alt="Architecture" width="92%">
 </div>
 
-底下是 Firecracker microVM(由 jailer 启动),上面是控制面、Python 与 JS SDK、CLI、MCP 和控制台。**agent 层是可选的**:一个托管的个人编码 agent,
-沙箱认识它的预算、工单和事件;它只通过 HTTP 或 SDK 要沙箱,不用它,沙箱云照样跑(`tests/unit/test_layers.py` 强制这条边界)。
+Underneath are Firecracker microVMs under the jailer; on top are a control plane, Python and JS SDKs, a CLI, an MCP server and a web console. The **agent layer is optional**: a hosted personal coding agent
+that the sandbox knows by its budget, tickets and events. It reaches the sandbox cloud only through the HTTP API or the SDK, and the sandbox cloud runs without it (`tests/unit/test_layers.py` enforces the boundary).
 
 <div align="center">
-<img src="docs/assets/shot-sandbox.png" alt="沙箱详情" width="92%"><br><sub>一台沙箱:规格、网络与限额、检查点打 / 回滚 / fork</sub>
+<img src="docs/assets/shot-sandbox.png" alt="A sandbox" width="92%"><br><sub>One sandbox's checkpoints: roll back in place, or fork a new sandbox from any of them</sub>
 <br><br>
-<img src="docs/assets/shot-audit.png" alt="审计" width="92%"><br><sub>审计:控制面做过的每件事,哈希链可核对</sub>
+<img src="docs/assets/shot-audit.png" alt="Audit" width="92%"><br><sub>Audit: everything the control plane did, verifiable as a hash chain</sub>
 </div>
 
-<details>
-<summary><b>agent 层是什么</b></summary>
-
-一个托管的、会变强的个人编码 agent:接进你已经在用的地方(代码托管、聊天工具),在对话里交代一件事,然后走开。它只在**做完了、卡住了、要你做决定**时找你;
-不可逆的事(合并、向外发消息、超预算、定例行)只给你一份草稿,你同意才发生。你纠正它一次,它记成规则,以后每件事开始时带着,有检查的规则在交付前先被检查一遍。
-一个人的一天见 [docs/001](docs/001-journey.md);工作台见 [docs/008](docs/008-workbench.md)。这一层同样是 Apache-2.0,但比沙箱云更早期。
-
-</details>
-
-## 状态
+## Status
 
 > [!WARNING]
-> 单台机器上实测。**没有外部渗透测试**,没有对外基线,多节点未做压力。`scripts/bootstrap.sh` 本身没有从干净机器整条跑过(分步验证见 [docs/en/quickstart.md](docs/en/quickstart.md) 末尾),项目之外还没人照着装过。
-> 别把它当作隔离不可信公共租户的唯一屏障。
+> Measured on one host. **No external penetration test**, no published baseline against other sandboxes, multi-node not load-tested. `scripts/bootstrap.sh` has not been run end to end from a clean machine
+> (the steps were verified separately; see the end of [docs/en/quickstart.md](docs/en/quickstart.md)), and nobody outside the project has followed the instructions yet. Do not treat it as the only barrier between untrusted public tenants and anything valuable.
 
-没做的事都写在 [ROADMAP.md](ROADMAP.md)。安全问题请走 [SECURITY.md](SECURITY.md),不要开公开 issue。
+What is missing: [ROADMAP.md](ROADMAP.md). Security problems: [SECURITY.md](SECURITY.md), not a public issue.
 
-## 读下去
+## Read on
 
 | | |
 | :-- | :-- |
-| 用的人 | [docs/guide/](docs/guide/README.md):租户手册、API 参考、SDK 与 MCP 参考、教程 · [功能清单](docs/guide/features.md) |
-| 读代码的人 | [docs/README.md](docs/README.md)(000 原则 … 013 威胁模型)· [docs/011](docs/011-architecture.md) 各部件索引 · [docs/decisions-index.md](docs/decisions-index.md) 每个决定与理由 |
-| 英文读者 | [docs/en/](docs/en/README.md):快速开始、架构、安全模型 |
-| 参与 | [CONTRIBUTING.md](CONTRIBUTING.md)(提交要 `git commit -s`)· [行为准则](CODE_OF_CONDUCT.md) |
+| Using it | [docs/en/](docs/en/README.md): quickstart, architecture, security model · [user guide](docs/guide/README.md) (Chinese) · [features](docs/guide/features.md) |
+| Reading the code | [docs/README.md](docs/README.md) · [docs/011](docs/011-architecture.md) index of parts · [design decisions](docs/decisions-index.md) (Chinese) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) (sign off your commits) · [Code of Conduct](CODE_OF_CONDUCT.md) |
 
-目录:`cp/` 控制面(Go)· `node/` 节点代理(Python)· `guest/` guest 内的 runtime(Rust)· `sdk/` SDK、CLI、MCP · `console/` 控制台 · `deploy/` compose 与运维 · `recipes/` 内核、基础镜像、层的配方 · `aios/` `intake/` `eval/` `web/` agent 层。
-
-<div align="center"><sub>Apache-2.0 · <a href="LICENSE">LICENSE</a> · 第三方内容见 <a href="NOTICE">NOTICE</a></sub></div>
+<div align="center"><sub>Apache-2.0 · <a href="LICENSE">LICENSE</a> · third-party material in <a href="NOTICE">NOTICE</a></sub></div>

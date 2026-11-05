@@ -95,7 +95,7 @@ Apache 2.0,基于自研 RustVMM + KVM,兼容 E2B SDK;组件有 API、调度、�
 | P1 分层 | 完成:`tests/unit/test_layers.py`;扫描发现 agent 层没有 import 沙箱层内部。控制面向可选的 agent 服务做 HTTP 转发,这是允许的唯一交叉。 |
 | P2 外人安装演练 | **部分**:在干净副本上于一台 Linux 机器分步跑通——两个镜像(控制面镜像构建里含 `go vet` 与测试)、Python 单测全过、Rust runtime 与 Debian 基础镜像从源码构建、compose 起栈(Valkey、Postgres、分块仓库、节点、控制面)、SDK 快速上手 13/13。过程中发现并修了一个真缺陷:新机器没有可写层模板 `upper-template.ext4`,第一个沙箱会 500;`bootstrap.sh` 现在会创建它。**没从零跑**:`bootstrap.sh` 整条、Firecracker 下载、内核编译(共享机器上不压测)、控制台构建。**不是外人**:是同一个人在用改过的副本,不能代替真正的外人演练。 |
 | P3 公开 CI | 写好 `.github/workflows/ci.yml`(Go、Python 单测、JS SDK、shell 语法);**没有在 GitHub 上跑过**,第一次推送后才知道。KVM 端到端套件不在其中。 |
-| P4 文档 | 完成:`docs/en/` 三页(快速开始、架构、安全模型)、`README.en.md` 更新、中文 README 重写部署一节。其余中文文档未翻译。 |
+| P4 文档 | 完成:`docs/en/` 三页(快速开始、架构、安全模型)、英文 `README.md`(中文版挪到 `README.zh.md`)、中文 README 重写部署一节。其余中文文档未翻译。 |
 | P5 发布产物 | **没做**:预编译内核与基础镜像要放 Releases,需要账号。`bootstrap.sh` 是现在的替代(要编译内核)。 |
 | P6 治理 | 完成:`CONTRIBUTING.md`(DCO)、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`ROADMAP.md`、issue/PR 模板。联系方式留空,见 §12。 |
 | P7 小范围试用 | **没做**:需要真人。 |

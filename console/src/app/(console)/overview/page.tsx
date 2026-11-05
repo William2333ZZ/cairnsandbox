@@ -27,7 +27,7 @@ export default function Overview() {
   const err = sbs.error || health.error
 
   if (sbs.data && mine.length === 0) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://<控制面>'
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://<control-plane>'
     return (
       <>
         {err && <ErrorLine>{(err as Error).message}</ErrorLine>}

@@ -90,9 +90,9 @@ export function translate(lang: Lang, key: string, vars?: Record<string, string 
   return s
 }
 
-const Ctx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: (k: string, v?: Record<string, string | number>) => string }>({ lang: 'zh', setLang: () => {}, t: k => k })
+const Ctx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: (k: string, v?: Record<string, string | number>) => string }>({ lang: 'en', setLang: () => {}, t: k => k })
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>('zh')
+  const [lang, setLangState] = useState<Lang>('en')
   useEffect(() => { const l = getLang(); if (l === 'en' || l === 'zh') setLangState(l) }, [])
   const setLang = (l: Lang) => { setLangState(l); setLangKey(l); document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en' }
   return <Ctx.Provider value={{ lang, setLang, t: (k, v) => translate(lang, k, v) }}>{children}</Ctx.Provider>
@@ -109,7 +109,12 @@ export function serverError(lang: Lang, msg: string) {
   const m = /^(account id|user|project id): lowercase letters, digits, _ or -, 2-32 chars$/.exec(msg)
   return m ? '名称只能用小写字母、数字、_ 或 -,2-32 位' : msg
 }
+const EN_WORD: Record<string, string> = { op: 'Operation', env: 'Environment', ttl: 'TTL', by: 'By', ip: 'IP', id: 'ID', vcpu: 'vCPU' }
 export function word(lang: Lang, x: unknown) {
-  return typeof x === 'string' && x ? (DICT[lang]['w.' + x] ?? (lang === 'zh' ? zh['w.' + x] : undefined) ?? x) : x
+  if (typeof x !== 'string' || !x) return x
+  const v = DICT[lang]['w.' + x] ?? (lang === 'zh' ? zh['w.' + x] : undefined)
+  if (v !== undefined) return v
+  if (lang === 'en') return EN_WORD[x] ?? (/^[a-z][a-z /()-]*$/.test(x) ? x[0].toUpperCase() + x.slice(1) : x)   // 源码里的英文键多是小写,英文界面首字母大写
+  return x
 }
 export const useI18n = () => useContext(Ctx)
