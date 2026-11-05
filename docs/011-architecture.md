@@ -46,7 +46,8 @@ web/ ──HTTP──▶ cp/ (fc-cp, Go) ──bearer──▶ nodeagent.py ─�
 | 配方 | `recipes/kernel-6.18/`、`base-debian-13/`、`sbx-runtime/`、`agent-langs/`、`agent-harness/`、`dev-tools/` | 每层的构建脚本或 `recipe.sh`;模板 JSON 在 `recipes/templates/` |
 | 层构建 | `node/build-layer.sh`、`node/build-dev-layer.sh`、`node/build-rootfs.sh`、`node/smoke-boot.sh` | 在构建沙箱里跑配方并 pack;旧的整盘构建;单机启动烟测 |
 | 工作台 | `web/src/kernel`(插件注册表)、`web/src/layout`(三栏外壳)、`web/src/plugins/*`(功能插件;`cloud/` 是沙箱侧对象的页面:账户 / 项目 / 配额 / 成员、账单与价目表、卷、模板与构建;`nodes/` 带 cordon / drain / balance / evacuate)、`web/src/store`、`web/src/api`、`web/src/ui`;`web/DESIGN.md`、`web/scripts/design-check.mjs`、`web/vite.config.ts`、`web/tailwind.config.js`、`web/postcss.config.js`;`web/legacy/`(旧原生 JS 页面,含 `legacy/index.html`、`legacy/app.js`、`legacy/style.css`、`legacy/mock-server.py`) | React + TS + Vite,Mac 上构建到 `web/dist/`,控制面提供 |
-| 启动 | `run-node.sh`、`node/Dockerfile`、`scripts/bootstrap.sh` | 服务启动与镜像 |
+| 启动 | `run-node.sh`、`node/Dockerfile`、`scripts/lib/verify.sh`、`scripts/release-artifacts.sh`(发布产物打包,配合 `bootstrap.sh --artifacts`)、`tests/unit/test_verify_sh.py` |
+| `scripts/bootstrap.sh` | 服务启动与镜像 |
 | CI | `.github/workflows/ci.yml` | Go、Python 单测与 JS SDK 构建(不需要 KVM);端到端套件见 [010](010-deployment.md) |
 | Agent 服务(旧名接单层) | `intake/intake.py` | Policy(Gate 代码 + 版本哈希)、Store(SQLite)、Engine(receive / evaluate_due / accept / assignments / report / outbox / follow_prs)、Gitea(Source 轮询与中继)、HTTP;`node/test-intake.py` 端到端 |
 
