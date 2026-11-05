@@ -1,6 +1,6 @@
 """Corrections (docs/001 第 6 阶段, D17): a person setting the agent right becomes a rule in memory, the next job starts with it,
 and a merged pull request of a corrected job becomes a dependent task that carries the rules."""
-import os, sys
+import os, sys, time
 sys.path.insert(0, os.path.dirname(__file__)); sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "eval"))
 from test_intake_engine import engine, wait, FakeEval, I  # noqa: E402
@@ -391,7 +391,11 @@ def test_a_handoff_nobody_answers_is_refused_after_ten_minutes_and_a_pending_one
     t = finished(main, "work"); mandate = dict(t["mandate"]); mandate["handoff_out"] = {"to": "fix", "trigger": "wb-x", "at": I.now() - 700}
     main.store.update("tickets", t["id"], {"mandate": mandate, "state": "open"})
     assert main._approval(main.store.get("tickets", t["id"]), "send", {"text": "x"}, "x") is None                      # while it is being handed over it is not the giver's to draft from
-    main.handoff_check(); got = main.store.get("tickets", t["id"]); assert "handoff_out" not in got["mandate"] and "no answer in ten minutes" in got["attention"]["question"] or "没有接下" in got["attention"]["question"]
+    for _ in range(60):                                   # a job thread that was still finishing can write the ticket back after the update above: put the scene back and look again
+        main.store.update("tickets", t["id"], {"mandate": mandate, "state": "open"}); main.handoff_check(); got = main.store.get("tickets", t["id"])
+        if (got.get("attention") or {}).get("question"): break
+        time.sleep(0.05)
+    assert "handoff_out" not in got["mandate"] and "no answer in ten minutes" in got["attention"]["question"] or "没有接下" in got["attention"]["question"]
 
 
 def test_a_check_that_takes_too_long_is_stopped_switched_off_and_never_freezes_the_service():
