@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"fcnode/cp/internal/e2b"
 	"fcnode/cp/internal/exec"
 	"fcnode/cp/internal/fleet"
 	"fcnode/cp/internal/images"
@@ -1650,6 +1651,7 @@ func (s *Server) metrics(w http.ResponseWriter) {
 		fmt.Fprintf(&b, "cairn_node_load{node=%q} %.3f\n", n.Name, fleet.Load(n))
 	}
 	fmt.Fprintf(&b, "cairn_nodes_alive %d\ncairn_nodes_total %d\n", alive, total)
+	b.WriteString(e2b.MetricsText()) // the E2B envd side (port 8710) counts in this process; its lines are part of the same scrape
 	fmt.Fprintf(&b, "cairn_accounts_suspended %d\n", len(s.Tenancy.Suspensions()))
 	for _, k := range []string{"cpu", "egress"} {
 		n := 0

@@ -236,12 +236,33 @@ def _(sb):
     assert sb.files.read("/tmp/e2b/big.bin", format="bytes") == data
 
 
+@case("files", "gzip=True upload and a file-like (streamed, octet-stream) upload round-trip")
+def _(sb):
+    import io
+    data = (b"compressible line\n" * 20000) + os.urandom(1 << 20)
+    sb.files.write("/tmp/e2b/gz.bin", data, gzip=True)
+    assert sb.files.read("/tmp/e2b/gz.bin", format="bytes") == data
+    big = os.urandom(40 << 20)
+    sb.files.write("/tmp/e2b/stream.bin", io.BytesIO(big))
+    assert sb.files.read("/tmp/e2b/stream.bin", format="bytes") == big
+
+
 # ---------------------------------------------------------------- sandbox lifecycle
 @case("sandbox", "get_info, set_timeout, is_running")
 def _(sb):
     assert sb.is_running()
     sb.set_timeout(600)
     assert sb.get_info().sandbox_id == sb.sandbox_id
+
+
+@case("sandbox", "GET /sandboxes/metrics (batch, raw REST) answers for the sandbox")
+def _(sb):
+    import urllib.request
+    time.sleep(6)                                  # the node samples every 5 s
+    req = urllib.request.Request(os.environ["E2B_API_URL"].rstrip("/") + "/sandboxes/metrics?sandbox_ids=" + sb.sandbox_id + ",sb-nope", headers={"X-API-Key": os.environ["E2B_API_KEY"]})
+    d = json.load(urllib.request.urlopen(req, timeout=30))
+    assert set(d["sandboxes"]) <= {sb.sandbox_id}, d
+    assert sb.sandbox_id in d["sandboxes"] and "cpuUsedPct" in d["sandboxes"][sb.sandbox_id], d
 
 
 @case("sandbox", "get_metrics answers")

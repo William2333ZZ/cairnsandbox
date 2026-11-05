@@ -114,6 +114,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.create(w, body, project)
 	case (path == "/sandboxes" || path == "/v2/sandboxes") && r.Method == "GET":
 		s.list(w, r, scope)
+	case path == "/sandboxes/metrics" && r.Method == "GET":
+		s.batchMetrics(w, r, scope)
 	case path == "/snapshots" && r.Method == "GET":
 		s.snapshots(w, scope)
 	case strings.HasPrefix(path, "/templates/") && r.Method == "DELETE":
@@ -426,15 +428,28 @@ func networkPolicy(body map[string]any) map[string]any {
 
 // metrics: GET /sandboxes/<id>/metrics -> E2B's array of points (bytes, percent of all cores) from our node's cgroup samples.
 func (s *Server) metrics(w http.ResponseWriter, r *http.Request, sid string) {
-	sub := "/metrics"
+	sub := ""
 	if st := r.URL.Query().Get("start"); st != "" {
-		sub += "?since=" + url.QueryEscape(st)
+		sub = "?since=" + url.QueryEscape(st)
 	}
-	st, out := s.Life.NodeCall(sid, "GET", sub, nil)
+	st, out := s.Life.NodeCall(sid, "GET", "/metrics"+sub, nil)
 	if st != 200 {
 		s.relay(w, st, out, 200)
 		return
 	}
+	send(w, 200, s.points(sid, out))
+}
+
+// metricPoints: the sandbox's samples in E2B's shape (nil when the node has none or cannot answer).
+func (s *Server) metricPoints(sid, sub string) []map[string]any {
+	st, out := s.Life.NodeCall(sid, "GET", "/metrics"+sub, nil)
+	if st != 200 {
+		return nil
+	}
+	return s.points(sid, out)
+}
+
+func (s *Server) points(sid string, out map[string]any) []map[string]any {
 	vcpu, mem, disk := 1.0, 0.0, 0.0
 	if _, info := s.Life.NodeCall(sid, "GET", "", nil); info != nil {
 		if v, ok := info["vcpu"].(float64); ok && v > 0 {
@@ -453,7 +468,7 @@ func (s *Server) metrics(w http.ResponseWriter, r *http.Request, sid string) {
 		res = append(res, map[string]any{"timestamp": time.Unix(int64(t), 0).UTC().Format(time.RFC3339), "timestampUnix": int64(t), "cpuCount": int(vcpu), "cpuUsedPct": cpu / vcpu,
 			"memUsed": int64(mu * 1048576), "memTotal": int64(mem * 1048576), "memCache": 0, "diskUsed": 0, "diskTotal": int64(disk * 1048576)})
 	}
-	send(w, 200, res)
+	return res
 }
 
 // Snapshots (E2B: a persistent snapshot of a sandbox that later sandboxes are created from, by id as the templateID) are our "commit a sandbox as a template"
@@ -520,4 +535,27 @@ func (s *Server) deleteSnapshot(w http.ResponseWriter, id tenancy.Identity, scop
 		return
 	}
 	w.WriteHeader(204)
+}
+
+// batchMetrics: GET /sandboxes/metrics?sandbox_ids=a,b -> {"sandboxes": {id: latest metric}}; ids outside the caller's projects are left out, like unknown ones.
+func (s *Server) batchMetrics(w http.ResponseWriter, r *http.Request, scope map[string]bool) {
+	out := map[string]any{}
+	ids := r.URL.Query()["sandbox_ids"]
+	if len(ids) == 1 {
+		ids = strings.Split(ids[0], ",")
+	}
+	for i, sid := range ids {
+		if i >= 100 {
+			break
+		}
+		sid = strings.TrimSpace(sid)
+		p := s.Life.ProjectOf(sid)
+		if p == "" || (scope != nil && !scope[p]) {
+			continue
+		}
+		if pts := s.metricPoints(sid, ""); len(pts) > 0 {
+			out[sid] = pts[len(pts)-1]
+		}
+	}
+	send(w, 200, map[string]any{"sandboxes": out})
 }

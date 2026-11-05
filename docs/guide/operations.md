@@ -127,6 +127,8 @@ VMM 异常退出或健康看门线程发现 guest 失联时,节点把它标 fail
 | --- | --- | --- | --- |
 | `cairn_node_up` | node | 1 = 最近一次轮询成功 | AiosNodeDown(0 持续 1 分钟,critical) |
 | `cairn_node_vms_total` / `_running` | node | 节点上的沙箱数 / 运行中 | — |
+| `cairn_envd_requests_total` | kind(start、connect、process_rpc、filesystem_rpc、files、health)、status(2xx/4xx/5xx) | E2B 数据面请求数(D88) | — |
+| `cairn_envd_active_relays` / `cairn_envd_bytes_total{dir}` / `cairn_envd_auth_denied_total` | dir | 在途中继数(Start 流在命令期间一直占一个)/ 中继字节 / 令牌被拒次数 | — |
 | `cairn_node_mem_mib_running` / `cairn_node_mem_budget_mib` | node | 已用 / 预算内存 | AiosNodeMemoryHigh(> 90% 持续 10 分钟) |
 | `cairn_node_load` | node | 空位占用与内存占用里大的那个(0–1) | AiosNodeLoadHigh(> 0.85 持续 10 分钟);AiosNoRoomAnywhere(所有节点都 > 0.85,critical) |
 | `cairn_nodes_alive` / `cairn_nodes_total` | — | 活节点数 / 登记数 | — |

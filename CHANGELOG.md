@@ -6,6 +6,7 @@
 
 ### 沙箱云
 - 修了一个竞态:删除沙箱时控制面在把 200 写给客户端**之后**才去掉路由,客户端收到 200 后立刻查路由偶尔还能查到(CI 上出现过一次 `route survived the delete`)。现在在响应头写出之前先去掉路由。
+- E2B envd 收口:所有解析客户端字节的代码加变异压力测试(sandboxd 发布版 panic 即退出);multipart 改流式;支持 `gzip=True` 上传(自写 DEFLATE 解码,带校验与上限);`/files/compose`;批量指标;控制面 `/metrics` 增加 `cairn_envd_*`。Python 一致性用例 35 条、npm 20 条通过。
 - E2B SDK 版本矩阵:`ops/e2b-matrix.sh` 对每个版本建独立环境跑同一套用例;Python 与 npm 各 6 个 2.x 版本全过,1.x 不支持。一致性套件现在先核对 SDK 的 API 地址等于 `E2B_API_URL` 才发请求(1.x 会把密钥发去 e2b.app);SDK 里没有的 API 报 SKIP 并写原因。
 - E2B `get_host(port)`:设了 `PREVIEW_DOMAIN` 时创建响应的 `domain` 填它,SDK 拿到的主机就是控制面已经在路由的预览主机(Python 一致性用例 33 条,含沙箱里起服务再经预览域名访问)。
 - E2B 兼容补验证:2 个节点下 Python 32 条、npm 20 条全过;多节点与节点挂掉后 evacuate 再用 SDK 通过;栈本身延迟与小规模并发的数字(`ops/e2b-multinode-check.py`、`ops/e2b-latency-raw.py`、`ops/e2b-latency.py`,结果在 `docs/research/e2b-conformance/`)。

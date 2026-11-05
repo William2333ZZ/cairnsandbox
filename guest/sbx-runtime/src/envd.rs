@@ -8,7 +8,7 @@
 //!     (Stat, MakeDir, Move, ListDir, Remove, CreateWatcher, GetWatcherEvents, RemoveWatcher).
 //! HTTP/1.1 only (cleartext SDK traffic is HTTP/1.1 even with the SDK's default http_version "2"); one request per connection
 //! (`Connection: close`), so the host side can relay the bytes without understanding the framing. Request bodies may be chunked.
-//! Not implemented: StreamInput (client streaming needs HTTP/2), /files gzip, /init, /metrics. WatchDir and the watcher RPCs poll (no inotify).
+//! Not implemented: StreamInput (client streaming needs HTTP/2), /init, /metrics. gzip uploads are decoded in memory with a ceiling. WatchDir and the watcher RPCs poll (no inotify).
 use crate::{base_env, drop_privs, user, DEFAULT_USER};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use serde_json::{json, Map, Value};
@@ -28,8 +28,10 @@ use std::time::Duration;
 
 pub const PORT: u32 = 49983;
 /// Written by the host at create/restore (op set_env): the sandbox's `envVars`, laid under every process envd starts.
+/// gzip uploads are decoded in memory: at most this much compressed and this much decompressed.
+const MAX_GZIP_IN: usize = 32 << 20;
+const MAX_GZIP_OUT: usize = 64 << 20;
 const ENV_FILE: &str = "/run/sandboxd/env.json";
-const MAX_MULTIPART: usize = 128 << 20;
 
 // ---------------- errors ----------------
 struct CErr { code: &'static str, msg: String }
@@ -363,31 +365,100 @@ fn write_file(path: &Path, data: &mut dyn Read, uid: u32, gid: u32) -> Result<()
 fn multipart_boundary(ct: &str) -> Option<String> {
     let i = ct.to_ascii_lowercase().find("boundary=")?; let v = ct[i + 9..].split(';').next()?.trim().trim_matches('"'); Some(v.to_string())
 }
-fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> { if n.is_empty() || h.len() < n.len() || from > h.len() - n.len() { return None; } (from..=h.len() - n.len()).find(|&i| &h[i..i + n.len()] == n) }
-/// (filename, data) for every part named "file".
-fn multipart_parts(body: &[u8], boundary: &str) -> Vec<(String, Vec<u8>)> {
-    let delim = format!("--{boundary}").into_bytes(); let mut out = Vec::new(); let mut pos = match find(body, &delim, 0) { Some(p) => p + delim.len(), None => return out };
+fn find(h: &[u8], n: &[u8]) -> Option<usize> { if n.is_empty() || h.len() < n.len() { return None; } h.windows(n.len()).position(|w| w == n) }
+
+/// A streaming `multipart/form-data` reader: memory is one buffer, not the upload. Parts are handed to a callback as readers that end at the delimiter.
+struct Mp<'a> { r: &'a mut dyn Read, buf: Vec<u8>, pos: usize, eof: bool }
+impl<'a> Mp<'a> {
+    fn new(r: &'a mut dyn Read) -> Self { Mp { r, buf: Vec::new(), pos: 0, eof: false } }
+    fn avail(&self) -> &[u8] { &self.buf[self.pos..] }
+    /// Read more; false at EOF. Keeps the buffer small by dropping what was consumed.
+    fn fill(&mut self) -> io::Result<bool> {
+        if self.eof { return Ok(false); }
+        if self.pos > 0 && self.pos >= self.buf.len() / 2 { self.buf.drain(..self.pos); self.pos = 0; }
+        let mut chunk = [0u8; 65536];
+        let n = self.r.read(&mut chunk)?;
+        if n == 0 { self.eof = true; return Ok(false); }
+        self.buf.extend_from_slice(&chunk[..n]); Ok(true)
+    }
+    /// Skip to just after the first occurrence of `needle` (false if the input ends first).
+    fn skip_past(&mut self, needle: &[u8]) -> io::Result<bool> {
+        loop {
+            if let Some(i) = find(self.avail(), needle) { self.pos += i + needle.len(); return Ok(true); }
+            let keep = needle.len().saturating_sub(1); let drop = self.avail().len().saturating_sub(keep); self.pos += drop;
+            if !self.fill()? { return Ok(false); }
+        }
+    }
+    fn need(&mut self, n: usize) -> io::Result<bool> { while self.avail().len() < n { if !self.fill()? { return Ok(false); } } Ok(true) }
+}
+struct PartReader<'a, 'b> { mp: &'b mut Mp<'a>, needle: Vec<u8>, done: bool }
+impl<'a, 'b> Read for PartReader<'a, 'b> {
+    fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
+        if self.done || out.is_empty() { return Ok(0); }
+        loop {
+            if let Some(i) = find(self.mp.avail(), &self.needle) {
+                // `\r\n--B` is the delimiter only when CRLF or `--` follows it; `\r\n--Bx` is data (like Go's mime/multipart)
+                let need = i + self.needle.len() + 2;
+                while self.mp.avail().len() < need { if !self.mp.fill()? { break; } }
+                let a = self.mp.avail(); let tail = if a.len() >= need { Some(&a[need - 2..need]) } else { None };
+                let real = tail.map(|t| t == b"\r\n" || t == b"--").unwrap_or(true);
+                if real {
+                    if i == 0 { self.mp.pos += self.needle.len(); self.done = true; return Ok(0); }
+                    let n = i.min(out.len()); out[..n].copy_from_slice(&self.mp.avail()[..n]); self.mp.pos += n; return Ok(n);
+                }
+                let n = (i + 1).min(out.len()); out[..n].copy_from_slice(&self.mp.avail()[..n]); self.mp.pos += n; return Ok(n);
+            }
+            let safe = self.mp.avail().len().saturating_sub(self.needle.len() - 1);
+            if safe > 0 { let n = safe.min(out.len()); out[..n].copy_from_slice(&self.mp.avail()[..n]); self.mp.pos += n; return Ok(n); }
+            if !self.mp.fill()? { return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "multipart part is not terminated")); }
+        }
+    }
+}
+/// Calls `f(filename, data)` for every part named "file"; returns how many there were.
+fn multipart_each(rd: &mut dyn Read, boundary: &str, f: &mut dyn FnMut(&str, &mut dyn Read) -> Result<(), CErr>) -> Result<usize, CErr> {
+    let bad = |m: &str| cerr("invalid_argument", format!("malformed multipart body: {m}"));
+    let (delim, needle) = (format!("--{boundary}").into_bytes(), format!("\r\n--{boundary}").into_bytes());
+    let mut mp = Mp::new(rd); let mut count = 0;
+    if !mp.skip_past(&delim).map_err(|e| io_err(e, "multipart"))? { return Err(bad("no boundary")); }
     loop {
-        if body[pos..].starts_with(b"--") { break; }
-        if body[pos..].starts_with(b"\r\n") { pos += 2; }
-        let Some(hend) = find(body, b"\r\n\r\n", pos) else { break };
-        let head = String::from_utf8_lossy(&body[pos..hend]).into_owned(); let start = hend + 4;
-        let Some(next) = find(body, &[b"\r\n".as_slice(), &delim].concat(), start) else { break };
+        if !mp.need(2).map_err(|e| io_err(e, "multipart"))? { return Err(bad("ends before the closing boundary")); }
+        if mp.avail().starts_with(b"--") { return Ok(count); }
+        if !mp.avail().starts_with(b"\r\n") { return Err(bad("boundary line")); }
+        mp.pos += 2;
+        // part headers: up to the blank line, at most 16 KiB
+        let mut head_end = None;
+        loop {
+            if let Some(i) = find(mp.avail(), b"\r\n\r\n") { head_end = Some(i); break; }
+            if mp.avail().len() > 16384 { break; }
+            if !mp.fill().map_err(|e| io_err(e, "multipart"))? { break; }
+        }
+        let Some(he) = head_end else { return Err(bad("part headers")) };
+        let head = String::from_utf8_lossy(&mp.avail()[..he]).into_owned(); mp.pos += he + 4;
         let (mut is_file, mut fname) = (false, String::new());
         for l in head.lines() { if l.to_ascii_lowercase().starts_with("content-disposition") {
             for part in l.split(';') { let part = part.trim(); if let Some(n) = part.strip_prefix("name=") { if n.trim_matches('"') == "file" { is_file = true; } }
-                if let Some(f) = part.strip_prefix("filename=") { fname = f.trim_matches('"').to_string(); } } } }
-        if is_file { out.push((fname, body[start..next].to_vec())); }
-        pos = next + 2 + delim.len();
+                if let Some(v) = part.strip_prefix("filename=") { fname = v.trim_matches('"').to_string(); } } } }
+        let mut pr = PartReader { mp: &mut mp, needle: needle.clone(), done: false };
+        if is_file { f(&fname, &mut pr)?; count += 1; }
+        // whatever the callback left unread (or every other part) is skipped up to its delimiter
+        let mut sink = [0u8; 8192];
+        while !pr.done { match pr.read(&mut sink) { Ok(0) => break, Ok(_) => {}, Err(e) => return Err(io_err(e, "multipart")) } }
+        if !pr.done { return Err(bad("part is not terminated")); }
     }
-    out
 }
-
 fn files_post(w: &mut UnixStream, rd: &mut BufReader<UnixStream>, req: &Request) -> io::Result<()> {
     let name = req_user(req);
     let (uid, gid, home) = match home_of(&name) { Ok(h) => h, Err(e) => return respond_err(w, &e) };
-    if req.h("content-encoding").map(|v| !v.is_empty() && v != "identity").unwrap_or(false) { return respond(w, 415, "application/json", json!({"code": "unsupported", "message": "Content-Encoding is not supported"}).to_string().as_bytes()); }
-    let ct = req.h("content-type").unwrap_or("").to_string(); let mut body = Body::new(rd, req);
+    let enc = req.h("content-encoding").unwrap_or("").to_ascii_lowercase();
+    if !enc.is_empty() && enc != "identity" && enc != "gzip" { return respond(w, 415, "application/json", json!({"code": "unsupported", "message": "only Content-Encoding: gzip is supported"}).to_string().as_bytes()); }
+    let ct = req.h("content-type").unwrap_or("").to_string(); let mut raw_body = Body::new(rd, req);
+    // gzip is decoded in memory: bounded on both sides (the guest's RAM is the sandbox's), larger files should go uncompressed and streamed
+    let mut gz_body: Option<io::Cursor<Vec<u8>>> = None;
+    if enc == "gzip" {
+        let packed = match read_all(&mut raw_body, MAX_GZIP_IN) { Ok(b) => b, Err(e) => return respond_err(w, &e) };
+        match crate::inflate::gunzip(&packed, MAX_GZIP_OUT) { Ok(b) => gz_body = Some(io::Cursor::new(b)), Err(m) => return respond_err(w, &cerr("invalid_argument", format!("bad gzip body: {m} (gzip uploads are limited to {} MiB decompressed; send larger files without gzip)", MAX_GZIP_OUT >> 20))) }
+    }
+    let mut body: &mut dyn Read = match gz_body.as_mut() { Some(c) => c, None => &mut raw_body };
     let mut written: Vec<Value> = Vec::new();
     let mut put = |path: PathBuf, data: &mut dyn Read| -> Result<(), CErr> {
         write_file(&path, data, uid, gid)?;
@@ -396,14 +467,15 @@ fn files_post(w: &mut UnixStream, rd: &mut BufReader<UnixStream>, req: &Request)
     let res: Result<(), CErr> = (|| {
         if ct.to_ascii_lowercase().starts_with("multipart/form-data") {
             let b = multipart_boundary(&ct).ok_or_else(|| cerr("invalid_argument", "multipart boundary missing"))?;
-            let raw = read_all(&mut body, MAX_MULTIPART)?; let parts = multipart_parts(&raw, &b);
-            if parts.is_empty() { return Err(cerr("invalid_argument", "no file part")); }
-            let single = parts.len() == 1;
-            for (fname, data) in parts {
-                let p = req.q("path").filter(|p| !p.is_empty() && single).map(|p| p.to_string()).unwrap_or(fname);
+            // The query's `path` names the target of a single-file upload; several files carry their paths as filenames. We cannot know the count before reading
+            // the parts, so a `path` in the query is used for the first file and filenames for any after it.
+            let mut first = true; let qpath = req.q("path").filter(|p| !p.is_empty()).map(|p| p.to_string());
+            let n = multipart_each(&mut body, &b, &mut |fname, data| {
+                let p = if first { qpath.clone().unwrap_or_else(|| fname.to_string()) } else { fname.to_string() }; first = false;
                 if p.is_empty() { return Err(cerr("invalid_argument", "path is required")); }
-                put(resolve(&p, &home), &mut &data[..])?;
-            }
+                put(resolve(&p, &home), data)
+            })?;
+            if n == 0 { return Err(cerr("invalid_argument", "no file part")); }
         } else {
             let p = req.q("path").filter(|p| !p.is_empty()).ok_or_else(|| cerr("invalid_argument", "path is required"))?;
             put(resolve(p, &home), &mut body)?;
@@ -413,6 +485,24 @@ fn files_post(w: &mut UnixStream, rd: &mut BufReader<UnixStream>, req: &Request)
     match res { Ok(()) => respond_json(w, &Value::Array(written)), Err(e) => respond_err(w, &e) }
 }
 // A single-file multipart upload names its target in the `path` query; several files carry their paths as filenames.
+
+/// POST /files/compose {source_paths, destination, username?}: concatenate the sources into the destination, then delete the sources.
+fn compose(req: &Request, body: &Value) -> Result<Value, CErr> {
+    let name = body.get("username").and_then(|u| u.as_str()).filter(|u| !u.is_empty()).map(|u| u.to_string()).unwrap_or_else(|| req_user(req));
+    let (uid, gid, home) = home_of(&name)?;
+    let srcs: Vec<PathBuf> = body.get("source_paths").and_then(|a| a.as_array()).map(|a| a.iter().filter_map(|x| x.as_str()).map(|p| resolve(p, &home)).collect()).unwrap_or_default();
+    let dst = body.get("destination").and_then(|d| d.as_str()).filter(|d| !d.is_empty()).map(|d| resolve(d, &home)).ok_or_else(|| cerr("invalid_argument", "destination is required"))?;
+    if srcs.is_empty() { return Err(cerr("invalid_argument", "source_paths is required")); }
+    if srcs.iter().any(|p| *p == dst) { return Err(cerr("invalid_argument", "the destination cannot also be a source")); }
+    for p in &srcs { if !fs::metadata(p).map(|m| m.is_file()).unwrap_or(false) { return Err(cerr("not_found", format!("{}: not a file", p.display()))); } }
+    if let Some(par) = dst.parent() { if !par.as_os_str().is_empty() { mkdir_all_owned(par, uid, gid).map_err(|e| io_err(e, &par.display().to_string()))?; } }
+    let existed = dst.exists();
+    let mut out = fs::File::create(&dst).map_err(|e| io_err(e, &dst.display().to_string()))?;
+    for p in &srcs { let mut f = fs::File::open(p).map_err(|e| io_err(e, &p.display().to_string()))?; io::copy(&mut f, &mut out).map_err(|e| io_err(e, &dst.display().to_string()))?; }
+    if !existed { let _ = fs::set_permissions(&dst, fs::Permissions::from_mode(0o644)); chown_to(&dst, uid, gid); }
+    for p in &srcs { let _ = fs::remove_file(p); }
+    Ok(json!({"name": dst.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(), "path": dst.to_string_lossy(), "type": "file"}))
+}
 
 // ---------------- processes ----------------
 #[derive(Clone)]
@@ -556,6 +646,11 @@ fn route(w: &mut UnixStream, rd: &mut BufReader<UnixStream>, req: &Request) -> i
         ("GET", "/health") => return respond(w, 204, "", b""),
         ("GET", "/files") => return files_get(w, req),
         ("POST", "/files") => return files_post(w, rd, req),
+        ("POST", "/files/compose") => {
+            let raw = match read_all(&mut Body::new(rd, req), 1 << 20) { Ok(b) => b, Err(e) => return respond_err(w, &e) };
+            let v: Value = match serde_json::from_slice(&raw) { Ok(v) => v, Err(e) => return respond_err(w, &cerr("invalid_argument", format!("bad JSON: {e}"))) };
+            return match compose(req, &v) { Ok(o) => respond_json(w, &o), Err(e) => respond_err(w, &e) };
+        }
         ("GET", "/envs") => return respond_json(w, &Value::Object(sandbox_env().into_iter().map(|(k, v)| (k, json!(v))).collect())),
         _ => {}
     }
@@ -626,10 +721,58 @@ mod tests {
         let s = String::from_utf8_lossy(&out).into_owned();
         assert!(s.starts_with("c\r\n")); assert!(s.ends_with("0\r\n\r\n")); assert!(s.contains("\u{2}") || out.windows(1).any(|w| w[0] == 2));
     }
+    fn collect(body: &[u8], b: &str) -> Result<Vec<(String, Vec<u8>)>, String> {
+        let mut out = vec![]; let mut rd = body;
+        multipart_each(&mut rd, b, &mut |f, d| { let mut v = vec![]; d.read_to_end(&mut v).map_err(|e| cerr("internal", e.to_string()))?; out.push((f.to_string(), v)); Ok(()) }).map(|_| out).map_err(|e| e.msg)
+    }
+    /// A reader that hands out at most `n` bytes per call: boundaries land across reads.
+    struct Trickle<'a>(&'a [u8], usize);
+    impl<'a> Read for Trickle<'a> { fn read(&mut self, b: &mut [u8]) -> io::Result<usize> { let n = self.1.min(b.len()).min(self.0.len()); b[..n].copy_from_slice(&self.0[..n]); self.0 = &self.0[n..]; Ok(n) } }
     #[test] fn multipart_single_and_many() {
-        let body = b"--B\r\nContent-Disposition: form-data; name=\"file\"; filename=\"/tmp/a.txt\"\r\nContent-Type: text/plain\r\n\r\nhello\r\n--B\r\nContent-Disposition: form-data; name=\"file\"; filename=\"/tmp/b.bin\"\r\n\r\n\x00\x01\r\n--B--\r\n";
-        let p = multipart_parts(body, "B"); assert_eq!(p.len(), 2); assert_eq!(p[0].0, "/tmp/a.txt"); assert_eq!(p[0].1, b"hello"); assert_eq!(p[1].1, vec![0u8, 1]);
+        let body = b"preamble\r\n--B\r\nContent-Disposition: form-data; name=\"file\"; filename=\"/tmp/a.txt\"\r\nContent-Type: text/plain\r\n\r\nhello\r\n--B\r\nContent-Disposition: form-data; name=\"other\"\r\n\r\nskipped\r\n--B\r\nContent-Disposition: form-data; name=\"file\"; filename=\"/tmp/b.bin\"\r\n\r\n\x00\x01\r\n--B--\r\n";
+        let p = collect(body, "B").unwrap(); assert_eq!(p.len(), 2); assert_eq!(p[0].0, "/tmp/a.txt"); assert_eq!(p[0].1, b"hello"); assert_eq!(p[1].1, vec![0u8, 1]);
         assert_eq!(multipart_boundary("multipart/form-data; boundary=\"B\""), Some("B".to_string()));
+    }
+    #[test] fn multipart_data_that_looks_like_a_boundary_and_boundaries_split_across_reads() {
+        let mut data = b"line\r\n--Bx not the delimiter\r\n-- also not\r\n--".to_vec(); data.extend(std::iter::repeat(b'z').take(300_000)); data.extend_from_slice(b"\r\n-");
+        let mut body = b"--B\r\nContent-Disposition: form-data; name=\"file\"; filename=\"f\"\r\n\r\n".to_vec(); body.extend_from_slice(&data); body.extend_from_slice(b"\r\n--B--\r\n");
+        for step in [1usize, 2, 7, 4096, 1 << 20] {
+            let mut out = vec![]; let mut rd = Trickle(&body, step);
+            multipart_each(&mut rd, "B", &mut |_, d| { d.read_to_end(&mut out).map(|_| ()).map_err(|e| cerr("internal", e.to_string())) }).ok().unwrap();
+            assert_eq!(out, data, "step {step}");
+        }
+    }
+    #[test] fn multipart_malformed_bodies_are_errors_not_panics() {
+        for bad in [&b""[..], b"--B", b"--B\r\n", b"--B\r\nContent-Disposition: form-data; name=\"file\"\r\n\r\nno end", b"--B\r\nno headers end", b"--B--", b"--Bxx\r\n\r\n\r\n", b"garbage"] {
+            let _ = collect(bad, "B");
+        }
+        assert!(collect(b"--B\r\nContent-Disposition: form-data; name=\"file\"; filename=\"f\"\r\n\r\nunterminated", "B").is_err());
+        assert!(collect(b"no boundary at all", "B").is_err());
+    }
+    /// Deterministic mutation fuzzing of everything that parses bytes a client controls. The release profile aborts on panic, so a panic here would take
+    /// sandboxd down: none may happen, whatever the input.
+    #[test] fn parsers_never_panic_on_garbage() {
+        let mut x: u64 = 0x9E3779B97F4A7C15;
+        let mut rnd = move || { x ^= x << 13; x ^= x >> 7; x ^= x << 17; x };
+        let seeds: Vec<Vec<u8>> = vec![
+            b"POST /files?path=%2Ftmp%2Fa HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n".to_vec(),
+            b"--B\r\nContent-Disposition: form-data; name=\"file\"; filename=\"/tmp/a\"\r\n\r\nhello\r\n--B--\r\n".to_vec(),
+            { let j = br#"{"process":{"cmd":"/bin/sh","args":["-c","true"]}}"#; let mut e = vec![0u8]; e.extend_from_slice(&(j.len() as u32).to_be_bytes()); e.extend_from_slice(j); e },
+            b"GET /%zz%2/..//?a=%&b HTTP/1.1\r\n: x\r\nbad header\r\n\r\n".to_vec(),
+        ];
+        for iter in 0..20000u32 {
+            let mut b = if iter % 4 == 0 { (0..(rnd() % 200) as usize).map(|_| rnd() as u8).collect() } else { seeds[(rnd() as usize) % seeds.len()].clone() };
+            for _ in 0..(rnd() % 6) { if b.is_empty() { break; } let i = (rnd() as usize) % b.len(); match rnd() % 4 { 0 => b[i] = rnd() as u8, 1 => { b.remove(i); }, 2 => b.insert(i, rnd() as u8), _ => b.truncate(i) } }
+            let s = String::from_utf8_lossy(&b).into_owned();
+            let _ = pct_decode(&s); let _ = multipart_boundary(&s); let _ = resolve(&s, "/home/agent"); let _ = rfc3339((rnd() as i64) >> 8, rnd() as u32 % 1_000_000_000);
+            let _ = read_head(&mut Cursor::new(b.clone()));
+            for hdr in [vec![], vec![("content-length", "7")], vec![("content-length", "99999999999999999999")], vec![("transfer-encoding", "chunked")]] {
+                let r = req(&hdr); let mut c = Cursor::new(b.clone()); let _ = Body::new(&mut c, &r).read_to_end(&mut Vec::new());
+            }
+            let _ = first_frame(&mut Cursor::new(b.clone()));
+            let mut rd: &[u8] = &b; let _ = multipart_each(&mut rd, "B", &mut |_, d| { io::copy(d, &mut io::sink()).map(|_| ()).map_err(|e| cerr("internal", e.to_string())) });
+            let _ = serde_json::from_slice::<Value>(&b).map(|v| { let _ = select(&v); let _ = process_rpc("SendInput", &v); let _ = process_rpc("Update", &v); let _ = process_rpc("SendSignal", &v); });
+        }
     }
     #[test] fn timestamps_and_permissions() {
         assert_eq!(rfc3339(0, 0), "1970-01-01T00:00:00.000000000Z"); assert_eq!(rfc3339(1_793_849_000, 5), "2026-11-05T03:23:20.000000005Z");
@@ -662,6 +805,16 @@ mod tests {
         now.insert(PathBuf::from("/w/same"), (1, 1, 1)); now.insert(PathBuf::from("/w/edit"), (2, 2, 2)); now.insert(PathBuf::from("/w/new"), (1, 1, 1));
         let mut ev: Vec<String> = diff_events(&root, &old, &now).iter().map(|e| format!("{}:{}", e["name"].as_str().unwrap(), e["type"].as_str().unwrap())).collect(); ev.sort();
         assert_eq!(ev, vec!["edit:EVENT_TYPE_WRITE", "gone:EVENT_TYPE_REMOVE", "new:EVENT_TYPE_CREATE"]);
+    }
+    #[test] fn compose_concatenates_and_removes_the_sources() {
+        let d = std::env::temp_dir().join(format!("envd-compose-{}", std::process::id())); let _ = fs::remove_dir_all(&d); fs::create_dir_all(&d).unwrap();
+        fs::write(d.join("a"), b"one-").unwrap(); fs::write(d.join("b"), b"two").unwrap();
+        let r = req(&[("authorization", "Basic cm9vdDo=")]);
+        let out = compose(&r, &json!({"source_paths": [d.join("a").to_string_lossy(), d.join("b").to_string_lossy()], "destination": d.join("sub/c").to_string_lossy()})).ok().unwrap();
+        assert_eq!(out["name"], "c"); assert_eq!(fs::read(d.join("sub/c")).unwrap(), b"one-two"); assert!(!d.join("a").exists() && !d.join("b").exists());
+        assert_eq!(compose(&r, &json!({"source_paths": [d.join("nope").to_string_lossy()], "destination": d.join("x").to_string_lossy()})).err().unwrap().code, "not_found");
+        assert_eq!(compose(&r, &json!({"source_paths": [], "destination": "/x"})).err().unwrap().code, "invalid_argument");
+        let _ = fs::remove_dir_all(&d);
     }
     #[test] fn process_start_stream_and_signal() {
         // Start /bin/sh as root (the test runs as root in the container; otherwise skip), collect events through the real subscription path.

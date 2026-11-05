@@ -13,10 +13,109 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
+
+// Counters for the envd side, rendered by MetricsText (the main port's /metrics appends them). Process-wide and per replica, like the rest of /metrics.
+var envdStats struct {
+	mu       sync.Mutex
+	requests map[string]*atomic.Int64 // "<kind>|<status class>"
+	active   atomic.Int64             // relays in flight (a Start stream stays open for the whole command)
+	bytesIn  atomic.Int64             // request bodies relayed toward sandboxes
+	bytesOut atomic.Int64             // response bodies relayed back
+	denied   atomic.Int64             // requests refused for a missing or wrong token
+}
+
+func envdKind(path string) string {
+	switch {
+	case path == "/health":
+		return "health"
+	case path == "/files":
+		return "files"
+	case path == "/process.Process/Start":
+		return "start"
+	case path == "/process.Process/Connect":
+		return "connect"
+	case strings.HasPrefix(path, "/process.Process/"):
+		return "process_rpc"
+	case strings.HasPrefix(path, "/filesystem.Filesystem/"):
+		return "filesystem_rpc"
+	}
+	return "other"
+}
+
+func envdCount(kind string, status int) {
+	key := kind + "|" + string(rune('0'+status/100)) + "xx"
+	envdStats.mu.Lock()
+	if envdStats.requests == nil {
+		envdStats.requests = map[string]*atomic.Int64{}
+	}
+	c := envdStats.requests[key]
+	if c == nil {
+		c = &atomic.Int64{}
+		envdStats.requests[key] = c
+	}
+	envdStats.mu.Unlock()
+	c.Add(1)
+}
+
+// MetricsText: Prometheus lines for the envd side of the E2B surface.
+func MetricsText() string {
+	var b strings.Builder
+	envdStats.mu.Lock()
+	keys := make([]string, 0, len(envdStats.requests))
+	for k := range envdStats.requests {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		kind, class, _ := strings.Cut(k, "|")
+		fmt.Fprintf(&b, "cairn_envd_requests_total{kind=%q,status=%q} %d\n", kind, class, envdStats.requests[k].Load())
+	}
+	envdStats.mu.Unlock()
+	fmt.Fprintf(&b, "cairn_envd_active_relays %d\ncairn_envd_bytes_total{dir=\"to_sandbox\"} %d\ncairn_envd_bytes_total{dir=\"from_sandbox\"} %d\ncairn_envd_auth_denied_total %d\n",
+		envdStats.active.Load(), envdStats.bytesIn.Load(), envdStats.bytesOut.Load(), envdStats.denied.Load())
+	return b.String()
+}
+
+// statusWriter remembers the status and counts the bytes written back.
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+	n      int64
+}
+
+func (w *statusWriter) WriteHeader(c int) { w.status = c; w.ResponseWriter.WriteHeader(c) }
+func (w *statusWriter) Write(p []byte) (int, error) {
+	if w.status == 0 {
+		w.status = 200
+	}
+	n, err := w.ResponseWriter.Write(p)
+	w.n += int64(n)
+	return n, err
+}
+func (w *statusWriter) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+type countingBody struct {
+	io.Reader
+	n *int64
+}
+
+func (c countingBody) Read(p []byte) (int, error) {
+	n, err := c.Reader.Read(p)
+	*c.n += int64(n)
+	return n, err
+}
 
 // EnvdVersion is what we tell the SDKs. They gate behaviour on it (e2b/envd/versions.py): 0.5.7 is the newest version whose features we implement
 // (octet-stream upload, stdin, default user; not file metadata or watch entry info).
@@ -58,14 +157,28 @@ func connectErr(w http.ResponseWriter, status int, code, msg string) {
 }
 
 // serveEnvd handles one SDK -> sandbox request.
-func (s *Server) serveEnvd(w http.ResponseWriter, r *http.Request) {
+func (s *Server) serveEnvd(w0 http.ResponseWriter, r *http.Request) {
 	sid := r.Header.Get("E2b-Sandbox-Id")
 	path := r.URL.Path
+	sw := &statusWriter{ResponseWriter: w0}
+	var w http.ResponseWriter = sw
+	envdStats.active.Add(1)
+	var upBytes int64
+	defer func() {
+		envdStats.active.Add(-1)
+		envdStats.bytesIn.Add(upBytes)
+		envdStats.bytesOut.Add(sw.n)
+		if sw.status == 0 {
+			sw.status = 200
+		}
+		envdCount(envdKind(path), sw.status)
+	}()
 	if !isEnvdPath(path) {
 		connectErr(w, 404, "not_found", "no route")
 		return
 	}
 	if !s.envdAuthorized(r, sid) {
+		envdStats.denied.Add(1)
 		connectErr(w, 401, "unauthenticated", "invalid or missing X-Access-Token for this sandbox")
 		return
 	}
@@ -154,6 +267,9 @@ func (s *Server) serveEnvd(w http.ResponseWriter, r *http.Request) {
 		uri += "?" + r.URL.RawQuery
 	}
 	cl := r.ContentLength
+	if body != nil {
+		body = countingBody{Reader: body, n: &upBytes}
+	}
 	resp, err := s.NC.DoStream(node, r.Method, uri, body, cl, hdr)
 	if err != nil {
 		connectErr(w, 503, "unavailable", "node unreachable: "+err.Error())

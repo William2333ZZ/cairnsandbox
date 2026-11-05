@@ -2,6 +2,7 @@
 //! request : {"id","op",...}  response: {"id","ok",...}  streamed: {"id","event":"out"|"err","data"} during exec/session_exec.
 mod abi;
 mod envd;
+mod inflate;
 mod landlock;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use serde_json::{json, Map, Value};

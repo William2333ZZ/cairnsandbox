@@ -115,7 +115,7 @@ print(sbx.commands.run("echo hi").stdout)
 
 ## 兼容矩阵(官方 SDK 实测)
 
-**测的是什么**:官方 `e2b` Python SDK(33 条)与 npm `e2b`(20 条)对着同一个控制面。**版本矩阵**(2026-11-05,`ops/e2b-matrix.sh`,每个版本一个独立环境,[结果](../../research/e2b-conformance/matrix-2026-11-05.json)):Python 2.52.1、2.55.1、2.57.0、2.60.0、2.62.1、2.63.0 与 npm 2.52.1、2.55.0、2.57.0、2.60.0、2.62.2、2.63.0 **全部通过**;**1.x 不支持**(Python 1.11.1、npm 1.13.2 不认自定义 API 地址,只能连 e2b.app,套件拒绝向它们发请求)。其余说明针对,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
+**测的是什么**:官方 `e2b` Python SDK(35 条)与 npm `e2b`(20 条)对着同一个控制面。**版本矩阵**(2026-11-05,`ops/e2b-matrix.sh`,每个版本一个独立环境,[结果](../../research/e2b-conformance/matrix-2026-11-05.json)):Python 2.52.1、2.55.1、2.57.0、2.60.0、2.62.1、2.63.0 与 npm 2.52.1、2.55.0、2.57.0、2.60.0、2.62.2、2.63.0 **全部通过**;**1.x 不支持**(Python 1.11.1、npm 1.13.2 不认自定义 API 地址,只能连 e2b.app,套件拒绝向它们发请求)。其余说明针对,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
 
 图例:**可用** = 一致性用例通过;**已实现未测** = 代码有、没有用例;**部分** = 有但语义不同;**没有** = 不提供。
 
@@ -131,9 +131,10 @@ print(sbx.commands.run("echo hi").stdout)
 | `fork`(`POST /sandboxes/<id>/fork`,`count`) | 可用 | 克隆整台运行中的虚机(内存与磁盘),克隆成为同 Project 的路由。这是我们的强项 |
 | 快照:`create_snapshot`、`list_snapshots`、`delete_snapshot`,用快照 id 当模板创建 | 可用 | 对应"提交成模板"(D37)。快照名是 `snap-<项目标记>-<随机>`,不接受自选名字(`names` 里就是这个 id) |
 | `update_network` | 可用 | **只有 owner 与 admin**:成员放宽策略要审批,这个口没有审批队列,成员得用原生 `PUT /sandboxes/<id>/network`(403 里说明)。E2B 的"整体替换"语义用 `rules: []` 清掉旧规则实现;E2B 的 `rules`(按主机改请求头)不支持 |
+| `GET /sandboxes/metrics?sandbox_ids=a,b`(批量) | 可用 | 返回各沙箱最新一个点;不是你的或不存在的 id 被略去 |
 | `get_metrics` | 可用 | 内存、CPU 来自节点的 cgroup 采样;`diskUsed` 恒 0 |
 | 读模板(`GET /templates`) | 部分 | 只读各节点的模板快照;`public` 恒 false |
-| 模板构建(`Template.build()`、`/v3/templates`、tags)、团队与密钥管理、沙箱日志(`/logs`)、`/sandboxes/metrics`(批量) | 没有 | 构建用原生 `POST /builds`([images.md](images.md));成员与令牌见 [tenancy.md](tenancy.md);日志见原生 `/events` |
+| 模板构建(`Template.build()`、`/v3/templates`、tags)、团队与密钥管理、沙箱日志(`/logs`) | 没有 | 构建用原生 `POST /builds`([images.md](images.md));成员与令牌见 [tenancy.md](tenancy.md);日志见原生 `/events` |
 
 ### 数据面(envd)
 
@@ -144,10 +145,11 @@ print(sbx.commands.run("echo hi").stdout)
 | `send_stdin`、`close_stdin`(`stdin=True`) | 可用 | |
 | 命令超时(`timeout=`)只断连接,进程与沙箱继续跑 | 可用 | 与 E2B 一致:客户端超时不杀进程 |
 | `pty.create`、`send_stdin`、`resize`、`kill`、读输出 | 可用 | |
-| `files.read` / `write`(文本、字节、20 MiB)、`write_files`、缺失文件抛 NotFound | 可用 | 上传支持 multipart 与 octet-stream;**不支持** `gzip=True`(415);multipart 整体缓冲在沙箱内存里,上限 128 MiB,大文件请用 SDK 默认的流式 octet-stream |
+| `files.read` / `write`(文本、字节、20 MiB)、`write_files`、缺失文件抛 NotFound | 可用 | 上传支持 multipart(流式写入,不整体缓冲)、octet-stream(流式)与 `gzip=True`。gzip 在沙箱里内存解压,压缩后至多 32 MiB、解压后至多 64 MiB,更大的文件请不带 gzip 上传(400 并给出提示);用例含 40 MiB 的流式上传与一次 gzip 往返 |
+| `/files/compose`(把几个文件拼成一个) | 已实现未测 | 单元测试覆盖,没有 SDK 用例(SDK 里没有对应方法) |
 | `files.list`(`depth`)、`exists`、`get_info`、`make_dir`、`rename`、`remove` | 可用 | |
 | `files.watch_dir` | 可用 | 靠每 250 ms 轮询目录快照,没有 inotify:重命名显示为"删除 + 创建",大目录树上有开销 |
-| `commands` 的 `StreamInput`(客户端流)、`/files/compose`、`/init`、`/metrics`、`/freeze` 等 envd 内部接口 | 没有 | `StreamInput` 要 HTTP/2 全双工,SDK 的 `send_stdin` 用的是一元的 `SendInput`,不受影响 |
+| `commands` 的 `StreamInput`(客户端流)、`/init`、`/metrics`、`/freeze` 等 envd 内部接口 | 没有 | `StreamInput` 要 HTTP/2 全双工,SDK 的 `send_stdin` 用的是一元的 `SendInput`,不受影响 |
 | `get_host(port)`:沙箱里起的服务的地址 | 部分 | 控制面设了 `PREVIEW_DOMAIN`(D55)时,创建响应的 `domain` 就是它,`get_host(8000)` 得到 `8000-<id>.<域名>`,控制面把这个主机改写成 `/sandboxes/<id>/ports/8000/…`,一致性用例用沙箱里起的小服务验证了(带 Bearer 头访问)。**和 E2B 的区别**:E2B 默认公开,我们要令牌(浏览器里首次带 `?token=`,见 [manual.md](../manual.md));需要你自己做泛域名 DNS 与 TLS;没设 `PREVIEW_DOMAIN` 时 `domain` 为空,`get_host` 退回 SDK 的默认域名,不可用。原生的 `ANY /sandboxes/<id>/ports/<port>/<path>`(含 WebSocket 升级)不受影响 |
 
 ### 多节点与延迟(2026-11-05,同一台机器上的 2 个节点容器)

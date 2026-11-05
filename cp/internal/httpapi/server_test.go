@@ -2734,6 +2734,15 @@ func TestTheE2BEnvdSideRelaysAuditsAndIsolates(t *testing.T) {
 	if r := do(sid, tok, "GET", "/health", nil); r.StatusCode != 204 {
 		t.Fatalf("health: %d", r.StatusCode)
 	}
+	m := e2b.MetricsText() // the envd side is counted, and the main port's /metrics carries these lines
+	for _, want := range []string{`cairn_envd_requests_total{kind="start",status="2xx"}`, `cairn_envd_requests_total{kind="health",status="2xx"}`, `cairn_envd_requests_total{kind="start",status="4xx"}`, "cairn_envd_active_relays 0", "cairn_envd_auth_denied_total"} {
+		if !strings.Contains(m, want) {
+			t.Fatalf("metrics lack %s:\n%s", want, m)
+		}
+	}
+	if strings.Contains(m, "cairn_envd_bytes_total{dir=\"to_sandbox\"} 0\n") {
+		t.Fatalf("no request bytes were counted:\n%s", m)
+	}
 }
 
 // e2bTok recomputes an envd token the way the server does, for a sandbox the server never issued one for.
