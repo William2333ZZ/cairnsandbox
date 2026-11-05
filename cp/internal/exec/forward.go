@@ -97,6 +97,9 @@ func (e *Exec) Forward(w http.ResponseWriter, r *http.Request, sid, sub string, 
 		return
 	}
 	defer resp.Body.Close()
+	if r.Method == "DELETE" && resp.StatusCode == 200 && sub == "" {
+		e.life.Forget(sid, node) // before the client can see the 200: a caller that checks right after must find the route gone
+	}
 	for _, k := range []string{"Content-Type", "Content-Length"} {
 		if v := resp.Header.Get(k); v != "" {
 			w.Header().Set(k, v)
@@ -122,9 +125,6 @@ func (e *Exec) Forward(w http.ResponseWriter, r *http.Request, sid, sub string, 
 			}
 			break
 		}
-	}
-	if r.Method == "DELETE" && resp.StatusCode == 200 && sub == "" {
-		e.life.Forget(sid, node)
 	}
 }
 
