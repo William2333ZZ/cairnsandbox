@@ -2,7 +2,7 @@
  "e2b_version": "2.63.0",
  "api_url": "http://<control plane>:<e2b port>",
  "summary": {
-  "PASS": 33,
+  "PASS": 36,
   "FAIL": 0,
   "SKIP": 0
  },
@@ -12,7 +12,7 @@
    "case": "run: stdout, exit code 0",
    "status": "PASS",
    "why": "",
-   "seconds": 0.22
+   "seconds": 0.15
   },
   {
    "group": "commands",
@@ -40,7 +40,7 @@
    "case": "run: envs and cwd",
    "status": "PASS",
    "why": "",
-   "seconds": 0.07
+   "seconds": 0.06
   },
   {
    "group": "commands",
@@ -54,28 +54,28 @@
    "case": "run: default user is unprivileged",
    "status": "PASS",
    "why": "",
-   "seconds": 0.06
+   "seconds": 0.07
   },
   {
    "group": "commands",
    "case": "run: command not found is exit 127, not a transport error",
    "status": "PASS",
    "why": "",
-   "seconds": 0.06
+   "seconds": 0.15
   },
   {
    "group": "commands",
    "case": "background: handle, list, kill",
    "status": "PASS",
    "why": "",
-   "seconds": 0.76
+   "seconds": 0.68
   },
   {
    "group": "commands",
    "case": "stdin: send_stdin to a stdin-enabled process",
    "status": "PASS",
    "why": "",
-   "seconds": 0.64
+   "seconds": 0.66
   },
   {
    "group": "commands",
@@ -89,14 +89,14 @@
    "case": "connect: re-attach to a running background command",
    "status": "PASS",
    "why": "",
-   "seconds": 2.07
+   "seconds": 2.09
   },
   {
    "group": "pty",
    "case": "create, send input, read output, resize, kill",
    "status": "PASS",
    "why": "",
-   "seconds": 0.9
+   "seconds": 1.02
   },
   {
    "group": "files",
@@ -110,135 +110,156 @@
    "case": "write_files (several at once)",
    "status": "PASS",
    "why": "",
-   "seconds": 0.1
+   "seconds": 0.26
   },
   {
    "group": "files",
    "case": "a file written by the SDK is visible to commands and vice versa",
    "status": "PASS",
    "why": "",
-   "seconds": 0.27
+   "seconds": 0.19
   },
   {
    "group": "files",
    "case": "read of a missing file raises NotFoundException",
    "status": "PASS",
    "why": "",
-   "seconds": 0.03
+   "seconds": 0.04
   },
   {
    "group": "files",
    "case": "list, exists, get_info",
    "status": "PASS",
    "why": "",
-   "seconds": 0.18
+   "seconds": 0.24
   },
   {
    "group": "files",
    "case": "make_dir (True first, False when it exists), rename, remove",
    "status": "PASS",
    "why": "",
-   "seconds": 0.35
+   "seconds": 0.3
   },
   {
    "group": "files",
    "case": "watch_dir sees a created file",
    "status": "PASS",
    "why": "",
-   "seconds": 0.68
+   "seconds": 0.75
   },
   {
    "group": "files",
    "case": "a 20 MiB upload and download round-trips intact",
    "status": "PASS",
    "why": "",
-   "seconds": 5.71
+   "seconds": 6.48
+  },
+  {
+   "group": "files",
+   "case": "gzip=True upload and a file-like (streamed, octet-stream) upload round-trip",
+   "status": "PASS",
+   "why": "",
+   "seconds": 12.66
   },
   {
    "group": "sandbox",
    "case": "get_info, set_timeout, is_running",
    "status": "PASS",
    "why": "",
-   "seconds": 0.15
+   "seconds": 0.24
+  },
+  {
+   "group": "sandbox",
+   "case": "GET /sandboxes/metrics (batch, raw REST) answers for the sandbox",
+   "status": "PASS",
+   "why": "",
+   "seconds": 6.2
   },
   {
    "group": "sandbox",
    "case": "get_metrics answers",
    "status": "PASS",
    "why": "",
-   "seconds": 0.18
+   "seconds": 0.09
   },
   {
    "group": "sandbox",
    "case": "pause then connect resumes with files intact",
    "status": "PASS",
    "why": "",
-   "seconds": 2.73
+   "seconds": 3.26
   },
   {
    "group": "sandbox",
    "case": "a command sent to a paused sandbox resumes it transparently",
    "status": "PASS",
    "why": "",
-   "seconds": 3.08
+   "seconds": 3.09
   },
   {
    "group": "sandbox",
    "case": "envs passed at create are visible to commands",
    "status": "PASS",
    "why": "",
-   "seconds": 1.0
+   "seconds": 1.02
+  },
+  {
+   "group": "template",
+   "case": "Template().from_base_image()... .build(), then a sandbox from it has the steps' effects and the running start command",
+   "status": "PASS",
+   "why": "",
+   "seconds": 4.42
   },
   {
    "group": "sandbox",
    "case": "kill, then the sandbox is gone",
    "status": "PASS",
    "why": "",
-   "seconds": 1.43
+   "seconds": 1.46
   },
   {
    "group": "sandbox",
    "case": "snapshot: create, start a new sandbox from it, list, delete",
    "status": "PASS",
    "why": "",
-   "seconds": 1.19
+   "seconds": 1.33
   },
   {
    "group": "sandbox",
    "case": "fork (E2B control-plane call)",
    "status": "PASS",
    "why": "",
-   "seconds": 1.05
+   "seconds": 1.26
   },
   {
    "group": "sandbox",
    "case": "list: metadata and state filters",
    "status": "PASS",
    "why": "",
-   "seconds": 1.11
+   "seconds": 1.13
   },
   {
    "group": "sandbox",
    "case": "update_network: allow_out becomes an allowlist, deny_out closes it",
    "status": "PASS",
    "why": "",
-   "seconds": 0.27
+   "seconds": 0.34
   },
   {
    "group": "sandbox",
    "case": "get_host(port) is a preview host that reaches a server started in the sandbox",
    "status": "PASS",
    "why": "",
-   "seconds": 1.36
+   "seconds": 1.27
   },
   {
    "group": "cairn",
    "case": "a background process survives checkpoint + rollback and can be re-attached",
    "status": "PASS",
    "why": "",
-   "seconds": 7.97
+   "seconds": 8.13
   }
  ],
  "date": "2026-11-05",
- "setup": "Cairn drill checkout on one Linux host (Firecracker, jailer on, kernel 6.18.59, base image with the envd-capable sandboxd), TWO node containers behind one control plane, PREVIEW_DOMAIN=preview.test; SDK on a Mac through an SSH tunnel"
+ "setup": "Cairn drill stack, 2 nodes, final code of the day; SDK on a Mac through an SSH tunnel"
 }

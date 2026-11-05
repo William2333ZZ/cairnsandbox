@@ -289,6 +289,12 @@ func (l *Lifecycle) Create(body map[string]any, project string) Result {
 			preempted = 2
 		}
 		if (n == nil || !n.Alive()) && noTemplate != nil {
+			for _, x := range l.fleet.All() { // a node that holds the template but has no room: that is a capacity problem, not a missing template
+				if x.Alive() && fleet.Warmth(x, key) > 0 {
+					l.audit.Write(map[string]any{"op": "create", "status": 429, "reason": "the nodes that hold the template are full", "template": key})
+					return Result{429, map[string]any{"error": "no node with capacity: the nodes that hold template " + key + " are full", "template": key}}
+				}
+			}
 			return *noTemplate
 		}
 		if n == nil || !n.Alive() {

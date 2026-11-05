@@ -1,6 +1,6 @@
 {
  "date": "2026-11-05",
- "setup": "Cairn drill stack on one Linux host, 2 node containers, PREVIEW_DOMAIN=preview.test; each SDK version in its own throwaway environment; ops/e2b-matrix.sh",
+ "setup": "Cairn drill stack on one Linux host, 2 node containers (4096 MiB budget each), PREVIEW_DOMAIN=preview.test; each SDK version in its own throwaway environment; ops/e2b-matrix.sh; final code of the day",
  "results": [
   {
    "sdk": "npm 2.52.1",
@@ -59,7 +59,7 @@
   {
    "sdk": "py 2.52.1",
    "summary": {
-    "PASS": 33,
+    "PASS": 36,
     "FAIL": 0,
     "SKIP": 0
    },
@@ -68,7 +68,7 @@
   {
    "sdk": "py 2.55.1",
    "summary": {
-    "PASS": 33,
+    "PASS": 36,
     "FAIL": 0,
     "SKIP": 0
    },
@@ -77,7 +77,7 @@
   {
    "sdk": "py 2.57.0",
    "summary": {
-    "PASS": 33,
+    "PASS": 36,
     "FAIL": 0,
     "SKIP": 0
    },
@@ -86,7 +86,7 @@
   {
    "sdk": "py 2.60.0",
    "summary": {
-    "PASS": 33,
+    "PASS": 36,
     "FAIL": 0,
     "SKIP": 0
    },
@@ -95,7 +95,7 @@
   {
    "sdk": "py 2.62.1",
    "summary": {
-    "PASS": 33,
+    "PASS": 36,
     "FAIL": 0,
     "SKIP": 0
    },
@@ -104,7 +104,7 @@
   {
    "sdk": "py 2.63.0",
    "summary": {
-    "PASS": 33,
+    "PASS": 36,
     "FAIL": 0,
     "SKIP": 0
    },

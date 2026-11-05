@@ -2980,6 +2980,14 @@ func TestCreateFromATemplateRetriesOnTheNodeThatHasIt(t *testing.T) {
 			t.Fatalf("create %d: %d %v", i, st, info)
 		}
 	}
+	// the node that holds the template is full: that is a capacity problem, and must not be reported as a missing template
+	b.mu.Lock()
+	b.maxVMs = float64(len(b.boxes))
+	b.mu.Unlock()
+	s.pollOnce()
+	if st, e := call(t, ts.URL, "POST", "/sandboxes", map[string]any{"mem": 256, "template_key": "fresh", "boot": "snapshot"}, nil); st != 429 || !strings.Contains(fmt.Sprint(e["error"]), "are full") {
+		t.Fatalf("a full node holding the template: %d %v", st, e)
+	}
 	if st, e := call(t, ts.URL, "POST", "/sandboxes", map[string]any{"mem": 256, "template_key": "nowhere", "boot": "snapshot"}, nil); st != 400 || !strings.Contains(fmt.Sprint(e["error"]), "no template") {
 		t.Fatalf("a template no node holds should say so, not claim there is no capacity: %d %v", st, e)
 	}
