@@ -1,0 +1,32 @@
+name: e2b-conformance
+# The official E2B SDKs against a real Cairn stack (Firecracker, so KVM): manual only, on a self-hosted runner labelled `kvm` that has the images built
+# (scripts/bootstrap.sh) and Docker. Not part of `ci`, which runs on GitHub-hosted machines without KVM. No such runner exists yet, so this workflow has
+# never run: treat it as the recipe, and fix it the first time it does.
+on:
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: 'SDK versions, e.g. "py:2.63.0 py:2.60.0 npm:2.63.0 npm:2.60.0"'
+        default: 'py:2.63.0 py:2.57.0 py:2.52.1 npm:2.63.0 npm:2.57.0 npm:2.52.1'
+jobs:
+  conformance:
+    runs-on: [self-hosted, kvm]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: start a 2-node stack
+        working-directory: deploy
+        run: PREVIEW_DOMAIN=preview.test PORT_OFFSET=1000 ./multinode.sh up 2
+      - name: matrix
+        working-directory: deploy
+        run: |
+          T=$(cat secrets/cp.token)
+          export E2B_API_URL=http://127.0.0.1:19710 E2B_SANDBOX_URL=http://127.0.0.1:19710 E2B_API_KEY=$T CAIRN_URL=http://127.0.0.1:19700 CAIRN_TOKEN=$T E2B_PREVIEW_DOMAIN=preview.test
+          ../ops/e2b-matrix.sh "$RUNNER_TEMP/matrix" "${{ inputs.versions }}" "$GITHUB_WORKSPACE/matrix-results"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: e2b-matrix, path: matrix-results }
+      - name: stop the stack
+        if: always()
+        working-directory: deploy
+        run: PORT_OFFSET=1000 ./multinode.sh down -v

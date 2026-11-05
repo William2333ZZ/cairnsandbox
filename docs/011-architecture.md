@@ -103,7 +103,7 @@ web/ ──HTTP──▶ cp/ (fc-cp, Go) ──bearer──▶ nodeagent.py ─�
 | `tests/unit/test_layers.py` | 分层:agent 层只走 HTTP / SDK 到沙箱云,沙箱层不 import agent 层 |
 | `deploy/node.sh`、`deploy/docker-compose.node.yml` | 在另一台机器上起一个节点并登记到控制面(D87) |
 | `deploy/multinode.sh` | 单机多容器模拟多机:`up N` 起 N 个节点加控制面,`kill` / `partition` / `evacuate` 注入故障(D86) |
-| `guest/sbx-runtime/src/envd.rs`、`cp/internal/e2b/envd.go`、`ops/e2b-conformance.py`、`ops/e2b-conformance.mjs`、`ops/e2b-multinode-check.py`、`ops/e2b-latency.py`、`ops/e2b-latency-raw.py` | E2B envd 兼容:沙箱里的 Connect/REST 服务(vsock 49983)、控制面的按头路由与审计解析、官方 SDK 一致性用例(D88) |
+| `guest/sbx-runtime/src/envd.rs`、`cp/internal/e2b/envd.go`、`ops/e2b-conformance.py`、`ops/e2b-conformance.mjs`、`ops/e2b-multinode-check.py`、`ops/e2b-latency.py`、`ops/e2b-latency-raw.py`、`ops/e2b-matrix.sh`(SDK 版本矩阵)、`.github/workflows/e2b-conformance.yml`(自托管 KVM 机器上手动跑,从没跑过) | E2B envd 兼容:沙箱里的 Connect/REST 服务(vsock 49983)、控制面的按头路由与审计解析、官方 SDK 一致性用例(D88) |
 | `scripts/bootstrap.sh` | 新机器上的一键准备:Firecracker、镜像、内核、runtime、基础镜像、密钥、控制台、分块仓库(开源发布设计 §7 P5) |
 | `tests/unit/test_docs_index.py` | 文档:每个模块都在本文索引里;编号文档只向前引用;无断链 |
 | `tests/unit/test_commands.py` | 预算改动被应用并确认且不开单、范围外被拒、只是提到预算的请求仍是请求、清单来自自己的状态、陌生人不能改 |

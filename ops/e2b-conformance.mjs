@@ -5,7 +5,7 @@
 //   E2B_API_URL=http://127.0.0.1:18710 E2B_SANDBOX_URL=http://127.0.0.1:18710 E2B_API_KEY=<token> node ops/e2b-conformance.mjs [--json out.json]
 //
 // Same rules as the Python script: each case is PASS / FAIL / SKIP with the reason, the exit code is the number of FAILs.
-import { Sandbox, CommandExitError, NotFoundError } from 'e2b'
+import { Sandbox, CommandExitError, NotFoundError, ConnectionConfig } from 'e2b'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -123,6 +123,9 @@ kase('sandbox', 'kill, then the sandbox is gone', async () => {
 
 const args = process.argv.slice(2); const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : null
 for (const k of ['E2B_API_URL', 'E2B_API_KEY']) if (!process.env[k]) { console.error(`${k} is required`); process.exit(2) }
+// Refuse to send the API key anywhere but where the caller said: an SDK version that ignores E2B_API_URL would send it to api.e2b.app.
+let got; try { got = new ConnectionConfig({}).apiUrl } catch {}
+if (!got || got.replace(/\/$/, '') !== process.env.E2B_API_URL.replace(/\/$/, '')) { console.error(`this SDK version would talk to ${got}, not E2B_API_URL=${process.env.E2B_API_URL}: it does not support a custom API URL (or it cannot be checked); nothing was sent`); process.exit(2) }
 const sb = await Sandbox.create(TEMPLATE, { timeoutMs: 900000 })
 const results = []
 try {

@@ -115,7 +115,7 @@ print(sbx.commands.run("echo hi").stdout)
 
 ## 兼容矩阵(官方 SDK 实测)
 
-**测的是什么**:官方 `e2b` Python SDK 2.63.0(33 条)与 npm `e2b` 2.63.0(20 条)对着同一个控制面,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,两套都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
+**测的是什么**:官方 `e2b` Python SDK(33 条)与 npm `e2b`(20 条)对着同一个控制面。**版本矩阵**(2026-11-05,`ops/e2b-matrix.sh`,每个版本一个独立环境,[结果](../../research/e2b-conformance/matrix-2026-11-05.json)):Python 2.52.1、2.55.1、2.57.0、2.60.0、2.62.1、2.63.0 与 npm 2.52.1、2.55.0、2.57.0、2.60.0、2.62.2、2.63.0 **全部通过**;**1.x 不支持**(Python 1.11.1、npm 1.13.2 不认自定义 API 地址,只能连 e2b.app,套件拒绝向它们发请求)。其余说明针对,脚本是 [ops/e2b-conformance.py](../../../ops/e2b-conformance.py) 与 [ops/e2b-conformance.mjs](../../../ops/e2b-conformance.mjs),结果文件在 [docs/research/e2b-conformance/](../../research/e2b-conformance/)。2026-11-05 在一台 Linux 机器上(Firecracker、jailer 开)跑,先 1 个节点、最后一轮 **2 个节点**,都**全部通过**。**这不代表别的 SDK 版本、别的语言(Go 等)或别的用例也通过**;SDK 升级可能改变请求形状,升级后要重跑。
 
 图例:**可用** = 一致性用例通过;**已实现未测** = 代码有、没有用例;**部分** = 有但语义不同;**没有** = 不提供。
 

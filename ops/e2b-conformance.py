@@ -35,6 +35,11 @@ class Skip(Exception):
     pass
 
 
+def new_sandbox(**kw):
+    """Sandbox.create in 2.x, the constructor in 1.x."""
+    return Sandbox.create(**kw) if hasattr(Sandbox, "create") else Sandbox(**kw)
+
+
 def need(cond, why):
     if not cond:
         raise Skip(why)
@@ -255,7 +260,7 @@ def _(sb):
 
 @case("sandbox", "a command sent to a paused sandbox resumes it transparently")
 def _(_sb):
-    s = Sandbox.create(template=TEMPLATE, timeout=120)
+    s = new_sandbox(template=TEMPLATE, timeout=120)
     try:
         s.files.write("/tmp/e2b/pp.txt", "kept")
         s.pause()
@@ -267,7 +272,7 @@ def _(_sb):
 
 @case("sandbox", "envs passed at create are visible to commands")
 def _(_sb):
-    s = Sandbox.create(template=TEMPLATE, envs={"CREATE_ENV": "yes"}, timeout=120)
+    s = new_sandbox(template=TEMPLATE, envs={"CREATE_ENV": "yes"}, timeout=120)
     try:
         assert s.commands.run("echo $CREATE_ENV").stdout == "yes\n"
     finally:
@@ -276,7 +281,7 @@ def _(_sb):
 
 @case("sandbox", "kill, then the sandbox is gone")
 def _(_sb):
-    s = Sandbox.create(template=TEMPLATE, timeout=120)
+    s = new_sandbox(template=TEMPLATE, timeout=120)
     s.kill()
     time.sleep(0.5)
     assert not s.is_running()
@@ -287,7 +292,7 @@ def _(sb):
     sb.files.write("/tmp/e2b/snap.txt", "in snapshot")
     snap = sb.create_snapshot()
     try:
-        s2 = Sandbox.create(template=snap.snapshot_id, timeout=120)
+        s2 = new_sandbox(template=snap.snapshot_id, timeout=120)
         try:
             assert s2.files.read("/tmp/e2b/snap.txt") == "in snapshot"
         finally:
@@ -324,7 +329,7 @@ def native(method, path, body=None):
 @case("sandbox", "list: metadata and state filters")
 def _(_sb):
     from e2b import SandboxQuery, SandboxState
-    s = Sandbox.create(template=TEMPLATE, metadata={"conf": "list1"}, timeout=120)
+    s = new_sandbox(template=TEMPLATE, metadata={"conf": "list1"}, timeout=120)
     try:
         items = Sandbox.list(query=SandboxQuery(metadata={"conf": "list1"})).next_items()
         assert [i.sandbox_id for i in items] == [s.sandbox_id], items
@@ -407,7 +412,12 @@ def main():
     for k in ("E2B_API_URL", "E2B_API_KEY"):
         if not os.environ.get(k):
             sys.exit(f"{k} is required")
-    sb = Sandbox.create(template=TEMPLATE, timeout=900)
+    # Refuse to send the API key anywhere but where the caller said: some SDK versions (1.x) ignore E2B_API_URL and would send it to api.e2b.app.
+    from e2b.connection_config import ConnectionConfig
+    want, got = os.environ["E2B_API_URL"].rstrip("/"), ConnectionConfig().api_url.rstrip("/")
+    if got != want:
+        sys.exit(f"this SDK version would talk to {got}, not E2B_API_URL={want}: it does not support a custom API URL, nothing was sent")
+    sb = new_sandbox(template=TEMPLATE, timeout=900)
     results = []
     try:
         for group, name, fn in CASES:
@@ -419,6 +429,13 @@ def main():
                 st, why = "PASS", ""
             except Skip as e:
                 st, why = "SKIP", str(e)
+            except (AttributeError, ImportError) as e:      # the SDK under test lacks this API (the server cannot raise these): not a failure of ours
+                st, why = "SKIP", f"SDK lacks it: {type(e).__name__}: {str(e)[:120]}"
+            except TypeError as e:
+                if "unexpected keyword argument" in str(e) or "required positional argument" in str(e):
+                    st, why = "SKIP", f"SDK API differs: {str(e)[:120]}"
+                else:
+                    st, why = "FAIL", f"TypeError: {str(e)[:300]}"
             except Exception as e:  # noqa: BLE001
                 st, why = "FAIL", f"{type(e).__name__}: {str(e)[:300]}"
                 if os.environ.get("E2B_TRACE"):

@@ -1,0 +1,124 @@
+{
+ "date": "2026-11-05",
+ "setup": "Cairn drill stack on one Linux host, 2 node containers, PREVIEW_DOMAIN=preview.test; each SDK version in its own throwaway environment; ops/e2b-matrix.sh",
+ "results": [
+  {
+   "sdk": "npm 2.52.1",
+   "summary": {
+    "PASS": 20,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.52.1"
+  },
+  {
+   "sdk": "npm 2.55.0",
+   "summary": {
+    "PASS": 20,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.55.0"
+  },
+  {
+   "sdk": "npm 2.57.0",
+   "summary": {
+    "PASS": 20,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.57.0"
+  },
+  {
+   "sdk": "npm 2.60.0",
+   "summary": {
+    "PASS": 20,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.60.0"
+  },
+  {
+   "sdk": "npm 2.62.2",
+   "summary": {
+    "PASS": 20,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.62.2"
+  },
+  {
+   "sdk": "npm 2.63.0",
+   "summary": {
+    "PASS": 20,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.63.0"
+  },
+  {
+   "sdk": "py 2.52.1",
+   "summary": {
+    "PASS": 33,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.52.1"
+  },
+  {
+   "sdk": "py 2.55.1",
+   "summary": {
+    "PASS": 33,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.55.1"
+  },
+  {
+   "sdk": "py 2.57.0",
+   "summary": {
+    "PASS": 33,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.57.0"
+  },
+  {
+   "sdk": "py 2.60.0",
+   "summary": {
+    "PASS": 33,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.60.0"
+  },
+  {
+   "sdk": "py 2.62.1",
+   "summary": {
+    "PASS": 33,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.62.1"
+  },
+  {
+   "sdk": "py 2.63.0",
+   "summary": {
+    "PASS": 33,
+    "FAIL": 0,
+    "SKIP": 0
+   },
+   "version_reported": "2.63.0"
+  },
+  {
+   "sdk": "npm 1.13.2",
+   "summary": null,
+   "note": "refused: this SDK version does not support a custom API URL, so the suite sends nothing"
+  },
+  {
+   "sdk": "py 1.11.1",
+   "summary": null,
+   "note": "refused: this SDK version does not support a custom API URL (it can only reach api.e2b.app or http://localhost:3000 in debug mode)"
+  }
+ ]
+}
