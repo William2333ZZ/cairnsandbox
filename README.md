@@ -6,7 +6,7 @@
 
 [![ci](https://github.com/William2333ZZ/cairnsandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/William2333ZZ/cairnsandbox/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-Apache--2.0-14B8A6)](LICENSE) [![status](https://img.shields.io/badge/status-early_(0.x)-F59E0B)](#status) [![platform](https://img.shields.io/badge/runs_on-Linux_x86__64_+_KVM-64748B)](docs/en/quickstart.md) [![stack](https://img.shields.io/badge/built_with-Go_·_Python_·_Rust_·_Firecracker-64748B)](docs/en/architecture.md)
 
-**[English](README.md) · [中文](README.zh.md) · [Quickstart](docs/en/quickstart.md) · [Features](docs/guide/features.md) · [Roadmap](ROADMAP.md) · [Design decisions](docs/decisions-index.md)**
+**[English](README.md) · [中文](README.zh.md) · [Quickstart](docs/en/quickstart.md) · [Features](docs/en/guide/features.md) · [Roadmap](ROADMAP.md) · [Design decisions](docs/decisions-index.md)**
 
 </div>
 
@@ -62,7 +62,7 @@ await sb.kill();
 
 > [!NOTE]
 > Needs Linux x86_64 with `/dev/kvm`, Docker 24+ with compose v2 and about 15 GB of disk. The first install compiles a guest kernel (30-60 minutes).
-> For agents: `claude mcp add cairn -- python3 -m cairnsandbox.mcp`. The official **E2B SDKs work against port 18710** (point `E2B_API_URL` and `E2B_SANDBOX_URL` at it): create, `commands.run` with streaming output, background commands and PTY, files, list/watch, pause/connect, fork and snapshots all pass a conformance suite (36 cases with e2b for Python and 20 with the npm package, for each of six 2.x releases (2.52 to 2.63) of both, run on one host with two nodes; the 1.x SDKs cannot be pointed at a custom API URL and are not supported; results in [docs/research/e2b-conformance](docs/research/e2b-conformance)). It is **not full compatibility**: template builds only from our bases or templates (`run_cmd`, `copy`, env, start command; no tags, no registry images), port URLs (`get_host`) only with a preview domain you set up and behind a token; the matrix is in [docs/guide/api/e2b.md](docs/guide/api/e2b.md) (Chinese). The official `e2b_code_interpreter` `run_code` works too once you build the `code-interpreter-v1` template (a small interpreter server of our own: stateful Python contexts, bash, JavaScript, with numpy, pandas, matplotlib (figures come back as PNG), scipy and scikit-learn in an optional layer; no IPython magics: [guide](docs/guide/code-interpreter.md), in Chinese). Processes also survive checkpoint and rollback, which E2B does not do.
+> For agents: `claude mcp add cairn -- python3 -m cairnsandbox.mcp`. The official **E2B SDKs work against port 18710** (point `E2B_API_URL` and `E2B_SANDBOX_URL` at it): create, `commands.run` with streaming output, background commands and PTY, files, list/watch, pause/connect, fork and snapshots all pass a conformance suite (36 cases with e2b for Python and 20 with the npm package, for each of six 2.x releases (2.52 to 2.63) of both, run on one host with two nodes; the 1.x SDKs cannot be pointed at a custom API URL and are not supported; results in [docs/research/e2b-conformance](docs/research/e2b-conformance)). It is **not full compatibility**: template builds only from our bases or templates (`run_cmd`, `copy`, env, start command; no tags, no registry images), port URLs (`get_host`) only with a preview domain you set up and behind a token; the matrix is in [docs/en/guide/api/e2b.md](docs/en/guide/api/e2b.md). The official `e2b_code_interpreter` `run_code` works too once you build the `code-interpreter-v1` template (a small interpreter server of our own: stateful Python contexts, bash, JavaScript, with numpy, pandas, matplotlib (figures come back as PNG), scipy and scikit-learn in an optional layer; no IPython magics: [guide](docs/en/guide/code-interpreter.md)). Processes also survive checkpoint and rollback, which E2B does not do.
 
 ## How it fits together
 
@@ -89,10 +89,10 @@ What is missing: [ROADMAP.md](ROADMAP.md). Security problems: [SECURITY.md](SECU
 
 ## Read on
 
-| | |
+| I want to… | Start here |
 | :-- | :-- |
-| Using it | [docs/en/](docs/en/README.md): quickstart, architecture, security model · [user guide](docs/guide/README.md) (Chinese) · [features](docs/guide/features.md) |
-| Reading the code | [docs/README.md](docs/README.md) · [docs/011](docs/011-architecture.md) index of parts · [design decisions](docs/decisions-index.md) (Chinese) |
-| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) (sign off your commits) · [Code of Conduct](CODE_OF_CONDUCT.md) |
+| Use it | [docs/en/](docs/en/README.md): [quickstart](docs/en/quickstart.md) · [architecture](docs/en/architecture.md) · [security model](docs/en/security-model.md) · [user guide](docs/en/guide/README.md) · [API reference](docs/en/guide/api/README.md) · [features](docs/en/guide/features.md) |
+| Read the code | [docs/README.md](docs/README.md) · [docs/011](docs/011-architecture.md) index of parts · [design decisions](docs/decisions-index.md) (design documents are in Chinese) |
+| Contribute | [CONTRIBUTING.md](CONTRIBUTING.md) (sign off your commits) · [Code of Conduct](CODE_OF_CONDUCT.md) |
 
 <div align="center"><sub>Apache-2.0 · <a href="LICENSE">LICENSE</a> · third-party material in <a href="NOTICE">NOTICE</a></sub></div>

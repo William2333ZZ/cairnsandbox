@@ -34,7 +34,7 @@ Not verified: other SDK versions or languages (Go, Java, ...), two physical mach
 
 ## code-interpreter
 
-The official `e2b_code_interpreter` (`Sandbox.create()` and `run_code`, contexts) passes 17 cases for 2.10.5, 2.11.0 and 2.11.9 once the `code-interpreter-v1` template is built with `recipes/code-interpreter/build-template.py`. The server inside is our own small one (standard library only): stateful Python contexts, bash and JavaScript. With the optional `ci-pylibs` layer (numpy, pandas, matplotlib, seaborn, scipy, scikit-learn, pillow, requests, ...) matplotlib figures come back as PNG results; there is no structured `chart` object and no IPython magics. Details and limits: [`docs/guide/code-interpreter.md`](../guide/code-interpreter.md) (Chinese).
+The official `e2b_code_interpreter` (`Sandbox.create()` and `run_code`, contexts) passes 17 cases for 2.10.5, 2.11.0 and 2.11.9 once the `code-interpreter-v1` template is built with `recipes/code-interpreter/build-template.py`. The server inside is our own small one (standard library only): stateful Python contexts, bash and JavaScript. With the optional `ci-pylibs` layer (numpy, pandas, matplotlib, seaborn, scipy, scikit-learn, pillow, requests, ...) matplotlib figures come back as PNG results; there is no structured `chart` object and no IPython magics. Details and limits: [`guide/code-interpreter.md`](guide/code-interpreter.md).
 
 ## What E2B does not have
 
@@ -42,4 +42,4 @@ A background process survives pause, checkpoint, rollback and fork, because it l
 
 ## How it works
 
-The SDK's data-plane requests arrive on the same port, carry `E2b-Sandbox-Id` and an access token bound to that one sandbox, and are relayed through the node and over vsock to `sandboxd`, which speaks the envd protocol (Connect with the JSON codec, plus `/files`) on a vsock-only listener. The control plane audits each request (for `Start`, the command line). The full matrix is in [`docs/guide/api/e2b.md`](../guide/api/e2b.md) (Chinese), the decision in D88.
+The SDK's data-plane requests arrive on the same port, carry `E2b-Sandbox-Id` and an access token bound to that one sandbox, and are relayed through the node and over vsock to `sandboxd`, which speaks the envd protocol (Connect with the JSON codec, plus `/files`) on a vsock-only listener. The control plane audits each request (for `Start`, the command line). The full matrix is in [`guide/api/e2b.md`](guide/api/e2b.md), the decision in D88.

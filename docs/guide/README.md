@@ -1,5 +1,7 @@
 # 使用指南
 
+[English](../en/guide/README.md) · 中文
+
 给**用**沙箱云的人看的:租户、接入的 agent、写 SDK 调用的人。设计与理由在上一层的编号文档(从 [docs/README](../README.md) 读起),接口合同在 [CONTRACT.md](../../CONTRACT.md),这里是按任务和按端点整理过的版本。
 
 | 读什么 | 给谁 |

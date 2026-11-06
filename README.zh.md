@@ -92,7 +92,7 @@ with c.sandboxes.create(mem=512, network={"allow_hosts": ["pypi.org"]}) as sb:
 
 | | |
 | :-- | :-- |
-| 用的人 | [docs/guide/](docs/guide/README.md):租户手册、API 参考、SDK 与 MCP 参考、教程 · [功能清单](docs/guide/features.md) |
+| 用的人 | [docs/guide/](docs/guide/README.md):租户手册、API 参考、SDK 与 MCP 参考、教程 · [功能清单](docs/guide/features.md) · [English guide](docs/en/guide/README.md) |
 | 读代码的人 | [docs/README.md](docs/README.md)(000 原则 … 013 威胁模型)· [docs/011](docs/011-architecture.md) 各部件索引 · [docs/decisions-index.md](docs/decisions-index.md) 每个决定与理由 |
 | 英文读者 | [docs/en/](docs/en/README.md):快速开始、架构、安全模型 |
 | 参与 | [CONTRIBUTING.md](CONTRIBUTING.md)(提交要 `git commit -s`)· [行为准则](CODE_OF_CONDUCT.md) |
