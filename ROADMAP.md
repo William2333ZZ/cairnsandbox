@@ -25,7 +25,7 @@ What the official SDKs can and cannot do against CairnSandbox is in `docs/guide/
 
 ## Product
 - OOM hint for streaming and session exec (sync exec has it).
-- Credential injection exercised in a real task (the mechanism exists).
+- Credential injection exercised in a real task inside a microVM. HTTPS APIs are now covered by `upstream: "https"` (D89), verified in unit tests, against the real DeepSeek API from a local proxy, and through a deployed node from a microVM: to an HTTPS mirror, and to DeepSeek with the key in the node vault (HardForge uses this for its planner).
 - "Fork for parallel attempts" measured on a real agent task, not just on a test suite.
 - Rename the remaining internal `aios` identifiers (guest paths `/aios/...`, the agent package directory `aios/`). Changing them needs rebuilt images, so it is deferred and tracked here.
 - Custom VMM: deferred. A KVM VMM needs no more host privilege than Firecracker does; the cost is engineering (device models, snapshots, vsock, balloon).

@@ -3,14 +3,16 @@
 
 policy per guest ip: {"sandbox", "mode": closed|allowlist|audited, "allow_hosts": [...], "rules": [...]}
   rules (first match wins): {"name", "match": {"scheme"?: http|https, "host"?: "exact" | "*.suffix" | glob | "~regex", "method"?: [..], "path"?: "/exact" | "/prefix/*"},
-                             "action": {"allow": bool, "inject"?: "credential name"}}
+                             "action": {"allow": bool, "inject"?: "credential name", "upstream"?: "https"}}
   method and path only apply to plain HTTP (a CONNECT tunnel shows the proxy nothing but host and port); inject adds the credential's header to a
   plain-HTTP request before it goes upstream — the value lives on the node and never enters the sandbox.
+  upstream "https" (D89): the sandbox sends plain http://host/... and the proxy opens TLS to the server itself (port 443 unless the URL names
+  one), verifying its certificate against the system CAs (plus EGRESS_CA_FILE if set). That is how inject works with HTTPS-only APIs.
   No rule matched: audited -> allow; else allow_hosts (glob; empty = deny all).
   limits (per sandbox, 0 = none): {"requests_per_min", "max_bytes"}: past either, the proxy answers 429 (egress_limited) until the window moves / the policy is reset.
 Every decision is reported through `audit_cb(dict)` and kept in a per-sandbox ring (recent()).
 """
-import collections, fnmatch, json, os, re, select, socket, threading, time, urllib.parse
+import collections, fnmatch, json, os, re, select, socket, ssl, threading, time, urllib.parse
 
 POLICY = {}          # guest ip -> {"sandbox", "mode", "allow_hosts", "rules", "limits"}
 _REQS = {}           # guest ip -> deque of request timestamps (requests_per_min)
@@ -87,7 +89,12 @@ def validate_rules(rules):
         if "allow" not in a: raise ValueError(f"rule {name}: action.allow is required")
         if a.get("inject") is not None and not NAME_RE.match(str(a["inject"])): raise ValueError(f"rule {name}: bad credential name")
         if a.get("inject") and not a.get("allow"): raise ValueError(f"rule {name}: inject on a deny rule")
-        out.append({"name": name, "match": {k: m[k] for k in ("scheme", "host", "method", "path") if k in m}, "action": {"allow": bool(a["allow"]), **({"inject": a["inject"]} if a.get("inject") else {})}})
+        if a.get("upstream") is not None:
+            if a["upstream"] != "https": raise ValueError(f"rule {name}: upstream must be \"https\"")
+            if not a.get("allow"): raise ValueError(f"rule {name}: upstream on a deny rule")
+            if m.get("scheme") != "http": raise ValueError(f"rule {name}: upstream needs match.scheme \"http\" (the request the sandbox sends)")
+        out.append({"name": name, "match": {k: m[k] for k in ("scheme", "host", "method", "path") if k in m},
+                    "action": {"allow": bool(a["allow"]), **({"inject": a["inject"]} if a.get("inject") else {}), **({"upstream": "https"} if a.get("upstream") else {})}})
     return out
 
 
@@ -104,9 +111,9 @@ def _path_match(pat, path):
 
 
 def decide(ip, scheme, host, method, path):
-    """(allowed, sandbox, rule name or None, inject headers)."""
+    """(allowed, sandbox, rule name or None, inject headers, upstream scheme or None)."""
     p = POLICY.get(ip)
-    if not p: return False, None, None, {}
+    if not p: return False, None, None, {}, None
     for r in p["rules"]:
         m = r["match"]
         if m.get("scheme") and m["scheme"] != scheme: continue
@@ -116,14 +123,27 @@ def decide(ip, scheme, host, method, path):
         inject = {}
         cred = r["action"].get("inject")
         if cred and cred in CREDENTIALS and scheme == "http": inject = {CREDENTIALS[cred]["header"]: CREDENTIALS[cred]["value"]}
-        return bool(r["action"]["allow"]), p["sandbox"], r["name"], inject
-    if p["mode"] == "audited": return True, p["sandbox"], None, {}
-    return any(fnmatch.fnmatch(host.lower(), pat.lower()) for pat in p["allow_hosts"]), p["sandbox"], None, {}
+        up = r["action"].get("upstream") if scheme == "http" else None
+        return bool(r["action"]["allow"]), p["sandbox"], r["name"], inject, up
+    if p["mode"] == "audited": return True, p["sandbox"], None, {}, None
+    return any(fnmatch.fnmatch(host.lower(), pat.lower()) for pat in p["allow_hosts"]), p["sandbox"], None, {}, None
 
 
 def allowed(ip, host):
-    ok, sb, _, _ = decide(ip, "https", host, "CONNECT", "")
+    ok, sb, *_ = decide(ip, "https", host, "CONNECT", "")
     return ok, sb
+
+
+_TLS = None
+def tls_context():
+    """Certificates are always verified: the system CAs, plus EGRESS_CA_FILE when a deployment has a private CA. There is no switch to turn it off."""
+    global _TLS
+    if _TLS is None:
+        ctx = ssl.create_default_context()
+        extra = os.environ.get("EGRESS_CA_FILE")
+        if extra: ctx.load_verify_locations(cafile=extra)
+        _TLS = ctx
+    return _TLS
 
 
 def recent(sandbox): return list(RECENT.get(sandbox, ()))
@@ -174,6 +194,7 @@ def _pipe(a, b, ip=None, idle=300):
             for s in r:
                 d = s.recv(65536)
                 if not d: return
+                while isinstance(s, ssl.SSLSocket) and s.pending(): d += s.recv(s.pending())     # decrypted bytes select() cannot see
                 (b if s is a else a).sendall(d)
                 if ip: _count(ip, "out" if s is a else "in", len(d))
     except OSError:
@@ -199,9 +220,10 @@ def handle(client, addr, audit_cb):
             host, _, port = target.rpartition(":"); port = int(port or 443); scheme, path = "https", ""
         else:
             u = urllib.parse.urlsplit(target); host, port = u.hostname, u.port or 80; scheme, path = "http", u.path or "/"
-        ok, sb, rule, inject = decide(ip, scheme, host or "", method, path)
+        ok, sb, rule, inject, upstream = decide(ip, scheme, host or "", method, path)
+        if upstream == "https" and not u.port: port = 443                             # http://api.example.com/ goes to the server's TLS port
         rec = {"op": "egress", "sandbox": sb, "guest_ip": ip, "method": method, "scheme": scheme, "host": host, "port": port, "path": path if scheme == "http" else None,
-               "allowed": ok, "rule": rule, "injected": sorted(k for k in inject)}
+               "allowed": ok, "rule": rule, "injected": sorted(k for k in inject), **({"upstream": upstream} if upstream else {})}
         audit_cb(rec); _remember(sb, {k: v for k, v in rec.items() if k not in ("op", "guest_ip")})
         if not ok:
             msg = deny_message(sb, host)       # the reason phrase is what Go and curl show the caller, so it says what to do, not just "Forbidden"
@@ -218,6 +240,7 @@ def handle(client, addr, audit_cb):
             _inflight[ip] = _inflight.get(ip, 0) + 1
         counted = True
         up = socket.create_connection((host, port), timeout=15)
+        if upstream == "https": up = tls_context().wrap_socket(up, server_hostname=host)   # verified; a bad certificate raises and the guest gets 502
         if method == "CONNECT":
             client.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
             _pipe(client, up, ip)

@@ -961,3 +961,14 @@
 
 **可推翻条件**:若 SDK 改成强制 HTTP/2 或二进制编码,envd.rs 要加相应支持;若多个 SDK 版本的行为分叉到一致性用例维护不过来,就只承诺一个版本区间。
 
+### D89 凭证注入用于 HTTPS 接口:代理替沙箱发起 TLS(2026-11-07)
+
+**背景**:D36 的凭证注入只加在明文 HTTP 请求上,HTTPS 走 CONNECT 隧道,代理不做中间人,看不到也改不了。可几乎所有真实接口(模型 API、GitHub、对象存储)都只收 HTTPS,于是"密钥不进沙箱"这条卖点对真实任务用不上。HardForge(用 CairnSandbox 跑生成程序、用 DeepSeek 规划)想把模型调用放进沙箱、由代理注入密钥,走不通,只能在沙箱外调。
+
+**选项**:①在代理上做 TLS 中间人(给沙箱发自签 CA,解开所有 HTTPS):能看到一切,但要往 guest 里装 CA、每个客户端都要信它,改动面大,而且把"代理能读所有流量"变成默认;②**TLS 起始(origination)**:沙箱对某个主机发明文 `http://`,规则命中后代理加上凭证,再由代理自己用 TLS 连服务器;只影响写了这条规则的主机,guest 里什么都不用装。
+
+**结论**:选②。规则的 `action` 加 `upstream: "https"`,只能用在 `allow:true`、且 `match.scheme` 显式为 `http` 的规则上(控制面 Go 与节点 Python 两处校验,错了 400)。上游端口默认 443,URL 写了端口就用它。证书**总是**校验:系统 CA,外加 `EGRESS_CA_FILE`(私有 CA 时),没有关闭开关;校验失败给沙箱 502,审计记 `egress_error`。决策日志多一个 `upstream` 字段,凭证仍只记头名。沙箱到代理这一段是明文,但它在宿主内的 tap 上,不出机器;密钥只出现在代理到服务器的 TLS 里。
+
+**验证**:单测 `tests/unit/test_egress_tls.py` 用测试临时签发的 CA 起本地 HTTPS 回显服务:凭证头到达、响应完整回到沙箱、日志里没有值、不受信任的证书 502、规则外路径 403、规则形状;Go `TestValidate` 加了对应的好坏用例。另外在本机对真实的 api.deepseek.com 试过:沙箱侧只发 `http://api.deepseek.com/models`(不带密钥),拿回 200 和模型列表。开发机节点(派生镜像 `fc-node:d89`,只换了 `egress_proxy.py`)上 `node/test-egress.py` 20/20:真实 microVM 里对 `mirrors.aliyun.com` 发明文 `http://`,决策日志记为 443 端口、`upstream: https`,原有的明文注入、路径规则、审计模式没有回归。同日又在 microVM 里对真要密钥的 HTTPS 接口走了完整注入:用户同意后把 DeepSeek 密钥经控制面存进节点保险库(响应与审计只有名字),封闭模式的沙箱里 Python 不带密钥 POST `http://api.deepseek.com/chat/completions`,拿到 200;虚机的环境变量与文件里搜不到密钥,同主机的 HTTPS 隧道被拒,规则外路径 403。HardForge 的规划调用就是这样跑的(`DEEPSEEK_VAULT_CREDENTIAL`)。**没验证**:多节点(保险库由控制面推到每个活节点,新加入的节点要重推)、长时间流式响应。
+
+**代价与边界**:请求体只支持 `Content-Length`(和原来的明文转发一样,不支持分块上传);沙箱里的程序要改成对这个主机用 `http://`(SDK 一般能改 base URL);响应是流式透传,SSE 也能用。
