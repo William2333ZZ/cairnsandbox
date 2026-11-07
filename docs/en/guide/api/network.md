@@ -10,8 +10,8 @@ This document covers context 6: the shape and rule syntax of sandbox egress poli
   "allow_hosts": ["pypi.org", "*.pythonhosted.org"],
   "allow_direct": [],
   "rules": [
-    {"name": "gh-read", "match": {"scheme": "https", "host": "api.github.com", "method": ["GET"], "path": "/repos/*"},
-     "action": {"allow": true, "inject": "github"}}
+    {"name": "gh-read", "match": {"scheme": "http", "host": "api.github.com", "method": ["GET"], "path": "/repos/*"},
+     "action": {"allow": true, "inject": "github", "upstream": "https"}}
   ],
   "limits": {"requests_per_min": 600, "max_bytes": 104857600}
 }
@@ -36,8 +36,9 @@ Rules:
 | `match.path?` | `"/exact"` or `"/prefix/*"`, must start with `/` |
 | `action.allow` | **Required**, bool |
 | `action.inject?` | Name of a credential in the vault; adds that credential's header to the **plaintext HTTP** request, and the value never enters the sandbox. Can only be used on rules with `allow:true` |
+| `action.upstream?` | Only `"https"` (D89): the sandbox sends plain `http://host/…`, the proxy adds the credential and opens TLS to the server itself (port 443 by default, certificate always verified; a private CA goes in the node's `EGRESS_CA_FILE`). Only on rules with `allow:true` and `match.scheme` `http` |
 
-`method` and `path` take effect only for plaintext HTTP; for an HTTPS CONNECT tunnel only the host and port are visible. A bad rule returns 400 on both the control plane and the node.
+`method` and `path` take effect only for plaintext HTTP; for an HTTPS CONNECT tunnel only the host and port are visible. To inject a credential into an HTTPS API (the example above), have the program in the sandbox use `http://` for that host and write the rule with `scheme: http` plus `upstream: "https"`; the key only travels inside the proxy's TLS connection to the server. A bad rule returns 400 on both the control plane and the node.
 
 ## Hint when denied
 

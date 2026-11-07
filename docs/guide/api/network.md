@@ -10,8 +10,8 @@
   "allow_hosts": ["pypi.org", "*.pythonhosted.org"],
   "allow_direct": [],
   "rules": [
-    {"name": "gh-read", "match": {"scheme": "https", "host": "api.github.com", "method": ["GET"], "path": "/repos/*"},
-     "action": {"allow": true, "inject": "github"}}
+    {"name": "gh-read", "match": {"scheme": "http", "host": "api.github.com", "method": ["GET"], "path": "/repos/*"},
+     "action": {"allow": true, "inject": "github", "upstream": "https"}}
   ],
   "limits": {"requests_per_min": 600, "max_bytes": 104857600}
 }
@@ -36,8 +36,9 @@
 | `match.path?` | `"/精确"` 或 `"/前缀/*"`,必须以 `/` 开头 |
 | `action.allow` | **必填**,bool |
 | `action.inject?` | 保险库里的凭证名;把该凭证的头加到**明文 HTTP** 请求上,值不进沙箱。只能用在 `allow:true` 的规则上 |
+| `action.upstream?` | 只能是 `"https"`(D89):沙箱发明文 `http://主机/…`,代理加上凭证后自己用 TLS 连服务器(默认 443,证书总是校验,私有 CA 用节点的 `EGRESS_CA_FILE`)。只能用在 `allow:true` 且 `match.scheme` 为 `http` 的规则上 |
 
-`method` 与 `path` 只对明文 HTTP 生效;HTTPS 的 CONNECT 隧道只看得到 host 与端口。坏规则在控制面和节点都回 400。
+`method` 与 `path` 只对明文 HTTP 生效;HTTPS 的 CONNECT 隧道只看得到 host 与端口。要对 HTTPS 接口注入凭证(上面的例子),让沙箱里的程序对这个主机用 `http://`,规则写 `scheme: http` 加 `upstream: "https"`;密钥只出现在代理到服务器的 TLS 里。坏规则在控制面和节点都回 400。
 
 ## 被拒时的提示
 

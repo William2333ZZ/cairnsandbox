@@ -5,6 +5,7 @@
 ## 控制台外壳跟工作台一致(D84)
 
 ### 沙箱云
+- 凭证注入能用于 HTTPS 接口了(D89):规则的 `action` 加 `upstream: "https"`(只能配 `allow:true` 与 `match.scheme: "http"`),沙箱对该主机发明文 `http://`,代理加上凭证后自己用 TLS 连服务器,证书总是校验(私有 CA 用节点的 `EGRESS_CA_FILE`);决策日志多一个 `upstream` 字段。顺带改正了 API 参考里一个从来注入不了的例子(`scheme: "https"` 加 `inject`)。
 - 项目改名为 CairnSandbox(文档、横幅、控制台标题);`cairn` 命令、`CAIRN_*` 环境变量、`X-Cairn-*` 头与 `cairn_*` 指标名不变。
 - 改名:SDK 包 `cairnbox` → `cairnsandbox`(Python 模块、npm 包、MCP 入口 `cairnsandbox.mcp` / `cairnsandbox-mcp`)。`cairn` 命令与 `CAIRN_*` 环境变量不变。
 - 修了一个竞态:删除沙箱时控制面在把 200 写给客户端**之后**才去掉路由,客户端收到 200 后立刻查路由偶尔还能查到(CI 上出现过一次 `route survived the delete`)。现在在响应头写出之前先去掉路由。
