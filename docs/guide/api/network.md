@@ -40,6 +40,8 @@
 
 `method` 与 `path` 只对明文 HTTP 生效;HTTPS 的 CONNECT 隧道只看得到 host 与端口。要对 HTTPS 接口注入凭证(上面的例子),让沙箱里的程序对这个主机用 `http://`,规则写 `scheme: http` 加 `upstream: "https"`;密钥只出现在代理到服务器的 TLS 里。坏规则在控制面和节点都回 400。
 
+**对 80 端口的隧道例外**(D91):`CONNECT host:80` 里面没有 TLS,代理会读出隧道里的那个请求,按 `scheme: http` 的规则判断并注入。Node 的 HTTP 客户端(Pi、Claude Code、Codex 这类代理都用它)经代理时对 `http://` 地址也先开隧道,所以它们和 curl、Python、Go 走到的是同一套规则。隧道里的请求只能发给开隧道时写的那个主机;审计记录带 `tunnelled: true`。
+
 ## 被拒时的提示
 
 出口代理拒绝请求时,HTTP 状态行的原因短语就是一句可操作的话(Go 的 `go install`、curl 都会把它打印出来):

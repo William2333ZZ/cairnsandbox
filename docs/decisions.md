@@ -972,3 +972,18 @@
 **验证**:单测 `tests/unit/test_egress_tls.py` 用测试临时签发的 CA 起本地 HTTPS 回显服务:凭证头到达、响应完整回到沙箱、日志里没有值、不受信任的证书 502、规则外路径 403、规则形状;Go `TestValidate` 加了对应的好坏用例。另外在本机对真实的 api.deepseek.com 试过:沙箱侧只发 `http://api.deepseek.com/models`(不带密钥),拿回 200 和模型列表。开发机节点(派生镜像 `fc-node:d89`,只换了 `egress_proxy.py`)上 `node/test-egress.py` 20/20:真实 microVM 里对 `mirrors.aliyun.com` 发明文 `http://`,决策日志记为 443 端口、`upstream: https`,原有的明文注入、路径规则、审计模式没有回归。同日又在 microVM 里对真要密钥的 HTTPS 接口走了完整注入:用户同意后把 DeepSeek 密钥经控制面存进节点保险库(响应与审计只有名字),封闭模式的沙箱里 Python 不带密钥 POST `http://api.deepseek.com/chat/completions`,拿到 200;虚机的环境变量与文件里搜不到密钥,同主机的 HTTPS 隧道被拒,规则外路径 403。HardForge 的规划调用就是这样跑的(`DEEPSEEK_VAULT_CREDENTIAL`)。**没验证**:多节点(保险库由控制面推到每个活节点,新加入的节点要重推)、长时间流式响应。
 
 **代价与边界**:请求体只支持 `Content-Length`(和原来的明文转发一样,不支持分块上传);沙箱里的程序要改成对这个主机用 `http://`(SDK 一般能改 base URL);响应是流式透传,SSE 也能用。
+
+### D91 对 80 端口的 CONNECT 按明文请求处理(2026-11-23)
+
+**背景**:把 Pi(Node 写的编程代理)放进沙箱,让它经出口代理调模型接口、密钥由 D89 的注入加上。请求全部被拒:Node 的 HTTP 客户端经代理时,对 `http://` 地址也先发 `CONNECT host:80`,代理只看到主机和端口,`method`、`path` 的规则对不上,也没有可以注入的请求。之前用的是 Python 的 `urllib`,它对 `http://` 直接发带完整地址的请求,所以没碰到。Claude Code、Codex 也用 Node,估计是同样的结果(没试过)。
+
+**决定**:沙箱发来 `CONNECT host:80` 时,代理先回 200,然后读隧道里的第一个请求,当作直接发给代理的明文请求处理:同样的规则、同样的注入和 `upstream: https`、同样的审计(多一个 `tunnelled: true`)。隧道里的请求只能发给开隧道时写的主机,写了别的主机回 400。
+
+**代价**:80 端口上不是 HTTP 的协议以前只要主机在白名单里就能过隧道,现在不行。没有已知的使用者。别的端口的隧道不变。
+
+**没做的**:一条隧道里只处理一个请求,处理完就关,客户端复用连接时会重开隧道。这和代理对普通明文请求的做法一致。
+
+**验证**:单元测试三条(注入、规则仍然生效、别的端口不受影响)。一台真节点上,沙箱里的 Pi 不经任何转发器、直接经代理跑通了对话,审计记录是 `POST api.deepseek.com /chat/completions`,带注入和 `tunnelled: true`。
+
+**可推翻条件**:若要支持 80 端口上的非 HTTP 协议,改成按规则里的一个开关决定是否拆开隧道。
+

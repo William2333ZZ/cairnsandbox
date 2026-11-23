@@ -8,6 +8,8 @@ policy per guest ip: {"sandbox", "mode": closed|allowlist|audited, "allow_hosts"
   plain-HTTP request before it goes upstream — the value lives on the node and never enters the sandbox.
   upstream "https" (D89): the sandbox sends plain http://host/... and the proxy opens TLS to the server itself (port 443 unless the URL names
   one), verifying its certificate against the system CAs (plus EGRESS_CA_FILE if set). That is how inject works with HTTPS-only APIs.
+  A CONNECT to port 80 (D91) is the exception to "a tunnel shows nothing": no TLS runs there, so the proxy reads the request inside and applies
+  method, path, inject and upstream to it. Clients that tunnel everything (Node) reach the same rules as clients that do not (curl, Python, Go).
   No rule matched: audited -> allow; else allow_hosts (glob; empty = deny all).
   limits (per sandbox, 0 = none): {"requests_per_min", "max_bytes"}: past either, the proxy answers 429 (egress_limited) until the window moves / the policy is reset.
 Every decision is reported through `audit_cb(dict)` and kept in a per-sandbox ring (recent()).
@@ -205,25 +207,47 @@ def _pipe(a, b, ip=None, idle=300):
             except OSError: pass
 
 
+def _read_head(f):
+    """One request line and its headers from a buffered reader: (method, target, version, {lower-case name: value}), or None at end of stream."""
+    line = f.readline()
+    if not line: return None
+    method, target, ver = line.decode(errors="replace").split()[:3]
+    headers = {}
+    while True:
+        h = f.readline()
+        if h in (b"\r\n", b"\n", b""): break
+        k, _, v = h.decode(errors="replace").partition(":"); headers[k.strip().lower()] = v.strip()
+    return method, target, ver, headers
+
+
 def handle(client, addr, audit_cb):
     ip = addr[0]; counted = False
     try:
-        f = client.makefile("rb"); line = f.readline()
-        if not line: client.close(); return
-        method, target, ver = line.decode(errors="replace").split()[:3]
-        headers = {}
-        while True:
-            h = f.readline()
-            if h in (b"\r\n", b"\n", b""): break
-            k, _, v = h.decode(errors="replace").partition(":"); headers[k.strip().lower()] = v.strip()
+        f = client.makefile("rb")
+        head = _read_head(f)
+        if not head: client.close(); return
+        method, target, ver, headers = head
+        u = None; tunnelled = False
         if method == "CONNECT":
             host, _, port = target.rpartition(":"); port = int(port or 443); scheme, path = "https", ""
+            if port == 80 and ip in POLICY:
+                # A tunnel to the plain-HTTP port (D91). Node's HTTP client opens one for every proxied request, http:// included, which would hide
+                # the method and path from the rules and leave nothing to inject into. Port 80 carries no TLS, so the request inside is read here
+                # and handled as if it had been sent to the proxy directly.
+                client.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+                head = _read_head(f)
+                if not head: client.close(); return
+                method, target, ver, headers = head; tunnelled = True
+                u = urllib.parse.urlsplit(target)
+                if method == "CONNECT" or (u.hostname and (u.hostname.lower() != host.lower() or (u.port or 80) != 80)):   # only the host the tunnel was opened for
+                    client.sendall(b"HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"); client.close(); return
+                scheme, path = "http", u.path or "/"
         else:
             u = urllib.parse.urlsplit(target); host, port = u.hostname, u.port or 80; scheme, path = "http", u.path or "/"
         ok, sb, rule, inject, upstream = decide(ip, scheme, host or "", method, path)
-        if upstream == "https" and not u.port: port = 443                             # http://api.example.com/ goes to the server's TLS port
+        if upstream == "https" and u is not None and not u.port: port = 443           # http://api.example.com/ goes to the server's TLS port
         rec = {"op": "egress", "sandbox": sb, "guest_ip": ip, "method": method, "scheme": scheme, "host": host, "port": port, "path": path if scheme == "http" else None,
-               "allowed": ok, "rule": rule, "injected": sorted(k for k in inject), **({"upstream": upstream} if upstream else {})}
+               "allowed": ok, "rule": rule, "injected": sorted(k for k in inject), **({"upstream": upstream} if upstream else {}), **({"tunnelled": True} if tunnelled else {})}
         audit_cb(rec); _remember(sb, {k: v for k, v in rec.items() if k not in ("op", "guest_ip")})
         if not ok:
             msg = deny_message(sb, host)       # the reason phrase is what Go and curl show the caller, so it says what to do, not just "Forbidden"

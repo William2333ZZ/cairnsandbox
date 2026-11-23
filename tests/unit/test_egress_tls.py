@@ -125,3 +125,47 @@ def test_rule_shape():
     # a CONNECT (https) request never gets an upstream, even if a rule would match it without a scheme
     ep.set_policy(IP, "sb", [], rules=ep.validate_rules([{"name": "h", "match": {"scheme": "http"}, "action": {"allow": True, "upstream": "https"}}]))
     assert ep.decide(IP, "https", "api.x", "CONNECT", "")[4] is None and ep.decide(IP, "http", "api.x", "GET", "/")[4] == "https"
+
+
+# ---- D91: a client that tunnels every proxied request (Node) reaches the same rules
+
+@pytest.fixture
+def to_api(api, monkeypatch):
+    """The tunnel names port 80 and the rule sends it to 443; land both on the local test API."""
+    real = socket.create_connection
+    seen = []
+    def dial(addr, *a, **kw):
+        seen.append(addr); return real(("127.0.0.1", api), *a, **kw)
+    monkeypatch.setattr(ep.socket, "create_connection", dial)
+    return seen
+
+
+def test_a_tunnel_to_port_80_is_read_and_gets_the_credential(pki, api, to_api, monkeypatch):
+    monkeypatch.setenv("EGRESS_CA_FILE", os.path.join(pki, "ca.pem"))
+    _policy(api)
+    resp, audit = _through_proxy(b"CONNECT localhost:80 HTTP/1.1\r\nHost: localhost:80\r\n\r\n"
+                                 b"POST /v1/chat HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer placeholder\r\nContent-Length: 2\r\n\r\n{}")
+    established, _, rest = resp.partition(b"\r\n\r\n")
+    assert established == b"HTTP/1.1 200 Connection Established"
+    assert json.loads(rest.split(b"\r\n\r\n", 1)[1]) == {"path": "/v1/chat", "auth": "Bearer sk-test-value"}   # the placeholder is replaced
+    assert to_api == [("localhost", 443)]
+    rec = audit[0]
+    assert rec["method"] == "POST" and rec["path"] == "/v1/chat" and rec["rule"] == "ds" and rec["injected"] == ["Authorization"] and rec["tunnelled"] is True
+    assert "sk-test-value" not in json.dumps(audit)
+
+
+def test_inside_the_tunnel_the_rules_still_decide(pki, api, to_api, monkeypatch):
+    monkeypatch.setenv("EGRESS_CA_FILE", os.path.join(pki, "ca.pem"))
+    _policy(api)
+    resp, audit = _through_proxy(b"CONNECT localhost:80 HTTP/1.1\r\n\r\nGET /admin HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    assert b"HTTP/1.1 403 egress denied for localhost" in resp and to_api == []
+    assert audit[0]["allowed"] is False and audit[0]["path"] == "/admin"
+    # the tunnel was opened for one host: a request inside it cannot name another
+    resp, audit = _through_proxy(b"CONNECT localhost:80 HTTP/1.1\r\n\r\nGET http://other.example/v1/x HTTP/1.1\r\nHost: other.example\r\n\r\n")
+    assert resp.endswith(b"HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n") and to_api == [] and audit == []
+
+
+def test_a_tunnel_to_another_port_is_still_opaque(api, to_api):
+    _policy(api)
+    resp, audit = _through_proxy(b"CONNECT localhost:443 HTTP/1.1\r\n\r\n")
+    assert resp.startswith(b"HTTP/1.1 403") and audit[0]["method"] == "CONNECT" and audit[0]["scheme"] == "https" and "tunnelled" not in audit[0]
