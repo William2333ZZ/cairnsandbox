@@ -40,6 +40,8 @@ Rules:
 
 `method` and `path` take effect only for plaintext HTTP; for an HTTPS CONNECT tunnel only the host and port are visible. To inject a credential into an HTTPS API (the example above), have the program in the sandbox use `http://` for that host and write the rule with `scheme: http` plus `upstream: "https"`; the key only travels inside the proxy's TLS connection to the server. A bad rule returns 400 on both the control plane and the node.
 
+**A tunnel to port 80 is the exception** (D91): there is no TLS inside `CONNECT host:80`, so the proxy reads the request in the tunnel, judges it by the `scheme: http` rules and injects into it. Node's HTTP client (which agents such as Pi, Claude Code and Codex use) opens a tunnel through a proxy even for `http://` URLs, so these clients reach the same rules as curl, Python and Go. A request inside the tunnel can only go to the host the tunnel was opened for; its audit record carries `tunnelled: true`.
+
 ## Hint when denied
 
 When the egress proxy rejects a request, the reason phrase in the HTTP status line is a single actionable sentence (Go's `go install` and curl both print it):
