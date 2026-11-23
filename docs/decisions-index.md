@@ -92,3 +92,4 @@
 | D86 | 单机多容器模拟多机(`deploy/multinode.sh`) | 2026-11-05 |
 | D87 | 多台真机:节点只靠 IP 加入(`deploy/node.sh`) | 2026-11-05 |
 | D88 | E2B 兼容做成真的:envd 由 sandboxd 说,官方 SDK 通过一致性用例 | 2026-11-05 |
+| D90 | 端口暴露把请求头和响应头原样带过去;`X-Sandbox-Authorization`、`X-Forwarded-Host`、路径形式下收窄 Cookie | 2026-11-23 |

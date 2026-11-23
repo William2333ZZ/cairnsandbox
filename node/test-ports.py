@@ -58,6 +58,23 @@ step("reachable through the node at /ports/<port>/", c == 200 and f"served from 
 c, body = req("GET", f"/sandboxes/{A}/ports/8080/sub/?x=1", raw=True); step("query strings pass through, directory listing served", c == 200 and b"a.txt" in body, f"{c} {body[:60]!r}")
 c, r = req("GET", f"/sandboxes/{A}/ports/8081/"); step("a closed port answers 502 from the node, not a hang", c == 502, str(r.get("error"))[:60])
 
+print("== the service sees the caller's headers (cookies, the host it was called by, a credential of its own) ==")
+ECHO = """import http.server, json, socketserver
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(s):
+        b = json.dumps({k.lower(): v for k, v in s.headers.items()}).encode()
+        s.send_response(200); s.send_header('Content-Length', str(len(b))); s.send_header('Set-Cookie', 'sid=1; Path=/'); s.end_headers(); s.wfile.write(b)
+    def log_message(s, *a): pass
+socketserver.TCPServer.allow_reuse_address = True
+socketserver.TCPServer(('0.0.0.0', 8070), H).serve_forever()
+"""
+put_raw("/tmp/echo.py", ECHO.encode()); ex(A, f"setsid -f {py} /tmp/echo.py >/tmp/echo.log 2>&1 </dev/null; sleep 1.5")
+rq = urllib.request.Request(BASE + f"/sandboxes/{A}/ports/8070/", headers={**AUTH, "Cookie": "sid=0", "X-Sandbox-Authorization": "Bearer for-the-app"})
+with urllib.request.urlopen(rq, timeout=30) as resp: seen = json.loads(resp.read()); setc = resp.headers.get("Set-Cookie")
+step("cookies pass in both directions", seen.get("cookie") == "sid=0" and setc == "sid=1; Path=/", f"{seen.get('cookie')} {setc}")
+step("X-Forwarded-Host names the host the caller used", seen.get("x-forwarded-host") == urllib.parse.urlsplit(BASE).netloc, str(seen.get("x-forwarded-host")))
+step("X-Sandbox-Authorization arrives as the service's Authorization; the node's bearer does not", seen.get("authorization") == "Bearer for-the-app" and "x-sandbox-authorization" not in seen, str(seen.get("authorization")))
+
 print("== websocket (Upgrade) tunnel ==")
 import base64, socket as _socket
 put_raw("/tmp/ws.py", WS.encode()); r = ex(A, f"setsid -f {py} /tmp/ws.py >/tmp/ws.log 2>&1 </dev/null; sleep 1.5; cat /tmp/ws.log; echo started")

@@ -4,6 +4,7 @@ package exec
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -82,14 +83,23 @@ func (e *Exec) Forward(w http.ResponseWriter, r *http.Request, sid, sub string, 
 		e.tunnel(w, r, node, sid)
 		return
 	}
+	port := strings.HasPrefix(sub, "/ports/") // a service in the guest: it gets the caller's headers and the caller gets its headers (cookies, caching, CORS)
 	hdr := http.Header{}
+	if port {
+		hdr = portRequestHeader(r)
+	}
 	ct := r.Header.Get("Content-Type")
-	if ct == "" {
+	if ct == "" && !port {
 		ct = "application/json"
 	}
-	hdr.Set("Content-Type", ct)
+	if ct != "" {
+		hdr.Set("Content-Type", ct)
+	}
 	if v := r.Header.Get("Idempotency-Key"); v != "" {
 		hdr.Set("Idempotency-Key", v)
+	}
+	if port && len(raw) == 0 {
+		raw = nil // no body: the node client must not invent a Content-Type for the service
 	}
 	resp, err := e.nc.Do(node, r.Method, r.URL.RequestURI(), raw, 0, hdr)
 	if err != nil {
@@ -100,9 +110,13 @@ func (e *Exec) Forward(w http.ResponseWriter, r *http.Request, sid, sub string, 
 	if r.Method == "DELETE" && resp.StatusCode == 200 && sub == "" {
 		e.life.Forget(sid, node) // before the client can see the 200: a caller that checks right after must find the route gone
 	}
-	for _, k := range []string{"Content-Type", "Content-Length"} {
-		if v := resp.Header.Get(k); v != "" {
-			w.Header().Set(k, v)
+	if port {
+		copyPortResponseHeader(w.Header(), resp.Header, portPrefix(r, sid, sub))
+	} else {
+		for _, k := range []string{"Content-Type", "Content-Length"} {
+			if v := resp.Header.Get(k); v != "" {
+				w.Header().Set(k, v)
+			}
 		}
 	}
 	w.WriteHeader(resp.StatusCode)
@@ -124,6 +138,68 @@ func (e *Exec) Forward(w http.ResponseWriter, r *http.Request, sid, sub string, 
 				e.audit.Write(map[string]any{"op": "forward_cut", "path": r.URL.Path, "error": rerr.Error()})
 			}
 			break
+		}
+	}
+}
+
+type ownOriginKey struct{}
+
+// WithOwnOrigin marks a request that reached a sandbox port on an origin of its own (the preview domain, D55), where the guest's cookies
+// concern nobody else. Without the mark the port is a path on the control plane's origin, shared with the API and with every other sandbox.
+func WithOwnOrigin(r *http.Request) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), ownOriginKey{}, true))
+}
+
+// hopHeaders are meaningful for one connection only and are never relayed (RFC 9110 7.6.1).
+var hopHeaders = map[string]bool{"Connection": true, "Keep-Alive": true, "Proxy-Authenticate": true, "Proxy-Authorization": true, "Proxy-Connection": true,
+	"Te": true, "Trailer": true, "Transfer-Encoding": true, "Upgrade": true}
+
+// portRequestHeader is what a service in the guest sees of the caller's request: everything except the hop headers and the caller's Authorization,
+// which is the control plane's bearer and stays here. A credential meant for the service itself travels as X-Sandbox-Authorization; the node hands
+// it to the guest as Authorization. X-Forwarded-Host carries the name the caller used, since the node addresses the guest by its own address
+// (a service that checks a browser's Origin against its host needs it).
+func portRequestHeader(r *http.Request) http.Header {
+	hdr := http.Header{}
+	for k, vs := range r.Header {
+		if hopHeaders[k] || k == "Authorization" || k == "Host" || k == "X-Forwarded-Host" || k == "Content-Length" {
+			continue
+		}
+		hdr[k] = append([]string(nil), vs...)
+	}
+	hdr.Set("X-Forwarded-Host", r.Host)
+	return hdr
+}
+
+// portPrefix is the path a port lives under on the control plane's own origin, or "" when the request came in on an origin of its own.
+func portPrefix(r *http.Request, sid, sub string) string {
+	if own, _ := r.Context().Value(ownOriginKey{}).(bool); own {
+		return ""
+	}
+	rest := strings.TrimPrefix(sub, "/ports/")
+	if i := strings.IndexByte(rest, '/'); i >= 0 {
+		rest = rest[:i]
+	}
+	return "/sandboxes/" + sid + "/ports/" + rest
+}
+
+// copyPortResponseHeader relays the guest service's response headers. With a prefix (the port is a path on the control plane's origin) every cookie
+// the service sets is confined to that path: left at "/", a browser would send it to the API and to every other sandbox's ports.
+func copyPortResponseHeader(dst, src http.Header, prefix string) {
+	for k, vs := range src {
+		if hopHeaders[k] {
+			continue
+		}
+		for _, v := range vs {
+			if k == "Set-Cookie" && prefix != "" {
+				c, err := http.ParseSetCookie(v)
+				if err != nil {
+					continue
+				}
+				c.Domain = ""
+				c.Path = prefix + "/" + strings.TrimPrefix(c.Path, "/")
+				v = c.String()
+			}
+			dst.Add(k, v)
 		}
 	}
 }
@@ -153,14 +229,14 @@ func (e *Exec) tunnel(w http.ResponseWriter, r *http.Request, node *fleet.Node, 
 	var req strings.Builder
 	fmt.Fprintf(&req, "%s %s HTTP/1.1\r\nHost: %s\r\nAuthorization: Bearer %s\r\n", r.Method, r.URL.RequestURI(), host, node.Token())
 	for k, vs := range r.Header {
-		if lk := strings.ToLower(k); lk == "host" || lk == "authorization" || lk == "proxy-authorization" {
+		if lk := strings.ToLower(k); lk == "host" || lk == "authorization" || lk == "proxy-authorization" || lk == "x-forwarded-host" {
 			continue
 		}
 		for _, v := range vs {
 			fmt.Fprintf(&req, "%s: %s\r\n", k, v)
 		}
 	}
-	req.WriteString("\r\n")
+	fmt.Fprintf(&req, "X-Forwarded-Host: %s\r\n\r\n", r.Host)
 	if _, err := up.Write([]byte(req.String())); err != nil {
 		up.Close()
 		http.Error(w, "node unreachable: "+err.Error(), 502)

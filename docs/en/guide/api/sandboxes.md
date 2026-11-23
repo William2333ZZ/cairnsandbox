@@ -241,6 +241,10 @@ Caller. The most recent 200 egress decisions: `{"decisions": [{sandbox, method, 
 
 - A paused sandbox is transparently resumed first.
 - A request with `Upgrade: websocket` becomes a **bidirectional byte tunnel** after the handshake (the control plane hijacks the connection and dials the node, and the node dials the guest; if the guest does not reply 101, its answer is passed through unchanged). Audit `port_tunnel` is written.
+- **Request and response headers** (D90): apart from the hop-by-hop headers, the caller's request headers reach the service in the sandbox unchanged, and the service's response headers come back unchanged (cookies, caching, CORS included). Three exceptions:
+  - `Authorization` is the control plane's own bearer and does not enter the sandbox. To give the service a credential of its own, send `X-Sandbox-Authorization: <value>`; the service receives `Authorization: <value>`.
+  - The `Host` the service sees is the sandbox's address; the host name the caller used is in `X-Forwarded-Host` (set by the control plane; one sent by the caller is overwritten).
+  - In the path form (the URL in this section), the `Path` of a cookie the service sets is moved under `/sandboxes/<id>/ports/<port>/` and its `Domain` is removed: this origin is shared by the control plane and every sandbox. On the preview domain (`<port>-<id>.<PREVIEW_DOMAIN>`) each port has an origin of its own and cookies are not changed.
 - Errors: 502 nothing listening on the port / node unreachable; 400 bad port.
 
 ```bash

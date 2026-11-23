@@ -29,6 +29,7 @@ What the official SDKs can and cannot do against CairnSandbox is in `docs/guide/
 - "Fork for parallel attempts" measured on a real agent task, not just on a test suite.
 - Rename the remaining internal `aios` identifiers (guest paths `/aios/...`, the agent package directory `aios/`). Changing them needs rebuilt images, so it is deferred and tracked here.
 - Custom VMM: deferred. A KVM VMM needs no more host privilege than Firecracker does; the cost is engineering (device models, snapshots, vsock, balloon).
+- **Port exposure for native clients.** A service in a sandbox now gets the caller's headers and cookies (D90), so browser apps work. A native client that sends its own `Authorization` header and cannot add another one still has no way in: the control plane takes that header for itself. Needs an entry point that does not carry the control-plane credential in a header, such as an access token per exposed port.
 
 ## Project
 - English translations of the Chinese design documents (`docs/`), starting with the user guide.

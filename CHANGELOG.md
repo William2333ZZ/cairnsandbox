@@ -5,6 +5,7 @@
 ## 控制台外壳跟工作台一致(D84)
 
 ### 沙箱云
+- 端口暴露(D90):`/sandboxes/<id>/ports/<port>/…` 现在把请求头和响应头原样带过去,用 Cookie 登录的网页应用能用了。新增 `X-Sandbox-Authorization`(交给沙箱里的服务时变成 `Authorization`)和 `X-Forwarded-Host`。**行为变化**:路径形式下服务设的 Cookie 的 `Path` 会被改到该端口的路径之下;以前这些头是全部丢掉的。
 - 项目改名为 CairnSandbox(文档、横幅、控制台标题);`cairn` 命令、`CAIRN_*` 环境变量、`X-Cairn-*` 头与 `cairn_*` 指标名不变。
 - 改名:SDK 包 `cairnbox` → `cairnsandbox`(Python 模块、npm 包、MCP 入口 `cairnsandbox.mcp` / `cairnsandbox-mcp`)。`cairn` 命令与 `CAIRN_*` 环境变量不变。
 - 修了一个竞态:删除沙箱时控制面在把 200 写给客户端**之后**才去掉路由,客户端收到 200 后立刻查路由偶尔还能查到(CI 上出现过一次 `route survived the delete`)。现在在响应头写出之前先去掉路由。
