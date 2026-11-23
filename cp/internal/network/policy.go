@@ -110,6 +110,19 @@ func Validate(net map[string]any) error {
 				return fmt.Errorf("rule %s: inject on a deny rule", name)
 			}
 		}
+		// upstream "https": the sandbox speaks plain HTTP to the proxy and the proxy opens TLS to the server (D89),
+		// so it only makes sense on an allow rule that matches plain HTTP
+		if up, ok := a["upstream"]; ok && up != nil {
+			if up != "https" {
+				return fmt.Errorf("rule %s: upstream must be \"https\"", name)
+			}
+			if !a["allow"].(bool) {
+				return fmt.Errorf("rule %s: upstream on a deny rule", name)
+			}
+			if m["scheme"] != "http" {
+				return fmt.Errorf("rule %s: upstream needs match.scheme \"http\" (the request the sandbox sends)", name)
+			}
+		}
 	}
 	return nil
 }

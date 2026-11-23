@@ -55,6 +55,15 @@ r = ex(A, "curl -s --max-time 8 -o /dev/null -w %{http_code} http://example.com/
 c, lg = req("GET", f"/sandboxes/{A}/egress"); rules_hit = [d.get("rule") for d in lg.get("decisions", [])]
 step("decision log names the rule, the path and what was injected", "api-with-key" in rules_hit and "deny-admin" in rules_hit and any(d.get("injected") == ["Authorization"] for d in lg["decisions"]) and any(d.get("allowed") is False and d.get("rule") is None for d in lg["decisions"]), str(rules_hit))
 
+print("== https upstream (D89) ==")
+TLS_HOST = os.environ.get("TLS_HOST", "mirrors.aliyun.com")        # any HTTPS server the node can reach
+c, n = req("PUT", f"/sandboxes/{A}/network", {"mode": "closed", "rules": [{"name": "tls-up", "match": {"scheme": "http", "host": TLS_HOST}, "action": {"allow": True, "upstream": "https"}}]})
+step("rule with upstream https accepted", c == 200 and n["network"]["rules"][0]["action"].get("upstream") == "https", str(n)[:120])
+r = ex(A, f"curl -s --max-time 15 -o /dev/null -w %{{http_code}} http://{TLS_HOST}/ || echo curl-exit-nonzero")["stdout"].strip()
+c, lg = req("GET", f"/sandboxes/{A}/egress"); last = [d for d in lg.get("decisions", []) if d.get("host") == TLS_HOST][-1:]
+step("plain http from the sandbox left the node over TLS (port 443, upstream https)", r[:1] in "23" and last and last[0].get("port") == 443 and last[0].get("upstream") == "https", f"{r} {last}")
+c, n = req("PUT", f"/sandboxes/{A}/network", {"rules": [{"name": "x", "match": {"host": TLS_HOST}, "action": {"allow": True, "upstream": "https"}}]}); step("upstream without match.scheme http refused", c == 400)
+
 print("== audited mode ==")
 c, n = req("PUT", f"/sandboxes/{A}/network", {"mode": "audited", "rules": [rules[0]]}); step("switch to audited with one deny rule", c == 200 and n["network"]["mode"] == "audited")
 r = ex(A, "curl -s --max-time 8 -o /dev/null -w %{http_code} http://example.com/ || echo curl-exit-nonzero")["stdout"].strip(); step("audited: unknown hosts pass (or fail upstream), never 403 from the proxy", r != "403", r)
