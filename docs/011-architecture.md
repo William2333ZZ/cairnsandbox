@@ -82,7 +82,7 @@ web/ ──HTTP──▶ cp/ (fc-cp, Go) ──bearer──▶ nodeagent.py ─�
 | 测试 | 覆盖 |
 | --- | --- |
 | `tests/unit/test_nodeagent_spec.py` | 规格解析、模板键、`disk` |
-| `tests/unit/test_netmgr.py`、`test_egress_policy.py` | 网络分配;域名放行规则 |
+| `tests/unit/test_netmgr.py`、`test_egress_policy.py`、`test_egress_tls.py` | 网络分配;域名放行规则;HTTPS 接口的凭证注入(代理发起 TLS,D89) |
 | `tests/unit/test_evolve.py`(候选部分) | 人写的候选(`eval/candidates.py`:`nudge`、`ask-paragraph`)是整份 harness 加一处有说明的改动,清单能过 `parse_manifest` |
 | `tests/unit/test_prompts.py` | 团队写的提示段落(沟通、范围、交付):版本、冲突、上限、默认变了的提示、只是建议不影响宿主的检查(`intake/prompts.py`) |
 | `tests/unit/test_threads.py` | PR 属于开它的工单、只读的上下文订阅、共享 Trigger 的线程互相关联(dsh-superagent 001/003) |
