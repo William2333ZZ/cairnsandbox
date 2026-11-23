@@ -106,6 +106,19 @@ func (f *fakeNode) handle(w http.ResponseWriter, r *http.Request) {
 			c.Write(append([]byte("echo:"), b[:n]...))
 		}
 	}
+	if strings.Contains(r.URL.Path, "/ports/3773/") { // a web app in the guest that signs its user in with a cookie: it reports the headers it was sent
+		seen := map[string]string{}
+		for _, k := range []string{"Cookie", "X-Sandbox-Authorization", "X-Forwarded-Host", "Accept", "Origin", "Content-Type"} {
+			seen[k] = r.Header.Get(k)
+		}
+		b, _ := json.Marshal(seen)
+		w.Header().Add("Set-Cookie", "t3_session=abc; Path=/; HttpOnly; SameSite=Lax")
+		w.Header().Add("Set-Cookie", "theme=dark; Path=/app; Domain=evil.test")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+		return
+	}
 	if strings.Contains(r.URL.Path, "/ports/") && r.Header.Get("E2b-Sandbox-Port") != "" { // a service in the guest reached through the E2B surface: a streamed NDJSON answer
 		b, _ := io.ReadAll(r.Body)
 		f.mu.Lock()
@@ -1441,6 +1454,60 @@ func TestAProjectDefaultNetworkPolicyAppliesWhenTheRequestSaysNothing(t *testing
 	a.mu.Unlock()
 	if has {
 		t.Fatal("after the default is removed a request without network carries none")
+	}
+}
+
+func TestAnExposedPortGetsTheCallersHeadersAndReturnsItsOwn(t *testing.T) {
+	a := newFakeNode(t, "na", 10)
+	reg, _ := registry.NewFileRegistry(t.TempDir())
+	s, ts := testServer(t, reg, "deployer-secret", a)
+	s.PreviewDomain = "preview.test"
+	_, sb := call(t, ts.URL, "POST", "/sandboxes", map[string]any{"mem": 256}, map[string]string{"Authorization": "Bearer deployer-secret"})
+	sid := sb["id"].(string)
+	get := func(path, host string) (*http.Response, map[string]string) {
+		req, _ := http.NewRequest("GET", ts.URL+path, nil)
+		if host != "" {
+			req.Host = host
+		}
+		req.Header.Set("Authorization", "Bearer deployer-secret")
+		req.Header.Set("Cookie", "t3_session=old")
+		req.Header.Set("X-Sandbox-Authorization", "Bearer for-the-app")
+		req.Header.Set("X-Forwarded-Host", "spoofed.test")
+		req.Header.Set("Accept", "text/event-stream")
+		req.Header.Set("Origin", "http://app.test")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		seen := map[string]string{}
+		json.NewDecoder(resp.Body).Decode(&seen)
+		return resp, seen
+	}
+	// as a path on the control plane's origin
+	resp, seen := get("/sandboxes/"+sid+"/ports/3773/api/session", "")
+	if resp.StatusCode != 200 || seen["Cookie"] != "t3_session=old" || seen["X-Sandbox-Authorization"] != "Bearer for-the-app" || seen["Accept"] != "text/event-stream" || seen["Origin"] != "http://app.test" {
+		t.Fatalf("the service did not get the caller's headers: %d %v", resp.StatusCode, seen)
+	}
+	if seen["X-Forwarded-Host"] != strings.TrimPrefix(ts.URL, "http://") {
+		t.Fatalf("X-Forwarded-Host must be the host the caller used, not what it claimed: %q", seen["X-Forwarded-Host"])
+	}
+	if seen["Content-Type"] != "" {
+		t.Fatalf("a GET must not gain a Content-Type: %q", seen["Content-Type"])
+	}
+	if resp.Header.Get("Cache-Control") != "no-store" {
+		t.Fatalf("the service's headers must come back: %v", resp.Header)
+	}
+	prefix := "/sandboxes/" + sid + "/ports/3773"
+	cookies := resp.Header.Values("Set-Cookie")
+	if len(cookies) != 2 || !strings.Contains(cookies[0], "t3_session=abc; Path="+prefix+"/;") || !strings.Contains(cookies[1], "Path="+prefix+"/app") || strings.Contains(cookies[1], "Domain") {
+		t.Fatalf("on the shared origin a cookie must be confined to the port's path: %q", cookies)
+	}
+	// on the port's own origin (the preview domain) the cookies are the service's business
+	resp, seen = get("/api/session", "3773-"+sid+".preview.test")
+	cookies = resp.Header.Values("Set-Cookie")
+	if resp.StatusCode != 200 || len(cookies) != 2 || !strings.Contains(cookies[0], "Path=/;") || seen["X-Forwarded-Host"] != "3773-"+sid+".preview.test" {
+		t.Fatalf("preview origin: %d %q %v", resp.StatusCode, cookies, seen)
 	}
 }
 

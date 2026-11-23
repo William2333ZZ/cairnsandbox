@@ -241,6 +241,10 @@ curl -s -H "Authorization: Bearer $TOKEN" "$CP/sandboxes/$ID/metrics?since=$(( $
 
 - 暂停着的沙箱会先透明恢复。
 - 带 `Upgrade: websocket` 的请求握手后变成**双向字节隧道**(控制面劫持连接、拨节点、节点再拨 guest;guest 不回 101 就把它的回答原样透传)。写审计 `port_tunnel`。
+- **请求头和响应头**(D90):除了逐跳头,调用方的请求头原样交给沙箱里的服务,服务的响应头原样回来(Cookie、缓存、CORS 都在内)。三处例外:
+  - `Authorization` 是控制面自己的令牌,不进沙箱。要给沙箱里的服务带它自己的凭证,用 `X-Sandbox-Authorization: <值>`,服务收到的是 `Authorization: <值>`。
+  - 服务收到的 `Host` 是沙箱的地址;调用方用的主机名在 `X-Forwarded-Host` 里(由控制面填,调用方自己带的会被覆盖)。
+  - 走路径形式(本节这种 URL)时,服务设的 Cookie 的 `Path` 会被改到 `/sandboxes/<id>/ports/<port>/` 之下、`Domain` 被去掉:这个源是控制面和所有沙箱共用的。走预览域名(`<port>-<id>.<PREVIEW_DOMAIN>`)时每个端口有自己的源,Cookie 不改。
 - 错误:502 端口没人监听 / 节点不可达;400 坏端口。
 
 ```bash

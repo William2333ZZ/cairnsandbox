@@ -221,6 +221,7 @@ func (s *Server) preview(w http.ResponseWriter, r *http.Request) bool {
 	}
 	r.URL.Path = fmt.Sprintf("/sandboxes/%s/ports/%d%s", sid, port, r.URL.Path)
 	r.URL.RawPath = ""
+	*r = *exec.WithOwnOrigin(r) // this host is the port's alone: the guest's cookies pass as they are
 	return false
 }
 

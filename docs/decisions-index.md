@@ -93,4 +93,5 @@
 | D87 | 多台真机:节点只靠 IP 加入(`deploy/node.sh`) | 2026-11-05 |
 | D88 | E2B 兼容做成真的:envd 由 sandboxd 说,官方 SDK 通过一致性用例 | 2026-11-05 |
 | D89 | 凭证注入用于 HTTPS 接口:代理替沙箱发起 TLS(`upstream: "https"`) | 2026-11-07 |
+| D90 | 端口暴露把请求头和响应头原样带过去;`X-Sandbox-Authorization`、`X-Forwarded-Host`、路径形式下收窄 Cookie | 2026-11-23 |
 | D91 | 对 80 端口的 CONNECT 按明文请求处理:Node 写的代理也能用规则和凭证注入 | 2026-11-23 |

@@ -940,6 +940,14 @@ def ttl_loop():
 PORT_RE = re.compile(r"^/sandboxes/([^/]+)/ports/(\d+)(/.*)?$")
 HOP_HEADERS = ("host", "authorization", "connection", "transfer-encoding", "keep-alive", "proxy-authorization", "te", "upgrade")
 
+def _port_caller_headers(h, hdr):
+    """Two things a service in the guest needs that the hop to it would otherwise lose. The name the caller used: Host becomes the guest's address,
+    so it goes in X-Forwarded-Host (a service that checks a browser's Origin against its host needs it). And a credential of the service's own:
+    Authorization on this hop is the node's bearer, so the caller sends X-Sandbox-Authorization and the guest receives it as Authorization."""
+    for k in [k for k in hdr if k.lower() == "x-sandbox-authorization"]: del hdr[k]
+    if not any(k.lower() == "x-forwarded-host" for k in hdr) and h.headers.get("Host"): hdr["X-Forwarded-Host"] = h.headers["Host"]
+    if h.headers.get("X-Sandbox-Authorization"): hdr["Authorization"] = h.headers["X-Sandbox-Authorization"]
+
 def proxy_port(h, sid, port, sub, method, raw, qs):
     import http.client            # (also used by _stream_port_response below)
     sb = get_sb(sid)
@@ -948,6 +956,7 @@ def proxy_port(h, sid, port, sub, method, raw, qs):
     port = int(port)
     if not 1 <= port <= 65535: return h._send(400, {"error": "bad port"})
     hdr = {k: v for k, v in h.headers.items() if k.lower() not in HOP_HEADERS}; hdr["Host"] = f"{ip}:{port}"; hdr["Connection"] = "close"
+    _port_caller_headers(h, hdr)
     path = (sub or "/") + (f"?{qs}" if qs else "")
     if h.headers.get("Upgrade", "").lower() == "websocket" and "upgrade" in h.headers.get("Connection", "").lower():
         return _tunnel_upgrade(h, sid, ip, port, path, method)
@@ -997,7 +1006,8 @@ def _tunnel_upgrade(h, sid, ip, port, path, method):
     try: up = socket.create_connection((ip, port), timeout=15)
     except OSError as e:
         audit(op="port", sandbox=sid, port=port, path=path[:120], error=repr(e)[:120]); return h._send(502, {"error": f"sandbox port {port}: {e}"})
-    hdr = "".join(f"{k}: {v}\r\n" for k, v in h.headers.items() if k.lower() not in ("host", "authorization", "proxy-authorization"))
+    fwd = {k: v for k, v in h.headers.items() if k.lower() not in ("host", "authorization", "proxy-authorization")}; _port_caller_headers(h, fwd)
+    hdr = "".join(f"{k}: {v}\r\n" for k, v in fwd.items())
     up.sendall(f"{method} {path} HTTP/1.1\r\nHost: {ip}:{port}\r\n{hdr}\r\n".encode()); up.settimeout(30)
     buf = b""
     try:

@@ -165,3 +165,20 @@ def test_a_named_template_at_another_size_needs_boot_cold_and_says_so():
         s = na.new_spec({"template_key": "dev-y", "mem": 4096, "boot": "cold"})
         assert na.resolve_template_key(s) == na.tpl_key(s)                   # not the template's snapshot: a cold boot
     finally: na.TPL_SNAPS.pop("dev-y", None)
+
+
+def test_a_port_request_carries_the_callers_host_and_its_own_credential():
+    import email.message, types
+    def caller(**headers):
+        m = email.message.Message()
+        for k, v in headers.items(): m[k.replace("_", "-")] = v
+        return types.SimpleNamespace(headers=m)
+    h = caller(Host="3773-sb-1.preview.test", X_Sandbox_Authorization="Bearer for-the-app")
+    hdr = {"X-Sandbox-Authorization": "Bearer for-the-app", "Cookie": "a=1"}
+    na._port_caller_headers(h, hdr)
+    assert hdr == {"Cookie": "a=1", "X-Forwarded-Host": "3773-sb-1.preview.test", "Authorization": "Bearer for-the-app"}
+    # the control plane already said which host the caller used: keep its word, and add no Authorization the caller did not send
+    h = caller(Host="fc-node:8800"); hdr = {"X-Forwarded-Host": "app.example.com"}
+    na._port_caller_headers(h, hdr)
+    assert hdr == {"X-Forwarded-Host": "app.example.com"}
+
