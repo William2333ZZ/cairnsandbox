@@ -95,3 +95,4 @@
 | D89 | 凭证注入用于 HTTPS 接口:代理替沙箱发起 TLS(`upstream: "https"`) | 2026-11-07 |
 | D90 | 端口暴露把请求头和响应头原样带过去;`X-Sandbox-Authorization`、`X-Forwarded-Host`、路径形式下收窄 Cookie | 2026-11-23 |
 | D91 | 对 80 端口的 CONNECT 按明文请求处理:Node 写的代理也能用规则和凭证注入 | 2026-11-23 |
+| D92 | 端口暴露放行 `OPTIONS` 预检和非 JSON 的请求体:别的来源上的客户端能用沙箱里的服务 | 2026-11-23 |

@@ -86,6 +86,7 @@ var (
 	reNodeOp    = regexp.MustCompile(`^/nodes/([^/]+)/(cordon|uncordon|drain)$`)
 	reMigrate   = regexp.MustCompile(`^/sandboxes/([^/]+)/migrate$`)
 	reSandbox   = regexp.MustCompile(`^/sandboxes/([^/]+)(/.*)?$`)
+	rePortPath  = regexp.MustCompile(`^/sandboxes/[^/]+/ports/\d+(/.*)?$`) // D92: what goes to a sandbox's own service is that service's to read, whatever its format
 	reProjects  = regexp.MustCompile(`^/accounts/([^/]+)/projects$`)
 	reWebhooks  = regexp.MustCompile(`^/projects/([^/]+)/webhooks(/([^/]+)(/(test|enable))?)?$`)
 	reKeys      = regexp.MustCompile(`^/projects/([^/]+)/keys(/([^/]+))?$`)
@@ -458,7 +459,7 @@ func (s *Server) accountScope(id tenancy.Identity) map[string]bool {
 
 func (s *Server) api(w http.ResponseWriter, r *http.Request, path string, raw []byte, id tenancy.Identity) {
 	body := map[string]any{}
-	if len(raw) > 0 && !(r.Method == "PUT" && strings.Contains(path, "/files")) && path != "/builds/archive" && path != "/volumes/from-archive" {
+	if len(raw) > 0 && !(r.Method == "PUT" && strings.Contains(path, "/files")) && path != "/builds/archive" && path != "/volumes/from-archive" && !rePortPath.MatchString(path) {
 		if err := json.Unmarshal(raw, &body); err != nil {
 			sendJSON(w, 400, map[string]any{"error": "bad json"})
 			return

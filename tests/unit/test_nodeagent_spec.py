@@ -182,3 +182,15 @@ def test_a_port_request_carries_the_callers_host_and_its_own_credential():
     na._port_caller_headers(h, hdr)
     assert hdr == {"X-Forwarded-Host": "app.example.com"}
 
+
+
+def test_a_preflight_reaches_the_service_behind_a_port(monkeypatch):
+    """A browser page on another origin (a desktop client, say) sends OPTIONS first. The node used to answer 501 itself, so the service in the guest never got to say yes."""
+    import io, email.message
+    seen = []
+    monkeypatch.setattr(na, "proxy_port", lambda h, sid, port, sub, method, raw, qs: seen.append((sid, port, sub, method)))
+    h = na.Handler.__new__(na.Handler)
+    h.path = "/sandboxes/sb-1/ports/3773/api/auth/session"; h.rfile = io.BytesIO(b"")
+    h.headers = email.message.Message(); h.headers["Authorization"] = f"Bearer {na.NODE_TOKEN}"; h.headers["Origin"] = "t3code://app"
+    h.do_OPTIONS()
+    assert seen == [("sb-1", "3773", "/api/auth/session", "OPTIONS")]
