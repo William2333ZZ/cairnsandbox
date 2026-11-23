@@ -3059,3 +3059,42 @@ func TestCreateFromATemplateRetriesOnTheNodeThatHasIt(t *testing.T) {
 		t.Fatalf("a template no node holds should say so, not claim there is no capacity: %d %v", st, e)
 	}
 }
+
+// D92: a client on another origin (a desktop app pairing with a service in a sandbox) asks first with OPTIONS and may then post a form, not JSON.
+func TestAnExposedPortTakesAPreflightAndABodyThatIsNotJSON(t *testing.T) {
+	a := newFakeNode(t, "na", 10)
+	reg, _ := registry.NewFileRegistry(t.TempDir())
+	_, ts := testServer(t, reg, "deployer-secret", a)
+	_, sb := call(t, ts.URL, "POST", "/sandboxes", map[string]any{"mem": 256}, map[string]string{"Authorization": "Bearer deployer-secret"})
+	path := "/sandboxes/" + sb["id"].(string) + "/ports/3773/oauth/token"
+	for _, c := range []struct{ method, ctype, body string }{
+		{"OPTIONS", "", ""},
+		{"POST", "application/x-www-form-urlencoded", "grant_type=pairing&code=ABC"},
+	} {
+		req, _ := http.NewRequest(c.method, ts.URL+path, strings.NewReader(c.body))
+		req.Header.Set("Authorization", "Bearer deployer-secret")
+		req.Header.Set("Origin", "t3code://app")
+		if c.ctype != "" {
+			req.Header.Set("Content-Type", c.ctype)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatalf("%s to a port must reach the service: %d", c.method, resp.StatusCode)
+		}
+	}
+	// the control plane's own routes still take JSON only
+	req, _ := http.NewRequest("POST", ts.URL+"/sandboxes", strings.NewReader("mem=256"))
+	req.Header.Set("Authorization", "Bearer deployer-secret")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 400 {
+		t.Fatalf("a form posted to the API itself must still be refused: %d", resp.StatusCode)
+	}
+}

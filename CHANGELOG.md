@@ -5,6 +5,7 @@
 ## 控制台外壳跟工作台一致(D84)
 
 ### 沙箱云
+- 端口暴露(D92):另一个来源上的客户端(桌面应用、别的网页)现在能用沙箱里的服务了。`OPTIONS` 预检请求会送到服务本身(以前节点直接回 501);发给端口的请求体不再要求是 JSON(以前控制面回 400 `bad json`,表单格式的登录请求过不去)。控制面自己的接口仍然只收 JSON。
 - 出口代理(D91):对 80 端口的 `CONNECT` 现在会读出隧道里的请求,按明文 HTTP 的规则处理并注入凭证。Node 写的程序(Pi 等)经代理访问 `http://` 地址时不再被拒。**行为变化**:80 端口上的非 HTTP 协议不能再过隧道。
 - 凭证注入能用于 HTTPS 接口了(D89):规则的 `action` 加 `upstream: "https"`(只能配 `allow:true` 与 `match.scheme: "http"`),沙箱对该主机发明文 `http://`,代理加上凭证后自己用 TLS 连服务器,证书总是校验(私有 CA 用节点的 `EGRESS_CA_FILE`);决策日志多一个 `upstream` 字段。顺带改正了 API 参考里一个从来注入不了的例子(`scheme: "https"` 加 `inject`)。
 - 端口暴露(D90):`/sandboxes/<id>/ports/<port>/…` 现在把请求头和响应头原样带过去,用 Cookie 登录的网页应用能用了。新增 `X-Sandbox-Authorization`(交给沙箱里的服务时变成 `Authorization`)和 `X-Forwarded-Host`。**行为变化**:路径形式下服务设的 Cookie 的 `Path` 会被改到该端口的路径之下;以前这些头是全部丢掉的。

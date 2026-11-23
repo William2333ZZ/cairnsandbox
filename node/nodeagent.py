@@ -1759,6 +1759,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_DELETE(self): self._dispatch("DELETE")
     def do_PATCH(self): self._dispatch("PATCH")
     def do_HEAD(self): self._dispatch("HEAD")
+    def do_OPTIONS(self): self._dispatch("OPTIONS")     # D92: a browser asks before a cross-origin request; only a port route answers it (the guest's service decides), the rest is 404
 
 
 def main():
