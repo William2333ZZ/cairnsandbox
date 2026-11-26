@@ -216,7 +216,7 @@ def new_spec(body):
     if qos not in ("normal", "be", "ls"): raise ValueError("qos must be normal|be|ls")
     boot = body.get("boot", "auto")
     if boot not in ("auto", "cold", "snapshot"): raise ValueError("boot must be auto|cold|snapshot")
-    disk = int(body.get("disk", 512))
+    disk = int(body.get("disk", 1024))
     if not 512 <= disk <= 16384: raise ValueError("disk must be 512..16384 MiB")
     tkey = str(body.get("template_key") or "")
     if tkey and not re.match(r"^[a-z0-9][a-z0-9_.-]{0,39}$", tkey): raise ValueError("bad template_key")
@@ -579,6 +579,7 @@ def create(spec, name=None, pooled=False):
         sb = take_from_pool(key)
         if sb:
             t0 = time.monotonic(); adopt(sb, spec)
+            start_workstation(sb)
             audit(op="create", sandbox=sb.id, spec=spec, boot_s=round(time.monotonic() - t0, 3), boot_mode="pool", template_snapshot=key, ip=sb.vm.net.ip)
             return sb
     err = admit(spec)
@@ -610,9 +611,24 @@ def create(spec, name=None, pooled=False):
     else:
         vm.boot(); sb.boot_mode = "cold"
         if spec.get("volumes"): volume_mount(sb)
+    if not pooled:
+        start_workstation(sb)
     audit(op="pool_create" if pooled else "create", sandbox=sid, spec=spec, boot_s=round(time.monotonic() - t0, 3), boot_mode=sb.boot_mode,
           template_snapshot=sb.tpl_key, ip=vm.net.ip, core_sched=vm.core_sched)
     return sb
+
+
+def start_workstation(sb):
+    # Old and custom base images may not provide this hook. Run only on assignment,
+    # never in a warm template: unrelated workstations must not share pairing state.
+    hook = "/usr/local/lib/sandboxd/start-t3"
+    try:
+        result = sb.vm.guest.exec(f'if test -x {hook}; then {hook}; fi', user="agent", timeout=65)
+        if result.get("exit") != 0:
+            raise RuntimeError("guest T3 failed readiness check on port 3773")
+    except Exception:
+        destroy(sb, "workstation_start_failed")
+        raise
 
 
 # ---------------- template pool: template snapshot + N warm sandboxes restored from it, refilled in the background ----------------

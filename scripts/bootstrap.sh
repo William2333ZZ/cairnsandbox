@@ -61,7 +61,9 @@ fi
 
 if [ -n "$ART" ]; then
   say "3-5b. kernel, base image and empty writable layer from the release bundle"
+  grep -q '"t3_preinstalled": true' "$ART/base-debian-13.json" || { echo 'release bundle lacks the T3 base; rebuild it first' >&2; exit 1; }
   mkdir -p images/kernel-out images/base images/layers images/bin-out
+  do_ cp "$ART/base-debian-13.json" images/base/base-debian-13.json
   K="vmlinux-$KVER-sbx"; [ -f "$ART/$K" ] || { echo "the bundle has no $K (it carries: $(ls "$ART" | tr '\n' ' '))" >&2; exit 1; }
   do_ cp "$ART/$K" "images/kernel-out/$K"; do_ cp "$ART/base-debian-13.ext4" images/base/base-debian-13.ext4; do_ cp "$ART/upper-template.ext4" images/layers/upper-template.ext4
   [ ! -f "$ART/sandboxd" ] || do_ cp "$ART/sandboxd" images/bin-out/sandboxd
@@ -77,7 +79,9 @@ say "4. guest runtime (Rust, static; $(have images/bin-out/sandboxd))"
 [ -x images/bin-out/sandboxd ] || do_ recipes/sbx-runtime/build.sh images/bin-out
 
 say "5. base image (Debian 13; $(have images/base/base-debian-13.ext4))"
-[ -f images/base/base-debian-13.ext4 ] || do_ recipes/base-debian-13/build.sh images/base
+if [ ! -f images/base/base-debian-13.ext4 ] || ! grep -q '"t3_preinstalled": true' images/base/base-debian-13.json 2>/dev/null; then
+  do_ recipes/base-debian-13/build.sh images/base
+fi
 
 say "5b. empty writable layer (copied into every new sandbox as its own disk)"
 if [ ! -f images/layers/upper-template.ext4 ] && [ "$DRY" = 1 ]; then echo "   would create images/layers/upper-template.ext4 (512 MiB, ext4)"
@@ -95,7 +99,8 @@ if [ "$SKIP_CONSOLE" = 1 ]; then echo "   console skipped (--skip-console)"; els
 say "7. publish kernel and base to the chunk store (nodes read images from it)"
 do_ mkdir -p deploy/store
 do_ python3 node/imgstore.py push deploy/store "vmlinux-$KVER-sbx" "images/kernel-out/vmlinux-$KVER-sbx"
-do_ python3 node/imgstore.py push deploy/store base-debian-13.ext4 images/base/base-debian-13.ext4
+do_ cp --sparse=always images/base/base-debian-13.ext4 images/base/base-debian-13-t3.ext4
+do_ python3 node/imgstore.py push deploy/store base-debian-13-t3.ext4 images/base/base-debian-13-t3.ext4
 
 cat <<MSG
 

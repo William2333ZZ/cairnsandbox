@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("PROXY_PORT", "8500")); STATE = os.environ.get("PROXY_STATE", "/var/lib/fc-model")
 BACKEND = os.environ.get("MODEL_BACKEND", "mock"); UPSTREAM = os.environ.get("UPSTREAM_URL", "").rstrip("/")
-UPSTREAM_KEY = os.environ.get("UPSTREAM_KEY", "") or (open(os.environ["UPSTREAM_KEY_FILE"]).read().strip() if os.environ.get("UPSTREAM_KEY_FILE") else "")   # file keeps the key out of `docker inspect`
+UPSTREAM_KEY = os.environ.get("UPSTREAM_KEY", "") or (open(os.environ["UPSTREAM_KEY_FILE"]).read().strip() if BACKEND == "upstream" and os.environ.get("UPSTREAM_KEY_FILE") else "")
 ADMIN = os.environ.get("PROXY_ADMIN_TOKEN"); DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-flash")
 # USD per million tokens [in (cache miss), out, in (cache hit)]; DeepSeek V4.1 Flash = "deepseek-flash", peak-hour list price (off-peak is half) per api-docs.deepseek.com/quick_start/pricing.
 # A cache hit costs 1/50 of a miss: an agent loop resends the same prefix every step, so charging all input at the miss price overstated its cost many times over.

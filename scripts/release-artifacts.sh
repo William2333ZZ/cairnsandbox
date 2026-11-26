@@ -11,6 +11,8 @@ KVER=${KVER:-6.18.59}; STAMP=$(date -u +%Y%m%d); OUT=${1:-release-out/cairn-arti
 K="images/kernel-out/vmlinux-$KVER-sbx"
 for f in "$K" images/base/base-debian-13.ext4 images/layers/upper-template.ext4; do [ -f "$f" ] || { echo "missing $f: build it first (scripts/bootstrap.sh)" >&2; exit 1; }; done
 mkdir -p "$OUT"
+grep -q '"t3_preinstalled": true' images/base/base-debian-13.json || { echo 'rebuild the base with T3 before packaging' >&2; exit 1; }
+cp images/base/base-debian-13.json "$OUT/"
 cp --sparse=always "$K" "$OUT/"; cp --sparse=always images/base/base-debian-13.ext4 images/layers/upper-template.ext4 "$OUT/"
 [ ! -f "$K.config" ] || cp "$K.config" "$OUT/"; [ ! -x images/bin-out/sandboxd ] || cp images/bin-out/sandboxd "$OUT/"
 COMMIT=$(git rev-parse HEAD 2>/dev/null || echo unknown)

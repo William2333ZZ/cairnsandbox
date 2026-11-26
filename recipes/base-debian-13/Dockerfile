@@ -5,7 +5,7 @@ ARG APT_MIRROR=
 RUN if [ -n "$APT_MIRROR" ]; then sed -i "s#http://deb.debian.org/debian-security#http://$APT_MIRROR/debian-security#;s#http://deb.debian.org/debian#http://$APT_MIRROR/debian#" /etc/apt/sources.list.d/debian.sources; fi \
  && apt-get -qq update \
  && DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends \
-      bash util-linux mount e2fsprogs iproute2 tar hostname ca-certificates curl \
+     bash util-linux mount e2fsprogs iproute2 tar hostname ca-certificates curl libatomic1 libstdc++6 \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man /usr/share/locale /usr/share/info \
       /usr/share/lintian /var/cache/apt/* /var/log/* \
  && mkdir -p /mnt /proc /sys /dev /run /tmp && chmod 1777 /tmp

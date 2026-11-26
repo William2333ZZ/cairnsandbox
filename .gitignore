@@ -27,3 +27,15 @@ node_modules/
 .DS_Store
 deploy/.multinode.compose.json
 deploy/node.env
+
+# Local deployment data and credentials (not deployment source files)
+/deploy/.env
+/deploy/secrets/
+/deploy/state/
+/deploy/cp-state/
+/deploy/eval-state/
+/deploy/model-state/
+/deploy/intake-state/
+/deploy/registry-data/
+/deploy/db-data/
+/deploy/store/

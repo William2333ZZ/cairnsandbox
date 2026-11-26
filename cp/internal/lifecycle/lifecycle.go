@@ -213,7 +213,7 @@ func (l *Lifecycle) Create(body map[string]any, project string) Result {
 	if project == "" {
 		project = "default"
 	}
-	diskMiB := 512.0
+	diskMiB := 1024.0
 	if d, ok := body["disk"].(float64); ok && d > 0 {
 		diskMiB = d
 	}

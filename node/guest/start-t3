@@ -1,0 +1,17 @@
+#!/bin/bash
+# Invoked as agent after guest networking and volumes are configured.
+set -eu
+umask 077
+export HOME=/home/agent
+cd "$HOME"
+ready() { curl --noproxy '*' -fsS --max-time 1 http://127.0.0.1:3773/.well-known/t3/environment >/dev/null 2>&1; }
+ready && exit 0
+mkdir -p work
+nohup setsid /opt/t3/t3 serve --lan --port 3773 "$HOME/work" </dev/null >>t3-fork.log 2>&1 &
+pid=$!
+for ((i=0;i<40;i++)); do
+    ready && exit 0
+    kill -0 "$pid" 2>/dev/null || exit 1
+    sleep 0.5
+done
+exit 1

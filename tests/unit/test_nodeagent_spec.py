@@ -72,7 +72,8 @@ def test_create_refused_while_draining():
 def test_disk_size_in_spec_and_template_key():
     import nodeagent
     s = nodeagent.new_spec({"disk": 2048}); assert s["disk"] == 2048
-    assert nodeagent.new_spec({})["disk"] == 512
+    assert nodeagent.new_spec({})["disk"] == 1024
+    assert nodeagent.new_spec({"disk": 512})["disk"] == 512
     try: nodeagent.new_spec({"disk": 64}); assert False
     except ValueError: pass
     assert nodeagent.tpl_key(nodeagent.new_spec({})) != nodeagent.tpl_key(nodeagent.new_spec({"disk": 2048}))

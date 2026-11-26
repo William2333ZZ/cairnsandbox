@@ -456,9 +456,12 @@ func (s *Server) accountScope(id tenancy.Identity) map[string]bool {
 	return out
 }
 
+// Port traffic belongs to the guest application, not the control-plane JSON API.
+var guestPortPath = regexp.MustCompile(`^/sandboxes/[^/]+/ports/[0-9]+(/|$)`)
+
 func (s *Server) api(w http.ResponseWriter, r *http.Request, path string, raw []byte, id tenancy.Identity) {
 	body := map[string]any{}
-	if len(raw) > 0 && !(r.Method == "PUT" && strings.Contains(path, "/files")) && path != "/builds/archive" && path != "/volumes/from-archive" {
+	if len(raw) > 0 && !guestPortPath.MatchString(path) && !(r.Method == "PUT" && strings.Contains(path, "/files")) && path != "/builds/archive" && path != "/volumes/from-archive" {
 		if err := json.Unmarshal(raw, &body); err != nil {
 			sendJSON(w, 400, map[string]any{"error": "bad json"})
 			return
